@@ -7,13 +7,17 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+import { Palette } from './colors';
+
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
+    text: Palette.text,
+    background: Palette.secondary,
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    primary: Palette.primary,
+    disabled: Palette.grey200,
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +25,8 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    primary: Palette.primary,
+    disabled: Palette.grey200,
   },
 } as const;
 
