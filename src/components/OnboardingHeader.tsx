@@ -8,10 +8,11 @@ import StepProgressIndicator, {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
-export type OnboardingHeaderProps = { onBack: () => void } & (
-  | { title: string; progress?: undefined }
-  | { title?: undefined; progress: StepProgressIndicatorProps }
-);
+export type OnboardingHeaderProps = {
+  onBack: () => void;
+  title?: string;
+  progress?: StepProgressIndicatorProps;
+};
 
 export default function OnboardingHeader({ onBack, title, progress }: OnboardingHeaderProps) {
   return (

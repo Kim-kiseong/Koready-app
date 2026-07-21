@@ -27,6 +27,16 @@ export interface Translations {
     next: string;
     options: Record<TravelStyleId, string>;
   };
+  destination: {
+    title: string;
+    subtitle: string;
+    next: string;
+  };
+  complete: {
+    title: string;
+    subtitle: string;
+    next: string;
+  };
 }
 
 export const ko: Translations = {
@@ -71,5 +81,15 @@ export const ko: Translations = {
       EXHIBITION_GALLERY: '전시/미술관',
       DRAMA_FILMING_SITE: '드라마 촬영지',
     },
+  },
+  destination: {
+    title: '관심 있는 여행지를 \n3개까지 선택해 주세요',
+    subtitle: '여행 취향을 반영해 더 알맞은 여행지를 추천해 드릴게요.',
+    next: '다음',
+  },
+  complete: {
+    title: '취향 설정이 완료되었어요',
+    subtitle: '선택한 여행지를 바탕으로\n맞춤 여행지를 추천해드릴게요!',
+    next: '다음',
   },
 };

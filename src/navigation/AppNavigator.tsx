@@ -8,6 +8,8 @@ export default function AppNavigator() {
       <Stack.Screen name="purpose" />
       <Stack.Screen name="location" />
       <Stack.Screen name="travel-style" />
+      <Stack.Screen name="destinations" />
+      <Stack.Screen name="complete" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="home" />
     </Stack>

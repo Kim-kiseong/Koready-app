@@ -80,6 +80,46 @@ export async function searchLocations(query: string): Promise<LocationSearchResu
   return MOCK_LOCATIONS.filter((r) => r.roadAddr.includes(q) || r.jibunAddr.includes(q));
 }
 
+export type DestinationId =
+  | 'NATIONAL_MUSEUM'
+  | 'JEONJU_HANOK_VILLAGE'
+  | 'GWANGJANG_MARKET'
+  | 'HALLASAN'
+  | 'YEOSU_CABLE_CAR'
+  | 'GAMCHEON_VILLAGE'
+  | 'MYEONGDONG'
+  | 'NAMI_ISLAND'
+  | 'BORYEONG_MUD_FESTIVAL'
+  | 'NONSAN_SUNSHINE_LAND';
+
+export type Destination = {
+  id: DestinationId;
+  name: string;
+  tags: [string, string];
+};
+
+// TODO: replace with a real GET /destinations response once the endpoint exists.
+// `name`/`tags` are Korean copy straight from the design, not run through i18n —
+// unlike PURPOSE_IDS/TRAVEL_STYLE_IDS these are real-world place names, not a
+// fixed set of app-defined categories, so they'll come from the backend as-is.
+export const DESTINATIONS: Destination[] = [
+  { id: 'NATIONAL_MUSEUM', name: '국립중앙박물관', tags: ['역사', '전시'] },
+  { id: 'JEONJU_HANOK_VILLAGE', name: '전주한옥마을', tags: ['역사', '전시'] },
+  { id: 'GWANGJANG_MARKET', name: '서울 광장시장', tags: ['음식', '로컬'] },
+  { id: 'HALLASAN', name: '제주 한라산', tags: ['힐링', '휴식'] },
+  { id: 'YEOSU_CABLE_CAR', name: '여수 해상케이블카', tags: ['풍경', '낭만'] },
+  { id: 'GAMCHEON_VILLAGE', name: '부산 감천문화마을', tags: ['예술', '사진'] },
+  { id: 'MYEONGDONG', name: '명동거리', tags: ['쇼핑', '음식'] },
+  { id: 'NAMI_ISLAND', name: '남이섬', tags: ['계절', '풍경'] },
+  { id: 'BORYEONG_MUD_FESTIVAL', name: '보령머드축제', tags: ['체험', '계절'] },
+  { id: 'NONSAN_SUNSHINE_LAND', name: '논산 선샤인랜드', tags: ['탐방', '호기심'] },
+];
+
+// TODO: replace with client.get<DestinationListEnvelope>('/destinations')
+export async function fetchDestinations(): Promise<Destination[]> {
+  return DESTINATIONS;
+}
+
 export type OnboardingSubmission = {
   purpose: PurposeId;
   location: {
@@ -89,6 +129,7 @@ export type OnboardingSubmission = {
     source: 'search' | 'current';
   };
   travelStyles: TravelStyleId[];
+  destinations: DestinationId[];
 };
 
 // TODO: replace with client.post('/onboarding', data) once the endpoint exists.
