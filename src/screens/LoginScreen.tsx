@@ -1,10 +1,17 @@
 import { Image, type ImageSource } from 'expo-image';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { socialLogin } from '@/api/auth';
+import { signInWithApple, signInWithGoogle } from '@/api/socialAuth';
+import type { SocialProvider } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { resolveNextStepRoute } from '@/navigation/next-step-route';
+import { useAuthStore } from '@/store/auth-store';
 
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.
 const FRAME_WIDTH = 375;
@@ -18,6 +25,28 @@ const BUTTON_GROUP_TOP = 630;
 export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const scale = width / FRAME_WIDTH;
+  const router = useRouter();
+  const deviceId = useAuthStore((state) => state.deviceId);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const setSession = useAuthStore((state) => state.setSession);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSocialLogin = async (provider: SocialProvider) => {
+    setIsSubmitting(true);
+    try {
+      const { idToken, authorizationCode } =
+        provider === 'GOOGLE' ? await signInWithGoogle() : await signInWithApple();
+      const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
+      setSession(session);
+      router.replace(resolveNextStepRoute(session.nextStep));
+    } catch (error) {
+      Alert.alert('로그인 실패', error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const buttonsDisabled = !hasHydrated || isSubmitting;
 
   return (
     <View style={styles.screen}>
@@ -47,7 +76,8 @@ export default function LoginScreen() {
             backgroundColor="#ffffff"
             borderColor={Palette.grey200}
             textColor={Palette.grey900}
-            onPress={() => {}}
+            disabled={buttonsDisabled}
+            onPress={() => handleSocialLogin('GOOGLE')}
           />
           <SocialButton
             label="Apple로 시작하기"
@@ -55,7 +85,8 @@ export default function LoginScreen() {
             iconSize={{ width: 16, height: 20 }}
             backgroundColor={Palette.appleBlack}
             textColor="#ffffff"
-            onPress={() => {}}
+            disabled={buttonsDisabled}
+            onPress={() => handleSocialLogin('APPLE')}
           />
         </SafeAreaView>
       </View>
@@ -70,6 +101,7 @@ type SocialButtonProps = {
   backgroundColor: string;
   borderColor?: string;
   textColor: string;
+  disabled?: boolean;
   onPress: () => void;
 };
 
@@ -80,15 +112,18 @@ function SocialButton({
   backgroundColor,
   borderColor,
   textColor,
+  disabled,
   onPress,
 }: SocialButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.socialButton,
         { backgroundColor, borderColor: borderColor ?? 'transparent' },
-        pressed && styles.pressed,
+        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed,
       ]}>
       <Image source={icon} style={iconSize} contentFit="contain" />
       <CustomText style={[styles.socialLabel, { color: textColor }]}>{label}</CustomText>
@@ -148,6 +183,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   socialLabel: {
     fontFamily: FontFamily.pretendard.medium,
