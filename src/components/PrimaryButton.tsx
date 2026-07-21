@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import CustomText from '@/components/CustomText';
+import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -29,7 +30,7 @@ export default function PrimaryButton({
         pressed && !disabled && styles.pressed,
         style,
       ]}>
-      <CustomText style={[styles.text, { color: disabled ? theme.textSecondary : theme.background }]}>
+      <CustomText style={[styles.text, { color: disabled ? Palette.grey400 : '#ffffff' }]}>
         {title}
       </CustomText>
     </Pressable>

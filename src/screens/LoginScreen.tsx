@@ -13,6 +13,22 @@ import { FontFamily } from '@/constants/typography';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
+// Dev-only bypass: lets onboarding be tested before social login keys exist.
+const DEV_MOCK_SESSION = {
+  tokenType: 'Bearer' as const,
+  accessToken: 'mock-token',
+  refreshToken: 'mock-refresh-token',
+  accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  user: {
+    userId: 0,
+    email: 'dev@koready.test',
+    profileImageUrl: null,
+    preferredLanguage: 'KO' as const,
+  },
+  nextStep: 'LANGUAGE' as const,
+};
+
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.
 const FRAME_WIDTH = 375;
 const TITLE_TOP = 177;
@@ -46,6 +62,11 @@ export default function LoginScreen() {
     }
   };
 
+  const handleDevOnboardingBypass = () => {
+    setSession(DEV_MOCK_SESSION);
+    router.replace(resolveNextStepRoute(DEV_MOCK_SESSION.nextStep));
+  };
+
   const buttonsDisabled = !hasHydrated || isSubmitting;
 
   return (
@@ -55,6 +76,14 @@ export default function LoginScreen() {
         source={require('@/assets/images/wallpaper.jpg')}
         contentFit="cover"
       />
+
+      {__DEV__ && (
+        <SafeAreaView edges={['top']} style={styles.devBanner}>
+          <Pressable style={styles.devButton} onPress={handleDevOnboardingBypass}>
+            <CustomText style={styles.devButtonText}>온보딩 화면 바로가기 (Dev)</CustomText>
+          </Pressable>
+        </SafeAreaView>
+      )}
 
       <CustomText style={[styles.title, { top: TITLE_TOP * scale }]}>Koready</CustomText>
 
@@ -135,6 +164,26 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  devBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  devButton: {
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: Palette.grey900,
+  },
+  devButtonText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 13,
+    color: '#ffffff',
   },
   title: {
     position: 'absolute',
