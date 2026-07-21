@@ -41,3 +41,16 @@ example
 # generated native folders
 /ios
 /android
+
+#컴포넌트 안쓰는거
+animated-icon.module.css
+collapsible.tsx
+animated-icon.tsx
+animated-icon.web.tsx
+app-tabs.tsx
+app-tabs.web.tsx
+external-link.tsx
+hint-row.tsx
+themed-text.tsx
+themed-view.tsx
+web-badge.tsx

@@ -3,19 +3,35 @@ import EnjoySection from "@/components/mvp2_BuddyRoute_description/EnjoySection"
 import Header from "@/components/mvp2_BuddyRoute_description/Header";
 import Info from "@/components/mvp2_BuddyRoute_description/Info";
 import NearbyPlaceCard from "@/components/mvp2_BuddyRoute_description/NearbyPlaceCard";
-import Tab, { TabType, } from "@/components/mvp2_BuddyRoute_description/Tab";
+import Tab, {
+  TabType,
+} from "@/components/mvp2_BuddyRoute_description/Tab";
 import { Theme } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, } from "react-native";
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { mockData } from "./mock";
 
+const TABS: TabType[] = [
+  "DESCRIPTION",
+  "ROUTE",
+  "MATE",
+];
+
 export default function BuddyRouteDescription() {
   const router = useRouter();
+
   const [activeTab, setActiveTab] =
-    useState<TabType>("DESCRIPTION");
+    useState<TabType>(TABS[0]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -47,12 +63,12 @@ export default function BuddyRouteDescription() {
 
         {/* 탭 */}
         <Tab
-          availableTabs={mockData.availableTabs}
+          availableTabs={TABS}
           activeTab={activeTab}
           onChangeTab={setActiveTab}
         />
 
-        {/* 설명 탭 */}
+        {/* 설명 */}
         {activeTab === "DESCRIPTION" && (
           <>
             <Description
@@ -81,7 +97,7 @@ export default function BuddyRouteDescription() {
           </>
         )}
 
-        {/* 이동 탭 */}
+        {/* 이동 */}
         {activeTab === "ROUTE" && (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>
@@ -90,7 +106,7 @@ export default function BuddyRouteDescription() {
           </View>
         )}
 
-        {/* 메이트 탭 */}
+        {/* 메이트 */}
         {activeTab === "MATE" && (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>
@@ -110,34 +126,34 @@ const styles = StyleSheet.create({
   },
 
   topBar: {
-    paddingHorizontal: Theme.spacing.xsl, //20
-    paddingTop: Theme.spacing.md,          // 12
-    paddingBottom: Theme.spacing.xl,       // 16
+    paddingHorizontal: Theme.spacing.xsl,
+    paddingTop: Theme.spacing.md,
+    paddingBottom: Theme.spacing.xl,
   },
 
   content: {
-    paddingBottom: Theme.spacing.xxxxxl, //42
+    paddingBottom: Theme.spacing.xxxxxl,
   },
 
   placeSection: {
-    paddingHorizontal: Theme.spacing.xl,   // 16
-    marginTop: 26,
+    paddingHorizontal: Theme.spacing.xl,
+    marginTop: Theme.spacing.xxxxl, // 40 또는 피그마 값에 맞게 수정
   },
 
   sectionTitle: {
     ...Theme.typography.text20SemiBold,
     color: Theme.colors.textPrimary,
-    marginBottom: Theme.spacing.xl,        // 16
+    marginBottom: Theme.spacing.xl,
   },
 
   placeholder: {
-    paddingVertical: 80,
+    paddingVertical: Theme.spacing.xxxxxxl, // 48
     justifyContent: "center",
     alignItems: "center",
   },
 
   placeholderText: {
     ...Theme.typography.text16Medium,
-    color: Theme.colors.grey500,
+    color: Theme.colors.textTertiary,
   },
 });

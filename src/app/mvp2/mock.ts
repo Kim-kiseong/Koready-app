@@ -70,7 +70,6 @@ export interface PlaceDetailResponse {
 
   relatedPlaces: RelatedPlace[];
 
-  availableTabs: AvailableTab[];
 }
 
 // ===============================
@@ -184,9 +183,4 @@ export const mockData: PlaceDetailResponse = {
     },
   ],
 
-  availableTabs: [
-    "DESCRIPTION",
-    "ROUTE",
-    "MATE",
-  ],
 };
