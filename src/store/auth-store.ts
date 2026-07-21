@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AuthUser, NextStep, TokenResponse } from '@/api/types';
 
 import { secureStorage } from './secure-storage';
+import { useOnboardingStore } from './onboarding-store';
 
 type AuthState = {
   accessToken: string | null;
@@ -39,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
           user: session.user,
           nextStep: session.nextStep,
         }),
-      clearSession: () =>
+      clearSession: () => {
         set({
           accessToken: null,
           refreshToken: null,
@@ -47,7 +48,9 @@ export const useAuthStore = create<AuthState>()(
           refreshTokenExpiresAt: null,
           user: null,
           nextStep: null,
-        }),
+        });
+        useOnboardingStore.getState().reset();
+      },
     }),
     {
       name: 'auth-storage',

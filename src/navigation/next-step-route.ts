@@ -7,7 +7,7 @@ export function resolveNextStepRoute(nextStep: NextStep): Href {
     case 'LANGUAGE':
       return '/language';
     case 'ONBOARDING':
-      return '/onboarding';
+      return '/purpose';
     case 'COMPLETED':
       return '/';
     // TERMS screen doesn't exist yet — temporarily route through language
