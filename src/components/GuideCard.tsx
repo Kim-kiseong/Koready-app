@@ -11,12 +11,13 @@ import { FontFamily } from '@/constants/typography';
 
 export type GuideCardProps = {
   guide: GuideArticle;
+  width: number;
   onPress?: () => void;
 };
 
-export default function GuideCard({ guide, onPress }: GuideCardProps) {
+export default function GuideCard({ guide, width, onPress }: GuideCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width }]}>
       <View style={styles.photoSection}>
         <Image source={HomeImages[guide.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
@@ -58,7 +59,6 @@ export default function GuideCard({ guide, onPress }: GuideCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 343,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Palette.grey200,

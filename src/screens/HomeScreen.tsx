@@ -1,7 +1,15 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchFeaturedEvents, fetchTravelGuides, FEATURED_EVENT_CATEGORIES } from '@/api/home';
@@ -25,14 +33,15 @@ function formatShortAddress(address: string): string {
   return tokens.slice(1, 3).join(' ');
 }
 
-const GUIDE_CARD_WIDTH = 343;
 const GUIDE_CARD_GAP = 16;
+const SCREEN_PADDING = 16;
 
 export default function HomeScreen() {
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const { width: windowWidth } = useWindowDimensions();
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
   const [events, setEvents] = useState<FeaturedEvent[]>([]);
@@ -49,9 +58,13 @@ export default function HomeScreen() {
 
   const month = useMemo(() => new Date().getMonth() + 1, []);
   const locationLabel = location ? formatShortAddress(location.displayAddress) : t.home.locationPlaceholder;
+  // Figma's guide card spans the full content width (screen width minus the
+  // shared 16pt side padding) rather than a fixed pixel size, so it fills the
+  // screen proportionally on any device instead of just the 375pt reference.
+  const guideCardWidth = windowWidth - SCREEN_PADDING * 2;
 
   const handleGuideScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const page = Math.round(event.nativeEvent.contentOffset.x / (GUIDE_CARD_WIDTH + GUIDE_CARD_GAP));
+    const page = Math.round(event.nativeEvent.contentOffset.x / (guideCardWidth + GUIDE_CARD_GAP));
     setGuidePage(page);
   };
 
@@ -60,7 +73,9 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerRow}>
           <View style={styles.locationRow}>
-            <CustomText style={styles.locationText}>{locationLabel}</CustomText>
+            <CustomText style={styles.locationText} numberOfLines={1}>
+              {locationLabel}
+            </CustomText>
             <SymbolView
               name={{ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' }}
               size={14}
@@ -150,12 +165,12 @@ export default function HomeScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            snapToInterval={GUIDE_CARD_WIDTH + GUIDE_CARD_GAP}
+            snapToInterval={guideCardWidth + GUIDE_CARD_GAP}
             decelerationRate="fast"
             onMomentumScrollEnd={handleGuideScroll}
             contentContainerStyle={styles.guideRow}>
             {guides.map((guide) => (
-              <GuideCard key={guide.id} guide={guide} />
+              <GuideCard key={guide.id} guide={guide} width={guideCardWidth} />
             ))}
           </ScrollView>
 
@@ -211,8 +226,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    flexShrink: 1,
   },
   locationText: {
+    flexShrink: 1,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
@@ -221,6 +238,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: Palette.grey150,
