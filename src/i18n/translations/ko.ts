@@ -1,3 +1,4 @@
+import type { FeaturedEventCategory } from '@/api/home';
 import type { PurposeId, TravelStyleId } from '@/api/onboarding';
 
 export interface Translations {
@@ -36,6 +37,18 @@ export interface Translations {
     title: string;
     subtitle: string;
     next: string;
+  };
+  home: {
+    locationPlaceholder: string;
+    searchPlaceholder: string;
+    featuredTitlePrefix: string;
+    featuredTitleConnector: string;
+    featuredTitleSuffix: string;
+    guidesSectionTitle: string;
+    seeAll: string;
+    languageKo: string;
+    languageEn: string;
+    categories: Record<FeaturedEventCategory, string>;
   };
 }
 
@@ -91,5 +104,22 @@ export const ko: Translations = {
     title: '취향 설정이 완료되었어요',
     subtitle: '선택한 여행지를 바탕으로\n맞춤 여행지를 추천해드릴게요!',
     next: '다음',
+  },
+  home: {
+    locationPlaceholder: '위치 정보 없음',
+    searchPlaceholder: '오늘은 어떤 여행을 해보실래요?',
+    featuredTitlePrefix: '한국',
+    featuredTitleConnector: '에 왔으면,',
+    featuredTitleSuffix: "월엔 '이건' 해야지!",
+    guidesSectionTitle: '호리가 알려주는 한국 여행 가이드',
+    seeAll: '전체보기',
+    languageKo: '한국어',
+    languageEn: 'English',
+    categories: {
+      POPULAR: '인기',
+      LOCAL_FESTIVAL: '지역 축제',
+      EXHIBITION_GALLERY: '전시/미술관',
+      NATURE_SPOT: '자연 명소',
+    },
   },
 };

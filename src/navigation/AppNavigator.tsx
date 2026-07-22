@@ -12,6 +12,10 @@ export default function AppNavigator() {
       <Stack.Screen name="complete" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="home" />
+      <Stack.Screen name="map" />
+      <Stack.Screen name="picks" />
+      <Stack.Screen name="saved" />
+      <Stack.Screen name="my" />
     </Stack>
   );
 }
