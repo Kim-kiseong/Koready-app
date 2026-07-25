@@ -1,4 +1,5 @@
 import { SymbolView } from 'expo-symbols';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
@@ -8,13 +9,30 @@ import StepProgressIndicator, {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
+const DEFAULT_RIGHT_ICON = (
+  <SymbolView
+    name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
+    size={18}
+    weight="regular"
+    tintColor={Palette.text}
+  />
+);
+
 export type OnboardingHeaderProps = {
   onBack: () => void;
   title?: string;
   progress?: StepProgressIndicatorProps;
+  rightIcon?: ReactNode;
+  onRightPress?: () => void;
 };
 
-export default function OnboardingHeader({ onBack, title, progress }: OnboardingHeaderProps) {
+export default function OnboardingHeader({
+  onBack,
+  title,
+  progress,
+  rightIcon = DEFAULT_RIGHT_ICON,
+  onRightPress,
+}: OnboardingHeaderProps) {
   return (
     <View style={styles.header}>
       <Pressable onPress={onBack} hitSlop={8} style={styles.iconSlot}>
@@ -34,15 +52,10 @@ export default function OnboardingHeader({ onBack, title, progress }: Onboarding
         )}
       </View>
 
-      {/* TODO: wire up settings navigation once that screen exists */}
-      <View style={styles.iconSlot}>
-        <SymbolView
-          name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
-          size={18}
-          weight="regular"
-          tintColor={Palette.text}
-        />
-      </View>
+      {/* TODO: wire up settings navigation once that screen exists, when rightIcon is left at its default */}
+      <Pressable onPress={onRightPress} hitSlop={8} style={styles.iconSlot}>
+        {rightIcon}
+      </Pressable>
     </View>
   );
 }

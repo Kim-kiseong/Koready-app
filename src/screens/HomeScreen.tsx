@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -14,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchFeaturedEvents, fetchTravelGuides, FEATURED_EVENT_CATEGORIES } from '@/api/home';
 import type { FeaturedEvent, FeaturedEventCategory, GuideArticle } from '@/api/home';
+import type { LanguageCode } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import EventCard from '@/components/EventCard';
 import GuideCard from '@/components/GuideCard';
+import LanguageSwitchModal from '@/components/LanguageSwitchModal';
 import PillChip from '@/components/PillChip';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -37,6 +40,7 @@ const GUIDE_CARD_GAP = 16;
 const SCREEN_PADDING = 16;
 
 export default function HomeScreen() {
+  const router = useRouter();
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const language = useLanguageStore((state) => state.language);
@@ -47,6 +51,7 @@ export default function HomeScreen() {
   const [events, setEvents] = useState<FeaturedEvent[]>([]);
   const [guides, setGuides] = useState<GuideArticle[]>([]);
   const [guidePage, setGuidePage] = useState(0);
+  const [pendingLanguage, setPendingLanguage] = useState<LanguageCode | null>(null);
 
   useEffect(() => {
     fetchFeaturedEvents(category).then(setEvents);
@@ -72,7 +77,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerRow}>
-          <View style={styles.locationRow}>
+          <Pressable style={styles.locationRow} hitSlop={8} onPress={() => router.push('/address')}>
             <CustomText style={styles.locationText} numberOfLines={1}>
               {locationLabel}
             </CustomText>
@@ -82,10 +87,13 @@ export default function HomeScreen() {
               weight="regular"
               tintColor={Palette.grey400}
             />
-          </View>
+          </Pressable>
 
           <View style={styles.languageToggle}>
-            <Pressable style={styles.languageSegment} onPress={() => setLanguage('KO')}>
+            <Pressable
+              style={styles.languageSegment}
+              hitSlop={10}
+              onPress={() => language !== 'KO' && setPendingLanguage('KO')}>
               {language === 'KO' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
@@ -93,7 +101,10 @@ export default function HomeScreen() {
                 {t.home.languageKo}
               </CustomText>
             </Pressable>
-            <Pressable style={styles.languageSegment} onPress={() => setLanguage('EN')}>
+            <Pressable
+              style={styles.languageSegment}
+              hitSlop={10}
+              onPress={() => language !== 'EN' && setPendingLanguage('EN')}>
               {language === 'EN' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
@@ -132,7 +143,7 @@ export default function HomeScreen() {
                 {t.home.featuredTitleSuffix}
               </CustomText>
             </View>
-            <SeeAllLink label={t.home.seeAll} />
+            <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/events')} />
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -159,7 +170,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <CustomText style={styles.sectionTitle}>{t.home.guidesSectionTitle}</CustomText>
-            <SeeAllLink label={t.home.seeAll} />
+            <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/guides')} />
           </View>
 
           <ScrollView
@@ -188,13 +199,26 @@ export default function HomeScreen() {
       </ScrollView>
 
       <BottomNavBar active="home" />
+
+      {pendingLanguage && (
+        <LanguageSwitchModal
+          visible
+          currentLanguage={language}
+          targetLanguage={pendingLanguage}
+          onCancel={() => setPendingLanguage(null)}
+          onConfirm={() => {
+            setLanguage(pendingLanguage);
+            setPendingLanguage(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-function SeeAllLink({ label }: { label: string }) {
+function SeeAllLink({ label, onPress }: { label: string; onPress?: () => void }) {
   return (
-    <View style={styles.seeAllRow}>
+    <Pressable style={styles.seeAllRow} onPress={onPress}>
       <CustomText style={styles.seeAllText}>{label}</CustomText>
       <SymbolView
         name={{ ios: 'chevron.right', android: 'arrow_forward_ios', web: 'arrow_forward_ios' }}
@@ -202,7 +226,7 @@ function SeeAllLink({ label }: { label: string }) {
         weight="regular"
         tintColor={Palette.grey500}
       />
-    </View>
+    </Pressable>
   );
 }
 

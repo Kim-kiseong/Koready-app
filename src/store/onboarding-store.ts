@@ -29,6 +29,7 @@ type OnboardingState = {
   hasHydrated: boolean;
   setPurpose: (purpose: PurposeId) => void;
   setLocation: (location: OnboardingLocation) => void;
+  clearLocation: () => void;
   toggleTravelStyle: (style: TravelStyleId) => void;
   toggleDestination: (destination: DestinationId) => void;
   reset: () => void;
@@ -44,6 +45,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       hasHydrated: false,
       setPurpose: (purpose) => set({ purpose }),
       setLocation: (location) => set({ location }),
+      clearLocation: () => set({ location: null }),
       toggleTravelStyle: (style) =>
         set((state) => ({
           travelStyles: toggleCapped(state.travelStyles, style, MAX_TRAVEL_STYLES),
