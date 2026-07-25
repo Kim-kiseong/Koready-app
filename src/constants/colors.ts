@@ -8,9 +8,13 @@ export const Palette = {
   grey150: '#F0F3F5',
   grey200: '#E8EEF2',
   grey300: '#D7DEE5',
+  grey350: '#B2BCC6',
   grey400: '#8B95A1',
+  grey500: '#6B7684',
   grey600: '#4E5968',
+  grey700: '#353D4A',
   grey900: '#1A1F26',
+  primaryPale: '#9BE6C6',
   appleBlack: '#242625',
 } as const;
 
