@@ -125,6 +125,7 @@ export interface Translations {
     next: string;
     loadError: string;
     submitError: string;
+    linkOpenError: string;
   };
 }
 
@@ -301,5 +302,6 @@ export const ko: Translations = {
     next: '다음',
     loadError: '약관 정보를 불러오지 못했어요.',
     submitError: '약관 동의에 실패했어요.',
+    linkOpenError: '페이지를 열지 못했어요.',
   },
 };

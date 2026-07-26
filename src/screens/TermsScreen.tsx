@@ -137,7 +137,9 @@ export default function TermsScreen() {
   };
 
   const openTerm = (term: RequiredTermItem) => {
-    WebBrowser.openBrowserAsync(term.contentUrl);
+    WebBrowser.openBrowserAsync(term.contentUrl).catch((error) => {
+      Alert.alert(t.terms.linkOpenError, extractErrorMessage(error));
+    });
   };
 
   const handleNext = async () => {
