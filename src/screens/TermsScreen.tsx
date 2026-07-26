@@ -116,8 +116,7 @@ export default function TermsScreen() {
 
   const requiredTerms = terms?.filter((term) => term.required) ?? [];
   const optionalTerms = terms?.filter((term) => !term.required) ?? [];
-  const requiredAgreed =
-    requiredTerms.length > 0 && requiredTerms.every((term) => agreedMap[term.termVersionId]);
+  const requiredAgreed = requiredTerms.every((term) => agreedMap[term.termVersionId]);
   const allAgreed = terms !== null && terms.length > 0 && terms.every((term) => agreedMap[term.termVersionId]);
 
   const toggleGroup = (group: RequiredTermItem[]) => {
@@ -213,7 +212,11 @@ export default function TermsScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton title={t.terms.next} disabled={!requiredAgreed || isSubmitting} onPress={handleNext} />
+        <PrimaryButton
+          title={t.terms.next}
+          disabled={!terms || !requiredAgreed || isSubmitting}
+          onPress={handleNext}
+        />
       </View>
     </SafeAreaView>
   );
