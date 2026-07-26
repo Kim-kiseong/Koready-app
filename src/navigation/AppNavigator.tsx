@@ -4,6 +4,7 @@ export default function AppNavigator() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
+      <Stack.Screen name="terms" />
       <Stack.Screen name="language" />
       <Stack.Screen name="purpose" />
       <Stack.Screen name="location" />

@@ -10,13 +10,14 @@ import type { SocialProvider } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 // Dev-only bypass: lets onboarding be tested before social login keys exist.
 const DEV_MOCK_SESSION = {
   tokenType: 'Bearer' as const,
-  accessToken: 'mock-token',
+  accessToken: DEV_MOCK_ACCESS_TOKEN,
   refreshToken: 'mock-refresh-token',
   accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -26,7 +27,7 @@ const DEV_MOCK_SESSION = {
     profileImageUrl: null,
     preferredLanguage: 'KO' as const,
   },
-  nextStep: 'LANGUAGE' as const,
+  nextStep: 'TERMS' as const,
 };
 
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.

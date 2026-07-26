@@ -115,6 +115,18 @@ export interface Translations {
     routePlaceholder: string;
     matePlaceholder: string;
   };
+  terms: {
+    headerTitle: string;
+    title: string;
+    agreeAll: string;
+    connector: string;
+    requiredSuffix: string;
+    optionalSuffix: string;
+    next: string;
+    loadError: string;
+    submitError: string;
+    linkOpenError: string;
+  };
 }
 
 export const ko: Translations = {
@@ -279,5 +291,17 @@ export const ko: Translations = {
     nearbyTitle: '같이 가보면 좋은 명소',
     routePlaceholder: '이동 정보는 준비 중이에요.',
     matePlaceholder: '메이트 기능은 준비 중이에요.',
+  },
+  terms: {
+    headerTitle: '약관동의',
+    title: '여행을 떠나기 전\n약관에 동의해주세요!',
+    agreeAll: '전체 동의',
+    connector: ' 및 ',
+    requiredSuffix: ' 동의',
+    optionalSuffix: ' (선택)',
+    next: '다음',
+    loadError: '약관 정보를 불러오지 못했어요.',
+    submitError: '약관 동의에 실패했어요.',
+    linkOpenError: '페이지를 열지 못했어요.',
   },
 };

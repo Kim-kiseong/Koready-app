@@ -10,9 +10,7 @@ export function resolveNextStepRoute(nextStep: NextStep): Href {
       return '/purpose';
     case 'COMPLETED':
       return '/home';
-    // TERMS screen doesn't exist yet — temporarily route through language
-    // selection until it's built.
     case 'TERMS':
-      return '/language';
+      return '/terms';
   }
 }
