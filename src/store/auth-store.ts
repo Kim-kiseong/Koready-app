@@ -2,7 +2,14 @@ import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { AuthUser, MyUserResponse, NextStep, SignupStatus, TokenResponse } from '@/api/types';
+import type {
+  AuthUser,
+  LanguageResponse,
+  MyUserResponse,
+  NextStep,
+  SignupStatus,
+  TokenResponse,
+} from '@/api/types';
 
 import { secureStorage } from './secure-storage';
 import { useLanguageStore } from './language-store';
@@ -25,6 +32,7 @@ type AuthState = {
   hasHydrated: boolean;
   setSession: (session: TokenResponse) => void;
   applyMyUser: (data: MyUserResponse) => void;
+  applyLanguageChange: (data: LanguageResponse) => void;
   clearSession: () => void;
 };
 
@@ -66,6 +74,13 @@ export const useAuthStore = create<AuthState>()(
           termsNeedReAgreement: data.termsNeedReAgreement,
         });
         useLanguageStore.getState().setLanguage(data.user.preferredLanguage);
+      },
+      applyLanguageChange: (data) => {
+        set((state) => ({
+          nextStep: data.nextStep,
+          user: state.user ? { ...state.user, preferredLanguage: data.language } : state.user,
+        }));
+        useLanguageStore.getState().setLanguage(data.language);
       },
       clearSession: () => {
         set({

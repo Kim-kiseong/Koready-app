@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { updateMyLanguage } from '@/api/user';
 import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -10,19 +11,28 @@ import SelectableCard from '@/components/SelectableCard';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useLanguageStore } from '@/store/language-store';
+import { resolveNextStepRoute } from '@/navigation/next-step-route';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function LanguageScreen() {
   const router = useRouter();
   const t = useTranslation();
-  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
   const [selected, setSelected] = useState<LanguageCode | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleNext = () => {
-    if (!selected) return;
-    // TODO: sync preferredLanguage to the backend once that endpoint exists.
-    setLanguage(selected);
-    router.push('/purpose');
+  const handleNext = async () => {
+    if (!selected || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await updateMyLanguage(selected);
+      applyLanguageChange(result);
+      router.push(resolveNextStepRoute(result.nextStep));
+    } catch (error) {
+      Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -50,7 +60,11 @@ export default function LanguageScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton title={t.language.next} disabled={!selected} onPress={handleNext} />
+        <PrimaryButton
+          title={t.language.next}
+          disabled={!selected || isSubmitting}
+          onPress={handleNext}
+        />
       </View>
     </SafeAreaView>
   );

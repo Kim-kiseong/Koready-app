@@ -54,6 +54,25 @@ export type MyUserEnvelope = {
   traceId: string;
 };
 
+export type LanguageRequest = {
+  language: LanguageCode;
+};
+
+export type LanguageResponse = {
+  language: LanguageCode;
+  // Server-computed from the current signup state — the client must not guess this.
+  nextStep: NextStep;
+  updatedAt: string;
+};
+
+export type LanguageEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: LanguageResponse;
+  traceId: string;
+};
+
 export type TokenResponse = {
   tokenType: 'Bearer';
   accessToken: string;

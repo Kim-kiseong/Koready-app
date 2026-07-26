@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 
 import { API_BASE_URL } from '@/constants/env';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 
 import type { ApiErrorEnvelope, TokenEnvelope, TokenResponse } from './types';
 
@@ -17,6 +18,9 @@ client.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.set('Authorization', `Bearer ${accessToken}`);
   }
+  // Keeps the server's locale-dependent responses (e.g. error messages) in
+  // sync with whatever language the user last confirmed via PATCH /users/me/language.
+  config.headers.set('Accept-Language', useLanguageStore.getState().language);
   return config;
 });
 
