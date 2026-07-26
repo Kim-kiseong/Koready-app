@@ -25,7 +25,7 @@ export default function PlaceInfo({ title, address, tags, isSaved, onToggleSave 
             name={{ ios: isSaved ? 'heart.fill' : 'heart', android: isSaved ? 'favorite' : 'favorite_border', web: isSaved ? 'favorite' : 'favorite_border' }}
             size={24}
             weight="regular"
-            tintColor={isSaved ? Palette.primary : Palette.grey400}
+            tintColor={isSaved ? Palette.red300 : Palette.grey400}
           />
         </Pressable>
       </View>
