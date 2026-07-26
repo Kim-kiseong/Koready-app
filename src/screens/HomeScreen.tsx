@@ -162,7 +162,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.eventRow}>
             {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })} />
             ))}
           </ScrollView>
         </View>

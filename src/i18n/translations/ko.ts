@@ -103,6 +103,18 @@ export interface Translations {
     cancel: string;
     apply: string;
   };
+  placeDetail: {
+    loading: string;
+    tabs: {
+      description: string;
+      route: string;
+      mate: string;
+    };
+    enjoyTitle: string;
+    nearbyTitle: string;
+    routePlaceholder: string;
+    matePlaceholder: string;
+  };
 }
 
 export const ko: Translations = {
@@ -255,5 +267,17 @@ export const ko: Translations = {
     },
     cancel: '취소',
     apply: '적용하기',
+  },
+  placeDetail: {
+    loading: '정보를 불러오는 중이에요.',
+    tabs: {
+      description: '설명',
+      route: '이동',
+      mate: '메이트',
+    },
+    enjoyTitle: '이렇게 즐겨보세요',
+    nearbyTitle: '같이 가보면 좋은 명소',
+    routePlaceholder: '이동 정보는 준비 중이에요.',
+    matePlaceholder: '메이트 기능은 준비 중이에요.',
   },
 };
