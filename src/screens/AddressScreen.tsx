@@ -28,7 +28,11 @@ export default function AddressScreen() {
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
-    fetchMyLocations().then(seedSavedAddresses);
+    fetchMyLocations()
+      .then(seedSavedAddresses)
+      .catch(() => {
+        // Keep showing the cached list; nothing actionable to do here.
+      });
   }, [seedSavedAddresses]);
 
   const handleSelectSaved = async (option: UserLocationResponse) => {
