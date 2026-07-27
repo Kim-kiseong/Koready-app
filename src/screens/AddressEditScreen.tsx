@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAxiosError } from 'axios';
 
+import { deleteMyLocation, fetchMyLocations } from '@/api/address';
 import AddressRow from '@/components/AddressRow';
 import CustomText from '@/components/CustomText';
 import DeleteAddressModal from '@/components/DeleteAddressModal';
@@ -14,28 +16,72 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { useAddressStore } from '@/store/address-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
-type DeleteTarget = { id: 'current' | string; title: string };
+type DeleteTarget = { id: 'current' | number; title: string };
 
 export default function AddressEditScreen() {
   const router = useRouter();
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
+  const setLocation = useOnboardingStore((state) => state.setLocation);
+  const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const clearLocation = useOnboardingStore((state) => state.clearLocation);
   const savedAddresses = useAddressStore((state) => state.savedAddresses);
-  const removeSavedAddress = useAddressStore((state) => state.removeSavedAddress);
+  const replaceSavedAddresses = useAddressStore((state) => state.replaceSavedAddresses);
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const otherAddresses = savedAddresses.filter((option) => option.title !== location?.displayAddress);
+  const otherAddresses = savedAddresses.filter(
+    (option) =>
+      !option.default && option.customLabel !== location?.displayAddress && option.displayName !== location?.displayAddress,
+  );
 
-  const handleConfirmDelete = () => {
-    if (!deleteTarget) return;
-    if (deleteTarget.id === 'current') {
-      clearLocation();
-    } else {
-      removeSavedAddress(deleteTarget.id);
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    const locationId = deleteTarget.id === 'current' ? currentLocationId : deleteTarget.id;
     setDeleteTarget(null);
+
+    // No backend record to delete (e.g. the mock "current location" button) — just clear locally.
+    if (locationId == null) {
+      if (deleteTarget.id === 'current') clearLocation();
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      try {
+        await deleteMyLocation(locationId);
+      } catch (error) {
+        // 404 means it's already gone server-side — safe to fall through and resync.
+        if (!(isAxiosError(error) && error.response?.status === 404)) {
+          Alert.alert('오류', '위치 삭제에 실패했습니다.');
+          return;
+        }
+      }
+
+      // Deleting the default location reassigns default server-side; a 204
+      // response doesn't say to what, so re-fetch to find the new one.
+      const refreshed = await fetchMyLocations();
+      replaceSavedAddresses(refreshed);
+      const newDefault = refreshed.find((item) => item.default) ?? null;
+      if (newDefault) {
+        setLocation({
+          displayAddress: newDefault.customLabel ?? newDefault.displayName,
+          latitude: newDefault.latitude,
+          longitude: newDefault.longitude,
+          source: 'search',
+        });
+        setCurrentLocationId(newDefault.locationId);
+      } else {
+        clearLocation();
+      }
+    } catch {
+      // The delete itself likely succeeded server-side; only the resync failed.
+      Alert.alert('오류', '위치 목록을 새로고침하지 못했어요. 화면을 다시 열어 확인해 주세요.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -62,13 +108,18 @@ export default function AddressEditScreen() {
           )}
           {otherAddresses.map((option) => (
             <AddressRow
-              key={option.id}
-              title={option.title}
-              subtitle={option.subtitle}
+              key={option.locationId}
+              title={option.customLabel ?? option.displayName}
+              subtitle={option.roadAddress ?? option.address ?? undefined}
               right={
                 <DeleteChip
                   label={t.addressEdit.delete}
-                  onPress={() => setDeleteTarget({ id: option.id, title: option.title })}
+                  onPress={() =>
+                    setDeleteTarget({
+                      id: option.locationId,
+                      title: option.customLabel ?? option.displayName,
+                    })
+                  }
                 />
               }
             />

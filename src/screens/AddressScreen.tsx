@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAxiosError } from 'axios';
 
-import { fetchSavedAddresses, type SavedAddressOption } from '@/api/address';
+import { fetchMyLocations, setDefaultLocation, type UserLocationResponse } from '@/api/address';
 import AddressRow from '@/components/AddressRow';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
@@ -20,21 +21,54 @@ export default function AddressScreen() {
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const setLocation = useOnboardingStore((state) => state.setLocation);
+  const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const savedAddresses = useAddressStore((state) => state.savedAddresses);
-  const seedSavedAddresses = useAddressStore((state) => state.seedSavedAddresses);
+  const replaceSavedAddresses = useAddressStore((state) => state.replaceSavedAddresses);
+  const setDefaultAddress = useAddressStore((state) => state.setDefaultAddress);
+  const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
-    fetchSavedAddresses().then(seedSavedAddresses);
-  }, [seedSavedAddresses]);
+    // replaceSavedAddresses, not seedSavedAddresses — hasSeeded persists
+    // across app restarts, so the seed-once guard would otherwise leave this
+    // screen showing a stale cached list forever after the first successful load.
+    fetchMyLocations()
+      .then(replaceSavedAddresses)
+      .catch(() => {
+        // Keep showing the cached list; nothing actionable to do here.
+      });
+  }, [replaceSavedAddresses]);
 
-  const handleSelectSaved = (option: SavedAddressOption) => {
-    setLocation({ displayAddress: option.title, latitude: null, longitude: null, source: 'search' });
+  const handleSelectSaved = async (option: UserLocationResponse) => {
+    if (isSwitching) return;
+    setIsSwitching(true);
+    try {
+      const updated = await setDefaultLocation(option.locationId);
+      setLocation({
+        displayAddress: updated.customLabel ?? updated.displayName,
+        latitude: updated.latitude,
+        longitude: updated.longitude,
+        source: 'search',
+      });
+      setCurrentLocationId(updated.locationId);
+      setDefaultAddress(updated.locationId);
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        Alert.alert('오류', '삭제되었거나 존재하지 않는 위치예요.');
+      } else {
+        Alert.alert('오류', '기본 위치 변경에 실패했습니다.');
+      }
+    } finally {
+      setIsSwitching(false);
+    }
   };
 
-  // The currently-active location is always the first row; any saved option
-  // that happens to match it is dropped from the list below to avoid showing
-  // the same address twice.
-  const otherAddresses = savedAddresses.filter((option) => option.title !== location?.displayAddress);
+  // The currently-active location is always the first row; the server's
+  // default=true entry (and any option that happens to match it by label)
+  // is dropped from the list below to avoid showing the same address twice.
+  const otherAddresses = savedAddresses.filter(
+    (option) =>
+      !option.default && option.customLabel !== location?.displayAddress && option.displayName !== location?.displayAddress,
+  );
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -78,9 +112,9 @@ export default function AddressScreen() {
           )}
           {otherAddresses.map((option) => (
             <AddressRow
-              key={option.id}
-              title={option.title}
-              subtitle={option.subtitle}
+              key={option.locationId}
+              title={option.customLabel ?? option.displayName}
+              subtitle={option.roadAddress ?? option.address ?? undefined}
               right={<Checkbox selected={false} />}
               onPress={() => handleSelectSaved(option)}
             />

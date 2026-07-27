@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchDestinations, type Destination } from '@/api/onboarding';
+import { fetchCurrentCandidateSet, type OnboardingCandidateSetResponse } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import DestinationCard from '@/components/DestinationCard';
 import OnboardingHeader from '@/components/OnboardingHeader';
@@ -16,22 +16,41 @@ import { useOnboardingStore } from '@/store/onboarding-store';
 export default function DestinationScreen() {
   const router = useRouter();
   const t = useTranslation();
-  const destinations = useOnboardingStore((state) => state.destinations);
-  const toggleDestination = useOnboardingStore((state) => state.toggleDestination);
-  const [options, setOptions] = useState<Destination[]>([]);
+  const selectedPreferencePlaceIds = useOnboardingStore((state) => state.selectedPreferencePlaceIds);
+  const toggleSelectedPreferencePlace = useOnboardingStore(
+    (state) => state.toggleSelectedPreferencePlace,
+  );
+  const setCandidateSet = useOnboardingStore((state) => state.setCandidateSet);
+  const [candidateSet, setCandidateSetData] = useState<OnboardingCandidateSetResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchDestinations().then(setOptions);
-  }, []);
+    fetchCurrentCandidateSet()
+      .then((data) => {
+        setCandidateSetData(data);
+        setCandidateSet(data.candidateSetId, data.version);
+      })
+      .catch(() => {
+        Alert.alert('오류', '여행지 후보를 불러오지 못했습니다.');
+      })
+      .finally(() => setIsLoading(false));
+  }, [setCandidateSet]);
 
   const handleNext = () => {
-    if (destinations.length === 0) return;
+    if (selectedPreferencePlaceIds.length === 0) return;
     router.push('/complete');
   };
 
+  const sortedItems = candidateSet
+    ? [...candidateSet.items].sort((a, b) => a.displayOrder - b.displayOrder)
+    : [];
+  // Always 3 per the API's maxSelection enum — sortedItems is empty until
+  // candidateSet loads anyway, so this default never actually gets tapped.
+  const maxSelection = candidateSet?.maxSelection ?? 3;
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 3, totalSteps: 3 }} />
+      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 2, totalSteps: 2 }} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>
@@ -40,12 +59,12 @@ export default function DestinationScreen() {
         </View>
 
         <View style={styles.grid}>
-          {options.map((destination) => (
+          {sortedItems.map((item) => (
             <DestinationCard
-              key={destination.id}
-              destination={destination}
-              selected={destinations.includes(destination.id)}
-              onPress={() => toggleDestination(destination.id)}
+              key={item.placeId}
+              item={item}
+              selected={selectedPreferencePlaceIds.includes(item.placeId)}
+              onPress={() => toggleSelectedPreferencePlace(item.placeId, maxSelection)}
             />
           ))}
         </View>
@@ -54,7 +73,7 @@ export default function DestinationScreen() {
       <View style={styles.footer}>
         <PrimaryButton
           title={t.destination.next}
-          disabled={destinations.length === 0}
+          disabled={isLoading || selectedPreferencePlaceIds.length === 0}
           onPress={handleNext}
         />
       </View>
