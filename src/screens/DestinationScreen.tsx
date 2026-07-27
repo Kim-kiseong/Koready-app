@@ -41,9 +41,16 @@ export default function DestinationScreen() {
     router.push('/complete');
   };
 
+  const sortedItems = candidateSet
+    ? [...candidateSet.items].sort((a, b) => a.displayOrder - b.displayOrder)
+    : [];
+  // Always 3 per the API's maxSelection enum — sortedItems is empty until
+  // candidateSet loads anyway, so this default never actually gets tapped.
+  const maxSelection = candidateSet?.maxSelection ?? 3;
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 3, totalSteps: 3 }} />
+      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 2, totalSteps: 2 }} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>
@@ -52,14 +59,12 @@ export default function DestinationScreen() {
         </View>
 
         <View style={styles.grid}>
-          {candidateSet?.items.map((item) => (
+          {sortedItems.map((item) => (
             <DestinationCard
               key={item.placeId}
               item={item}
               selected={selectedPreferencePlaceIds.includes(item.placeId)}
-              onPress={() =>
-                toggleSelectedPreferencePlace(item.placeId, candidateSet.maxSelection)
-              }
+              onPress={() => toggleSelectedPreferencePlace(item.placeId, maxSelection)}
             />
           ))}
         </View>

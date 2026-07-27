@@ -6,7 +6,6 @@ export default function AppNavigator() {
       <Stack.Screen name="login" />
       <Stack.Screen name="terms" />
       <Stack.Screen name="language" />
-      <Stack.Screen name="purpose" />
       <Stack.Screen name="location" />
       <Stack.Screen name="travel-style" />
       <Stack.Screen name="destinations" />

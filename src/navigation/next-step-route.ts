@@ -9,7 +9,7 @@ export function resolveNextStepRoute(nextStep: NextStep): Href {
     case 'LANGUAGE':
       return '/language';
     case 'ONBOARDING':
-      return '/purpose';
+      return '/location';
     case 'COMPLETED':
       return '/home';
     case 'TERMS':
@@ -32,10 +32,10 @@ function onboardingStepRoute(step: OnboardingStep): Href {
 
 // GET /users/me/onboarding — called when re-entering the onboarding flow
 // (e.g. app restart) so it resumes on the exact screen the server has saved
-// progress for, and hydrates onboarding-store with that progress. The
-// purpose screen itself isn't tracked server-side, so it's always shown
-// first on a fresh login/language change — this resolver is only used for
-// resuming an already-started flow.
+// progress for, and hydrates onboarding-store with that progress. A fresh
+// login/language change skips this and goes straight to LOCATION via
+// resolveNextStepRoute — this resolver is only for resuming an
+// already-started flow.
 export async function resolveOnboardingResumeRoute(): Promise<Href> {
   const progress = await fetchOnboardingProgress();
   useOnboardingStore.getState().applyProgress(progress);

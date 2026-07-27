@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { OnboardingProgressResponse, PurposeId, TravelStyleId } from '@/api/onboarding';
+import type { OnboardingProgressResponse, TravelStyleId } from '@/api/onboarding';
 
 import { secureStorage } from './secure-storage';
 
@@ -21,7 +21,6 @@ export type OnboardingLocation = {
 };
 
 type OnboardingState = {
-  purpose: PurposeId | null;
   location: OnboardingLocation | null;
   travelStyles: TravelStyleId[];
   // Real backend identifiers, populated from GET /users/me/onboarding
@@ -32,12 +31,12 @@ type OnboardingState = {
   candidateSetVersion: number | null;
   selectedPreferencePlaceIds: number[];
   hasHydrated: boolean;
-  setPurpose: (purpose: PurposeId) => void;
   setLocation: (location: OnboardingLocation) => void;
   setCurrentLocationId: (locationId: number | null) => void;
   clearLocation: () => void;
   toggleTravelStyle: (style: TravelStyleId) => void;
   toggleSelectedPreferencePlace: (placeId: number, max: number) => void;
+  clearPreferencePlaceSelection: () => void;
   // Records which published candidate set the user is choosing from. If it
   // differs from what's already stored (a newer set got published since the
   // last visit), any previously selected placeIds are cleared since they
@@ -50,7 +49,6 @@ type OnboardingState = {
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
-      purpose: null,
       location: null,
       travelStyles: [],
       currentLocationId: null,
@@ -58,7 +56,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       candidateSetVersion: null,
       selectedPreferencePlaceIds: [],
       hasHydrated: false,
-      setPurpose: (purpose) => set({ purpose }),
       setLocation: (location) => set({ location }),
       setCurrentLocationId: (locationId) => set({ currentLocationId: locationId }),
       clearLocation: () => set({ location: null, currentLocationId: null }),
@@ -70,6 +67,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         set((state) => ({
           selectedPreferencePlaceIds: toggleCapped(state.selectedPreferencePlaceIds, placeId, max),
         })),
+      clearPreferencePlaceSelection: () => set({ selectedPreferencePlaceIds: [] }),
       setCandidateSet: (candidateSetId, version) =>
         set((state) =>
           state.candidateSetId === candidateSetId && state.candidateSetVersion === version
@@ -86,7 +84,6 @@ export const useOnboardingStore = create<OnboardingState>()(
         }),
       reset: () =>
         set({
-          purpose: null,
           location: null,
           travelStyles: [],
           currentLocationId: null,
@@ -99,7 +96,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       name: 'onboarding-storage',
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
-        purpose: state.purpose,
         location: state.location,
         travelStyles: state.travelStyles,
         currentLocationId: state.currentLocationId,

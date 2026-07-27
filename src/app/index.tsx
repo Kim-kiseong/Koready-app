@@ -28,7 +28,7 @@ export default function Index() {
         }
         if (data.nextStep === 'ONBOARDING') {
           // Resume on the exact onboarding screen the server has progress
-          // for, instead of always restarting at /purpose.
+          // for, instead of always restarting at /location.
           try {
             setRoute(await resolveOnboardingResumeRoute());
             return;

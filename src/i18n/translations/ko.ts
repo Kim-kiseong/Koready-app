@@ -1,5 +1,5 @@
 import type { EventDateFilterId, EventRegionId, FeaturedEventCategory, GuideCategoryId } from '@/api/home';
-import type { PurposeId, TravelStyleId } from '@/api/onboarding';
+import type { TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 
 export interface Translations {
@@ -7,12 +7,6 @@ export interface Translations {
     title: string;
     subtitle: string;
     next: string;
-  };
-  purpose: {
-    title: string;
-    subtitle: string;
-    next: string;
-    options: Record<PurposeId, string>;
   };
   location: {
     title: string;
@@ -134,20 +128,6 @@ export const ko: Translations = {
     title: '언어를 선택해주세요',
     subtitle: 'Choose your language',
     next: '다음',
-  },
-  purpose: {
-    title: '한국에 오신 목적이 무엇인가요?',
-    subtitle: '여행 목적에 맞는 장소와 경험을 추천해드려요.',
-    next: '다음',
-    options: {
-      EXCHANGE_STUDENT: '교환학생',
-      LANGUAGE_COURSE: '어학연수',
-      SHORT_TRIP: '단기여행',
-      DEGREE_PROGRAM: '학위과정',
-      INTERN_JOB: '인턴/취업',
-      OTHER: '기타',
-      WORKING_HOLIDAY: '워킹홀리데이',
-    },
   },
   location: {
     title: '위치 검색',

@@ -32,18 +32,17 @@ export default function AddressSearchScreen() {
 
   useEffect(() => {
     const q = query.trim();
-    if (!q) {
+    // The API accepts 1 char, but 2+ keeps result quality reasonable.
+    if (q.length < 2) {
       setResults([]);
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchLocations(q)
-        .then((items) => {
-          if (!cancelled) setResults(items);
-        })
+      searchLocations(q, 10, controller.signal)
+        .then((items) => setResults(items))
         .catch((error) => {
-          if (cancelled) return;
+          if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
           setResults([]);
           if (isAxiosError(error) && error.response?.status === 503) {
             Alert.alert('오류', '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.');
@@ -51,8 +50,8 @@ export default function AddressSearchScreen() {
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => {
-      cancelled = true;
       clearTimeout(timer);
+      controller.abort();
     };
   }, [query]);
 
