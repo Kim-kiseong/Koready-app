@@ -23,17 +23,20 @@ export default function AddressScreen() {
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const savedAddresses = useAddressStore((state) => state.savedAddresses);
-  const seedSavedAddresses = useAddressStore((state) => state.seedSavedAddresses);
+  const replaceSavedAddresses = useAddressStore((state) => state.replaceSavedAddresses);
   const setDefaultAddress = useAddressStore((state) => state.setDefaultAddress);
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
+    // replaceSavedAddresses, not seedSavedAddresses — hasSeeded persists
+    // across app restarts, so the seed-once guard would otherwise leave this
+    // screen showing a stale cached list forever after the first successful load.
     fetchMyLocations()
-      .then(seedSavedAddresses)
+      .then(replaceSavedAddresses)
       .catch(() => {
         // Keep showing the cached list; nothing actionable to do here.
       });
-  }, [seedSavedAddresses]);
+  }, [replaceSavedAddresses]);
 
   const handleSelectSaved = async (option: UserLocationResponse) => {
     if (isSwitching) return;
