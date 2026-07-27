@@ -3,14 +3,14 @@ import type { TravelStyleId } from '@/api/onboarding';
 export type FeaturedEventCategory =
   | 'POPULAR'
   | 'LOCAL_FESTIVAL'
-  | 'EXHIBITION_GALLERY'
-  | 'NATURE_SPOT';
+  | 'EXHIBITION_MUSEUM'
+  | 'NATURE';
 
 export const FEATURED_EVENT_CATEGORIES: readonly FeaturedEventCategory[] = [
   'POPULAR',
   'LOCAL_FESTIVAL',
-  'EXHIBITION_GALLERY',
-  'NATURE_SPOT',
+  'EXHIBITION_MUSEUM',
+  'NATURE',
 ];
 
 export type FeaturedEvent = {
@@ -42,8 +42,8 @@ const MOCK_FEATURED_EVENTS: Record<FeaturedEventCategory, FeaturedEvent[]> = {
     },
   ],
   LOCAL_FESTIVAL: [],
-  EXHIBITION_GALLERY: [],
-  NATURE_SPOT: [],
+  EXHIBITION_MUSEUM: [],
+  NATURE: [],
 };
 
 // TODO: replace with client.get('/home/featured-events', { params: { category } })
@@ -110,7 +110,7 @@ export async function fetchGuideVideos(category: GuideCategoryId): Promise<Guide
   return MOCK_GUIDE_VIDEOS[category];
 }
 
-export type EventListingCategory = 'LOCAL_FESTIVAL' | 'NATURE_SPOT' | 'EXHIBITION_GALLERY';
+export type EventListingCategory = 'LOCAL_FESTIVAL' | 'NATURE' | 'EXHIBITION_MUSEUM';
 
 export type EventSortOrder = 'RECOMMENDED' | 'DEADLINE';
 
@@ -146,7 +146,7 @@ const MOCK_EVENT_LISTINGS: EventListing[] = [
     title: '대나무숲 산책',
     location: '담양',
     dateRangeLabel: '5.1(금)~5.5(화)',
-    category: 'NATURE_SPOT',
+    category: 'NATURE',
     month: 5,
     deadline: '2026-05-05',
     imageKey: 'DAMYANG_BAMBOO_FOREST_WALK',
@@ -156,7 +156,7 @@ const MOCK_EVENT_LISTINGS: EventListing[] = [
     title: '국립현대미술관',
     location: '서울',
     dateRangeLabel: '5.3(일)~6.15(월)',
-    category: 'EXHIBITION_GALLERY',
+    category: 'EXHIBITION_MUSEUM',
     month: 5,
     deadline: '2026-06-15',
     imageKey: 'NATIONAL_MUSEUM_OF_MODERN_ART',

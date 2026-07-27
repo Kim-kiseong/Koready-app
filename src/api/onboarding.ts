@@ -1,3 +1,6 @@
+import { client } from './client';
+import type { NextStep } from './types';
+
 export type PurposeId =
   | 'EXCHANGE_STUDENT'
   | 'LANGUAGE_COURSE'
@@ -17,123 +20,204 @@ export const PURPOSE_IDS: readonly PurposeId[] = [
   'WORKING_HOLIDAY',
 ];
 
+// Matches the backend's TravelStyle enum exactly (see PUT /users/me/onboarding) —
+// values are sent as-is in the onboarding completion request.
 export type TravelStyleId =
   | 'LOCAL_FOOD'
   | 'LOCAL_FESTIVAL'
   | 'TRADITIONAL_MARKET'
   | 'CULTURE_EXPERIENCE'
-  | 'NATURE_SPOT'
-  | 'EXHIBITION_GALLERY'
-  | 'DRAMA_FILMING_SITE';
+  | 'NATURE'
+  | 'EXHIBITION_MUSEUM'
+  | 'DRAMA_LOCATION';
 
 export const TRAVEL_STYLE_IDS: readonly TravelStyleId[] = [
   'LOCAL_FOOD',
   'LOCAL_FESTIVAL',
   'TRADITIONAL_MARKET',
   'CULTURE_EXPERIENCE',
-  'NATURE_SPOT',
-  'EXHIBITION_GALLERY',
-  'DRAMA_FILMING_SITE',
+  'NATURE',
+  'EXHIBITION_MUSEUM',
+  'DRAMA_LOCATION',
 ];
 
-export type LocationSearchResult = {
-  zipNo: string;
-  roadAddr: string;
-  jibunAddr: string;
+export type LocationSearchResultType = 'ADDRESS' | 'PLACE';
+
+export type LocationSearchItem = {
+  // Opaque, 10-minute-TTL token — resubmit as-is with the location-save
+  // request. The client never parses or derives anything from it.
+  searchResultToken: string;
+  provider: 'KAKAO';
+  // ADDRESS = 주소 검색 결과, PLACE = 학교·건물·장소 키워드 결과
+  resultType: LocationSearchResultType;
+  providerPlaceId: string | null;
+  name: string;
+  roadAddress: string | null;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  sido: string;
+  sigungu: string;
+  dong: string | null;
+  serviceRegionCode: ServiceRegionCode;
 };
 
-const MOCK_LOCATIONS: LocationSearchResult[] = [
-  {
-    zipNo: '02845',
-    roadAddr: '서울특별시 성북구 보문로34가길 17 (동선동3가)',
-    jibunAddr: '서울특별시 성북구 동선동3가 237 성신여자대학교 직장어린이집 및 기숙사',
-  },
-  {
-    zipNo: '06236',
-    roadAddr: '서울특별시 강남구 테헤란로 152',
-    jibunAddr: '서울특별시 강남구 역삼동 737',
-  },
-  {
-    zipNo: '06236',
-    roadAddr: '서울특별시 강남구 테헤란로 231',
-    jibunAddr: '서울특별시 강남구 역삼동 803',
-  },
-  {
-    zipNo: '03181',
-    roadAddr: '서울특별시 종로구 세종대로 209',
-    jibunAddr: '서울특별시 종로구 세종로 82',
-  },
-  {
-    zipNo: '04523',
-    roadAddr: '서울특별시 중구 세종대로 110',
-    jibunAddr: '서울특별시 중구 태평로1가 31',
-  },
-];
+type LocationSearchEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: { items: LocationSearchItem[] };
+  traceId: string;
+};
 
-// TODO: replace with client.get<LocationSearchEnvelope>('/locations/search', { params: { query } })
-// once the endpoint exists. Real response is expected to mirror Korea's road-name address
-// API shape ({ zipNo, roadAddr, jibunAddr }) — the mock above already uses it, so screen
-// code needs no reshaping when this goes live.
-export async function searchLocations(query: string): Promise<LocationSearchResult[]> {
+// GET /locations/search — call after debouncing the search box input
+// (300~500ms). The backend merges Kakao address + keyword search, dedupes,
+// and normalizes addresses server-side, so a single request is enough. No
+// matches is a normal 200 with items: [].
+export async function searchLocations(query: string, limit = 10): Promise<LocationSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
-  return MOCK_LOCATIONS.filter((r) => r.roadAddr.includes(q) || r.jibunAddr.includes(q));
+  const response = await client.get<LocationSearchEnvelope>('/locations/search', {
+    params: { query: q, limit },
+  });
+  return response.data.data.items;
 }
 
-export type DestinationId =
-  | 'NATIONAL_MUSEUM'
-  | 'JEONJU_HANOK_VILLAGE'
-  | 'GWANGJANG_MARKET'
-  | 'HALLASAN'
-  | 'YEOSU_CABLE_CAR'
-  | 'GAMCHEON_VILLAGE'
-  | 'MYEONGDONG'
-  | 'NAMI_ISLAND'
-  | 'BORYEONG_MUD_FESTIVAL'
-  | 'NONSAN_SUNSHINE_LAND';
+export type OnboardingStep = 'LOCATION' | 'TRAVEL_STYLES' | 'PREFERENCE_PLACES' | 'COMPLETED';
 
-export type Destination = {
-  id: DestinationId;
-  name: string;
-  tags: [string, string];
-};
-
-// TODO: replace with a real GET /destinations response once the endpoint exists.
-// `name`/`tags` are Korean copy straight from the design, not run through i18n —
-// unlike PURPOSE_IDS/TRAVEL_STYLE_IDS these are real-world place names, not a
-// fixed set of app-defined categories, so they'll come from the backend as-is.
-export const DESTINATIONS: Destination[] = [
-  { id: 'NATIONAL_MUSEUM', name: '국립중앙박물관', tags: ['역사', '전시'] },
-  { id: 'JEONJU_HANOK_VILLAGE', name: '전주한옥마을', tags: ['역사', '전시'] },
-  { id: 'GWANGJANG_MARKET', name: '서울 광장시장', tags: ['음식', '로컬'] },
-  { id: 'HALLASAN', name: '제주 한라산', tags: ['힐링', '휴식'] },
-  { id: 'YEOSU_CABLE_CAR', name: '여수 해상케이블카', tags: ['풍경', '낭만'] },
-  { id: 'GAMCHEON_VILLAGE', name: '부산 감천문화마을', tags: ['예술', '사진'] },
-  { id: 'MYEONGDONG', name: '명동거리', tags: ['쇼핑', '음식'] },
-  { id: 'NAMI_ISLAND', name: '남이섬', tags: ['계절', '풍경'] },
-  { id: 'BORYEONG_MUD_FESTIVAL', name: '보령머드축제', tags: ['체험', '계절'] },
-  { id: 'NONSAN_SUNSHINE_LAND', name: '논산 선샤인랜드', tags: ['탐방', '호기심'] },
-];
-
-// TODO: replace with client.get<DestinationListEnvelope>('/destinations')
-export async function fetchDestinations(): Promise<Destination[]> {
-  return DESTINATIONS;
-}
-
-export type OnboardingSubmission = {
-  purpose: PurposeId;
-  location: {
-    displayAddress: string;
-    latitude: number | null;
-    longitude: number | null;
-    source: 'search' | 'current';
-  };
+export type OnboardingProgressResponse = {
+  completed: boolean;
+  // Which screen the app should resume onboarding on.
+  currentStep: OnboardingStep;
+  currentLocationId: number | null;
   travelStyles: TravelStyleId[];
-  destinations: DestinationId[];
+  candidateSetId: string | null;
+  candidateSetVersion: number | null;
+  selectedPreferencePlaceIds: number[];
 };
 
-// TODO: replace with client.post('/onboarding', data) once the endpoint exists.
-// Should return an updated session/nextStep so the client knows where to route next.
-export async function submitOnboarding(data: OnboardingSubmission): Promise<void> {
-  console.log('[mock] submitOnboarding', data);
+type OnboardingProgressEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: OnboardingProgressResponse;
+  traceId: string;
+};
+
+// GET /users/me/onboarding — called when the login response is nextStep=ONBOARDING,
+// or when re-entering the onboarding flow (e.g. app restart). Requires a
+// principal, so it can't be called before login.
+export async function fetchOnboardingProgress(): Promise<OnboardingProgressResponse> {
+  const response = await client.get<OnboardingProgressEnvelope>('/users/me/onboarding');
+  return response.data.data;
+}
+
+export type ServiceRegionCode =
+  | 'SEOUL'
+  | 'GYEONGGI'
+  | 'GANGWON'
+  | 'CHUNGCHEONG'
+  | 'JEOLLA'
+  | 'GYEONGSANG'
+  | 'JEJU';
+
+export type LocationSummary = {
+  locationId: number;
+  displayName: string;
+  serviceRegionCode: ServiceRegionCode;
+};
+
+export type PreferenceTagSource = 'ONBOARDING_PLACE_SELECTION' | 'MANUAL' | 'BEHAVIOR_INFERRED';
+
+export type PreferenceTag = {
+  tagId: number;
+  code: string;
+  name: string;
+  weight: number;
+  source: PreferenceTagSource;
+};
+
+export type OnboardingProfile = {
+  currentLocation: LocationSummary;
+  travelStyles: TravelStyleId[];
+  selectedPreferencePlaceIds: number[];
+  // Preference-tag scoring isn't approved yet — the backend always returns [].
+  preferenceTags: PreferenceTag[];
+};
+
+export type OnboardingCompletionRequest = {
+  currentLocationId: number;
+  travelStyles: TravelStyleId[];
+  candidateSetId: string;
+  candidateSetVersion: number;
+  selectedPreferencePlaceIds: number[];
+};
+
+export type OnboardingCompletionResponse = {
+  completed: true;
+  completedAt: string;
+  nextStep: NextStep;
+  profile: OnboardingProfile;
+};
+
+type OnboardingCompletionEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: OnboardingCompletionResponse;
+  traceId: string;
+};
+
+// PUT /users/me/onboarding — validates location ownership, travel-style count,
+// and candidate-set/selection consistency in one transaction, then marks
+// onboarding complete. Idempotent for a retry of the exact same body (returns
+// the original completedAt); a different body after completion returns 409.
+export async function completeOnboarding(
+  payload: OnboardingCompletionRequest,
+): Promise<OnboardingCompletionResponse> {
+  const response = await client.put<OnboardingCompletionEnvelope>('/users/me/onboarding', payload);
+  return response.data.data;
+}
+
+export type CandidateSetStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export type OnboardingCandidateItem = {
+  placeId: number;
+  title: string;
+  imageUrl: string;
+  serviceRegionCode: ServiceRegionCode;
+  serviceRegionName: string;
+  travelStyle: TravelStyleId;
+  tags: string[];
+  curatorMessage: string;
+  displayOrder: number;
+};
+
+export type OnboardingCandidateSetResponse = {
+  candidateSetId: string;
+  version: number;
+  status: CandidateSetStatus;
+  publishedAt: string;
+  minSelection: number;
+  maxSelection: number;
+  // Always exactly 10 — the admin-curated, immutable published set.
+  items: OnboardingCandidateItem[];
+};
+
+type CandidateSetEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: OnboardingCandidateSetResponse;
+  traceId: string;
+};
+
+// GET /onboarding/place-candidate-sets/current — called once when entering the
+// final onboarding (preference-places) screen. Returns the admin-curated,
+// immutable published set — not a per-user recommendation. candidateSetId and
+// version must be kept and sent back unchanged with the completion request,
+// alongside the 1~3 placeIds the user picked.
+export async function fetchCurrentCandidateSet(): Promise<OnboardingCandidateSetResponse> {
+  const response = await client.get<CandidateSetEnvelope>('/onboarding/place-candidate-sets/current');
+  return response.data.data;
 }

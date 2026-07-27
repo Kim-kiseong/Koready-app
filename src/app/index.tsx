@@ -3,7 +3,7 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { fetchMyUser } from '@/api/user';
-import { resolveNextStepRoute } from '@/navigation/next-step-route';
+import { resolveNextStepRoute, resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function Index() {
@@ -20,9 +20,23 @@ export default function Index() {
     }
 
     fetchMyUser()
-      .then((data) => {
+      .then(async (data) => {
         applyMyUser(data);
-        setRoute(data.signupStatus === 'ACTIVE' ? '/home' : resolveNextStepRoute(data.nextStep));
+        if (data.signupStatus === 'ACTIVE') {
+          setRoute('/home');
+          return;
+        }
+        if (data.nextStep === 'ONBOARDING') {
+          // Resume on the exact onboarding screen the server has progress
+          // for, instead of always restarting at /purpose.
+          try {
+            setRoute(await resolveOnboardingResumeRoute());
+            return;
+          } catch {
+            // Falls through to the default ONBOARDING route below.
+          }
+        }
+        setRoute(resolveNextStepRoute(data.nextStep));
       })
       .catch(() => {
         // 401s already clear the session and redirect via the client's response

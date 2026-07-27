@@ -33,6 +33,7 @@ type AuthState = {
   setSession: (session: TokenResponse) => void;
   applyMyUser: (data: MyUserResponse) => void;
   applyLanguageChange: (data: LanguageResponse) => void;
+  setNextStep: (nextStep: NextStep) => void;
   clearSession: () => void;
 };
 
@@ -82,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
         }));
         useLanguageStore.getState().setLanguage(data.language);
       },
+      setNextStep: (nextStep) => set({ nextStep }),
       clearSession: () => {
         set({
           accessToken: null,

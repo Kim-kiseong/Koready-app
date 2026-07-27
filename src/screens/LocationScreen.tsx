@@ -1,10 +1,12 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAxiosError } from 'axios';
 
-import { searchLocations, type LocationSearchResult } from '@/api/onboarding';
+import { createMyLocation } from '@/api/address';
+import { searchLocations, type LocationSearchItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -13,30 +15,74 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
+const SEARCH_DEBOUNCE_MS = 400;
+
 export default function LocationScreen() {
   const router = useRouter();
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const setLocation = useOnboardingStore((state) => state.setLocation);
+  const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
 
   const [query, setQuery] = useState(location?.displayAddress ?? '');
   const [isFocused, setIsFocused] = useState(false);
-  const [results, setResults] = useState<LocationSearchResult[]>([]);
+  const [results, setResults] = useState<LocationSearchItem[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      return;
+    }
     let cancelled = false;
-    searchLocations(query).then((found) => {
-      if (!cancelled) setResults(found);
-    });
+    const timer = setTimeout(() => {
+      searchLocations(q)
+        .then((items) => {
+          if (!cancelled) setResults(items);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setResults([]);
+          if (isAxiosError(error) && error.response?.status === 503) {
+            Alert.alert('오류', '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.');
+          }
+        });
+    }, SEARCH_DEBOUNCE_MS);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [query]);
 
-  const handleSelectResult = (result: LocationSearchResult) => {
-    setLocation({ displayAddress: result.roadAddr, latitude: null, longitude: null, source: 'search' });
-    setQuery(result.roadAddr);
+  const handleSelectResult = async (item: LocationSearchItem) => {
+    if (isSaving) return;
+    const displayAddress = item.roadAddress ?? item.address ?? item.name;
+    setQuery(displayAddress);
     setResults([]);
+    setIsSaving(true);
+    try {
+      const saved = await createMyLocation({
+        searchResultToken: item.searchResultToken,
+        customLabel: null,
+        setDefault: true,
+      });
+      setLocation({
+        displayAddress: saved.customLabel ?? saved.displayName,
+        latitude: saved.latitude,
+        longitude: saved.longitude,
+        source: 'search',
+      });
+      setCurrentLocationId(saved.locationId);
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 410) {
+        Alert.alert('오류', '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.');
+      } else {
+        Alert.alert('오류', '위치 저장에 실패했습니다.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleUseCurrentLocation = () => {
@@ -46,6 +92,8 @@ export default function LocationScreen() {
       longitude: null,
       source: 'current',
     });
+    // Not a saved location (no search token), so it can't back a real locationId.
+    setCurrentLocationId(null);
     setQuery(t.location.currentLocationValue);
     setResults([]);
   };
@@ -102,20 +150,29 @@ export default function LocationScreen() {
         {showResults ? (
           <View style={styles.resultList}>
             {results.map((result) => (
-              <View key={`${result.zipNo}-${result.roadAddr}`} style={styles.resultGroup}>
-                <CustomText style={styles.zipText}>{result.zipNo}</CustomText>
-                <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
-                  <View style={[styles.badge, styles.badgeRoad]}>
-                    <CustomText style={styles.badgeTextRoad}>{t.location.roadAddressBadge}</CustomText>
-                  </View>
-                  <CustomText style={styles.addressText}>{result.roadAddr}</CustomText>
-                </Pressable>
-                <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
-                  <View style={[styles.badge, styles.badgeLot]}>
-                    <CustomText style={styles.badgeTextLot}>{t.location.lotNumberBadge}</CustomText>
-                  </View>
-                  <CustomText style={styles.addressText}>{result.jibunAddr}</CustomText>
-                </Pressable>
+              <View key={result.searchResultToken} style={styles.resultGroup}>
+                <CustomText style={styles.zipText}>{result.name}</CustomText>
+                {result.roadAddress && (
+                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                    <View style={[styles.badge, styles.badgeRoad]}>
+                      <CustomText style={styles.badgeTextRoad}>{t.location.roadAddressBadge}</CustomText>
+                    </View>
+                    <CustomText style={styles.addressText}>{result.roadAddress}</CustomText>
+                  </Pressable>
+                )}
+                {result.address && (
+                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                    <View style={[styles.badge, styles.badgeLot]}>
+                      <CustomText style={styles.badgeTextLot}>{t.location.lotNumberBadge}</CustomText>
+                    </View>
+                    <CustomText style={styles.addressText}>{result.address}</CustomText>
+                  </Pressable>
+                )}
+                {!result.roadAddress && !result.address && (
+                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                    <CustomText style={styles.addressText}>{result.sido} {result.sigungu}</CustomText>
+                  </Pressable>
+                )}
               </View>
             ))}
           </View>
@@ -135,7 +192,7 @@ export default function LocationScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton title={t.location.next} disabled={!location} onPress={handleNext} />
+        <PrimaryButton title={t.location.next} disabled={!location || isSaving} onPress={handleNext} />
       </View>
     </SafeAreaView>
   );

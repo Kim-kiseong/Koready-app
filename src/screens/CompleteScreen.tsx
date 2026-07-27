@@ -1,16 +1,18 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAxiosError } from 'axios';
 
-import { submitOnboarding } from '@/api/onboarding';
+import { completeOnboarding } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 export default function CompleteScreen() {
@@ -19,17 +21,54 @@ export default function CompleteScreen() {
   const purpose = useOnboardingStore((state) => state.purpose);
   const location = useOnboardingStore((state) => state.location);
   const travelStyles = useOnboardingStore((state) => state.travelStyles);
-  const destinations = useOnboardingStore((state) => state.destinations);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
+  const candidateSetId = useOnboardingStore((state) => state.candidateSetId);
+  const candidateSetVersion = useOnboardingStore((state) => state.candidateSetVersion);
+  const selectedPreferencePlaceIds = useOnboardingStore((state) => state.selectedPreferencePlaceIds);
+  const setNextStep = useAuthStore((state) => state.setNextStep);
+  const resetOnboarding = useOnboardingStore((state) => state.reset);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // TODO: currentLocationId/candidateSetId/candidateSetVersion/selectedPreferencePlaceIds
+  // are only populated once the location-registration and place-candidate-set
+  // APIs are wired into LocationScreen/DestinationScreen. Until then this stays
+  // false for a fresh onboarding run.
+  const canComplete =
+    currentLocationId != null &&
+    candidateSetId != null &&
+    candidateSetVersion != null &&
+    selectedPreferencePlaceIds.length > 0;
+
   const handleNext = async () => {
-    if (!purpose || !location) return;
+    if (!purpose || !location || isSubmitting) return;
+    if (!canComplete) {
+      // Expected until the location-registration and place-candidate-set
+      // APIs are wired into LocationScreen/DestinationScreen (next task).
+      Alert.alert('준비 중', '위치·여행지 선택 연동이 완료되면 이용할 수 있어요.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      // TODO: once submitOnboarding returns a real session/nextStep, update
-      // auth-store's nextStep from 'ONBOARDING' to 'COMPLETED' here.
-      await submitOnboarding({ purpose, location, travelStyles, destinations });
+      const result = await completeOnboarding({
+        currentLocationId,
+        travelStyles,
+        candidateSetId,
+        candidateSetVersion,
+        selectedPreferencePlaceIds,
+      });
+      setNextStep(result.nextStep);
+      resetOnboarding();
       router.replace('/home');
+    } catch (error) {
+      // A retried submit after a dropped response lands here as 409
+      // ONBOARDING_ALREADY_COMPLETED — safe to treat as success.
+      if (isAxiosError(error) && error.response?.status === 409) {
+        setNextStep('COMPLETED');
+        resetOnboarding();
+        router.replace('/home');
+        return;
+      }
+      Alert.alert('오류', error instanceof Error ? error.message : '온보딩 완료에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }

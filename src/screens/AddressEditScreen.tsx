@@ -14,7 +14,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { useAddressStore } from '@/store/address-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
-type DeleteTarget = { id: 'current' | string; title: string };
+type DeleteTarget = { id: 'current' | number; title: string };
 
 export default function AddressEditScreen() {
   const router = useRouter();
@@ -26,7 +26,10 @@ export default function AddressEditScreen() {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const otherAddresses = savedAddresses.filter((option) => option.title !== location?.displayAddress);
+  const otherAddresses = savedAddresses.filter(
+    (option) =>
+      !option.default && option.customLabel !== location?.displayAddress && option.displayName !== location?.displayAddress,
+  );
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
@@ -62,13 +65,18 @@ export default function AddressEditScreen() {
           )}
           {otherAddresses.map((option) => (
             <AddressRow
-              key={option.id}
-              title={option.title}
-              subtitle={option.subtitle}
+              key={option.locationId}
+              title={option.customLabel ?? option.displayName}
+              subtitle={option.roadAddress ?? option.address ?? undefined}
               right={
                 <DeleteChip
                   label={t.addressEdit.delete}
-                  onPress={() => setDeleteTarget({ id: option.id, title: option.title })}
+                  onPress={() =>
+                    setDeleteTarget({
+                      id: option.locationId,
+                      title: option.customLabel ?? option.displayName,
+                    })
+                  }
                 />
               }
             />
