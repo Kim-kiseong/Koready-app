@@ -56,14 +56,18 @@ export default function CompleteScreen() {
     // A retry after a dropped response can land here as 409. Never overwrite
     // what's already saved — re-read the authoritative state instead.
     if (status === 409 && code === 'ONBOARDING_ALREADY_COMPLETED') {
-      const progress = await fetchOnboardingProgress();
-      if (progress.completed) {
-        setNextStep('COMPLETED');
-        resetOnboarding();
-        router.replace('/home');
-      } else {
-        Alert.alert('오류', '이미 다른 선택으로 완료된 온보딩이에요.');
-        router.replace(await resolveOnboardingResumeRoute());
+      try {
+        const progress = await fetchOnboardingProgress();
+        if (progress.completed) {
+          setNextStep('COMPLETED');
+          resetOnboarding();
+          router.replace('/home');
+        } else {
+          Alert.alert('오류', '이미 다른 선택으로 완료된 온보딩이에요.');
+          router.replace(await resolveOnboardingResumeRoute());
+        }
+      } catch {
+        Alert.alert('오류', '저장된 온보딩 상태를 확인하지 못했어요. 다시 시도해 주세요.');
       }
       return;
     }
