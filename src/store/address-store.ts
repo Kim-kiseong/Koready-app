@@ -15,6 +15,7 @@ type AddressState = {
   replaceSavedAddresses: (addresses: UserLocationResponse[]) => void;
   addSavedAddress: (address: UserLocationResponse) => void;
   setDefaultAddress: (locationId: number) => void;
+  reset: () => void;
 };
 
 export const useAddressStore = create<AddressState>()(
@@ -42,6 +43,7 @@ export const useAddressStore = create<AddressState>()(
             default: a.locationId === locationId,
           })),
         })),
+      reset: () => set({ savedAddresses: [], hasSeeded: false }),
     }),
     {
       name: 'address-storage',

@@ -12,6 +12,7 @@ import type {
 } from '@/api/types';
 
 import { secureStorage } from './secure-storage';
+import { useAddressStore } from './address-store';
 import { useLanguageStore } from './language-store';
 import { useOnboardingStore } from './onboarding-store';
 
@@ -100,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
           termsNeedReAgreement: false,
         });
         useOnboardingStore.getState().reset();
+        useAddressStore.getState().reset();
       },
     }),
     {
