@@ -20,7 +20,6 @@ import { useOnboardingStore } from '@/store/onboarding-store';
 export default function CompleteScreen() {
   const router = useRouter();
   const t = useTranslation();
-  const location = useOnboardingStore((state) => state.location);
   const travelStyles = useOnboardingStore((state) => state.travelStyles);
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const candidateSetId = useOnboardingStore((state) => state.candidateSetId);
@@ -95,7 +94,7 @@ export default function CompleteScreen() {
   };
 
   const handleNext = async () => {
-    if (!location || isSubmitting) return;
+    if (isSubmitting) return;
     if (!canComplete) {
       // Expected until the location-registration and place-candidate-set
       // APIs are wired into LocationScreen/DestinationScreen (next task).
