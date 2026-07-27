@@ -56,9 +56,6 @@ export default function LocationScreen() {
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;
-    const displayAddress = item.roadAddress ?? item.address ?? item.name;
-    setQuery(displayAddress);
-    setResults([]);
     setIsSaving(true);
     try {
       const saved = await createMyLocation({
@@ -73,6 +70,9 @@ export default function LocationScreen() {
         source: 'search',
       });
       setCurrentLocationId(saved.locationId);
+      // Only reflect the pick in the search box/results once it's actually saved.
+      setQuery(saved.customLabel ?? saved.displayName);
+      setResults([]);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 410) {
         Alert.alert('오류', '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.');
