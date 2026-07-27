@@ -65,3 +65,12 @@ export async function setDefaultLocation(locationId: number): Promise<UserLocati
   const response = await client.put<UserLocationEnvelope>(`/users/me/locations/${locationId}/default`);
   return response.data.data;
 }
+
+// DELETE /users/me/locations/{locationId} — called when the user confirms
+// deletion on the locations management screen. Soft delete; 204 with no
+// body. Deleting the default location hands default to the most-recently-
+// created remaining active location, or clears it entirely if none remain
+// (the caller should re-fetch the list to see the new default).
+export async function deleteMyLocation(locationId: number): Promise<void> {
+  await client.delete(`/users/me/locations/${locationId}`);
+}

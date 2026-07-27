@@ -9,9 +9,12 @@ type AddressState = {
   savedAddresses: UserLocationResponse[];
   hasSeeded: boolean;
   seedSavedAddresses: (addresses: UserLocationResponse[]) => void;
+  // Wholesale overwrite, unlike seedSavedAddresses' seed-once guard — used to
+  // resync after a delete, since the server may have reassigned default to a
+  // different location and a 204 response doesn't say which.
+  replaceSavedAddresses: (addresses: UserLocationResponse[]) => void;
   addSavedAddress: (address: UserLocationResponse) => void;
   setDefaultAddress: (locationId: number) => void;
-  removeSavedAddress: (locationId: number) => void;
 };
 
 export const useAddressStore = create<AddressState>()(
@@ -23,6 +26,7 @@ export const useAddressStore = create<AddressState>()(
       // list legitimately stays empty instead of resurrecting stale data.
       seedSavedAddresses: (addresses) =>
         set((state) => (state.hasSeeded ? state : { savedAddresses: addresses, hasSeeded: true })),
+      replaceSavedAddresses: (addresses) => set({ savedAddresses: addresses, hasSeeded: true }),
       addSavedAddress: (address) =>
         set((state) => ({
           savedAddresses: [
@@ -37,11 +41,6 @@ export const useAddressStore = create<AddressState>()(
             ...a,
             default: a.locationId === locationId,
           })),
-        })),
-      // TODO: replace with client.delete(`/users/me/locations/${locationId}`) once that endpoint exists.
-      removeSavedAddress: (locationId) =>
-        set((state) => ({
-          savedAddresses: state.savedAddresses.filter((a) => a.locationId !== locationId),
         })),
     }),
     {

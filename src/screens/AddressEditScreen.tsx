@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAxiosError } from 'axios';
 
+import { deleteMyLocation, fetchMyLocations } from '@/api/address';
 import AddressRow from '@/components/AddressRow';
 import CustomText from '@/components/CustomText';
 import DeleteAddressModal from '@/components/DeleteAddressModal';
@@ -20,25 +22,61 @@ export default function AddressEditScreen() {
   const router = useRouter();
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
+  const setLocation = useOnboardingStore((state) => state.setLocation);
+  const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const clearLocation = useOnboardingStore((state) => state.clearLocation);
   const savedAddresses = useAddressStore((state) => state.savedAddresses);
-  const removeSavedAddress = useAddressStore((state) => state.removeSavedAddress);
+  const replaceSavedAddresses = useAddressStore((state) => state.replaceSavedAddresses);
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const otherAddresses = savedAddresses.filter(
     (option) =>
       !option.default && option.customLabel !== location?.displayAddress && option.displayName !== location?.displayAddress,
   );
 
-  const handleConfirmDelete = () => {
-    if (!deleteTarget) return;
-    if (deleteTarget.id === 'current') {
-      clearLocation();
-    } else {
-      removeSavedAddress(deleteTarget.id);
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    const locationId = deleteTarget.id === 'current' ? currentLocationId : deleteTarget.id;
     setDeleteTarget(null);
+
+    // No backend record to delete (e.g. the mock "current location" button) — just clear locally.
+    if (locationId == null) {
+      if (deleteTarget.id === 'current') clearLocation();
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteMyLocation(locationId);
+    } catch (error) {
+      // 404 means it's already gone server-side — safe to fall through and resync.
+      if (!(isAxiosError(error) && error.response?.status === 404)) {
+        Alert.alert('오류', '위치 삭제에 실패했습니다.');
+        setIsDeleting(false);
+        return;
+      }
+    }
+
+    // Deleting the default location reassigns default server-side; a 204
+    // response doesn't say to what, so re-fetch to find the new one.
+    const refreshed = await fetchMyLocations();
+    replaceSavedAddresses(refreshed);
+    const newDefault = refreshed.find((item) => item.default) ?? null;
+    if (newDefault) {
+      setLocation({
+        displayAddress: newDefault.customLabel ?? newDefault.displayName,
+        latitude: newDefault.latitude,
+        longitude: newDefault.longitude,
+        source: 'search',
+      });
+      setCurrentLocationId(newDefault.locationId);
+    } else {
+      clearLocation();
+    }
+    setIsDeleting(false);
   };
 
   return (
