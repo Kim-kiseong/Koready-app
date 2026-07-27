@@ -37,7 +37,14 @@ export default function MyScreen() {
   }, [applyMyUser]);
 
   const handleLogout = async () => {
-    if (!refreshToken || isLoggingOut) return;
+    if (isLoggingOut) return;
+    if (!refreshToken) {
+      // No session to log out of server-side — nothing to wait on, so just
+      // drop the local state instead of leaving the button a silent no-op.
+      clearSession();
+      router.replace('/login');
+      return;
+    }
     setIsLoggingOut(true);
     try {
       await logout({ refreshToken, deviceId });
