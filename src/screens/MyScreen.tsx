@@ -20,12 +20,20 @@ export default function MyScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    let active = true;
     fetchMyUser()
-      .then(applyMyUser)
+      .then((data) => {
+        // Avoid writing stale user data back in if logout/unmount happened
+        // while this request was still in flight.
+        if (active) applyMyUser(data);
+      })
       .catch(() => {
         // Keep showing the last known state; the request layer already
         // handles session-expiry redirects on 401.
       });
+    return () => {
+      active = false;
+    };
   }, [applyMyUser]);
 
   const handleLogout = async () => {
