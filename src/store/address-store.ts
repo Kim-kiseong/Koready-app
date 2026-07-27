@@ -48,6 +48,11 @@ export const useAddressStore = create<AddressState>()(
     {
       name: 'address-storage',
       storage: createJSONStorage(() => secureStorage),
+      // v0 persisted the old mock SavedAddressOption shape ({id, title,
+      // subtitle}); there's no meaningful mapping onto UserLocationResponse,
+      // so discard it and let fetchMyLocations() reseed on next load.
+      version: 1,
+      migrate: () => ({ savedAddresses: [], hasSeeded: false }) as unknown as AddressState,
     },
   ),
 );
