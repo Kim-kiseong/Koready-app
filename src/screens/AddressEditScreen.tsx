@@ -50,33 +50,38 @@ export default function AddressEditScreen() {
 
     setIsDeleting(true);
     try {
-      await deleteMyLocation(locationId);
-    } catch (error) {
-      // 404 means it's already gone server-side — safe to fall through and resync.
-      if (!(isAxiosError(error) && error.response?.status === 404)) {
-        Alert.alert('오류', '위치 삭제에 실패했습니다.');
-        setIsDeleting(false);
-        return;
+      try {
+        await deleteMyLocation(locationId);
+      } catch (error) {
+        // 404 means it's already gone server-side — safe to fall through and resync.
+        if (!(isAxiosError(error) && error.response?.status === 404)) {
+          Alert.alert('오류', '위치 삭제에 실패했습니다.');
+          return;
+        }
       }
-    }
 
-    // Deleting the default location reassigns default server-side; a 204
-    // response doesn't say to what, so re-fetch to find the new one.
-    const refreshed = await fetchMyLocations();
-    replaceSavedAddresses(refreshed);
-    const newDefault = refreshed.find((item) => item.default) ?? null;
-    if (newDefault) {
-      setLocation({
-        displayAddress: newDefault.customLabel ?? newDefault.displayName,
-        latitude: newDefault.latitude,
-        longitude: newDefault.longitude,
-        source: 'search',
-      });
-      setCurrentLocationId(newDefault.locationId);
-    } else {
-      clearLocation();
+      // Deleting the default location reassigns default server-side; a 204
+      // response doesn't say to what, so re-fetch to find the new one.
+      const refreshed = await fetchMyLocations();
+      replaceSavedAddresses(refreshed);
+      const newDefault = refreshed.find((item) => item.default) ?? null;
+      if (newDefault) {
+        setLocation({
+          displayAddress: newDefault.customLabel ?? newDefault.displayName,
+          latitude: newDefault.latitude,
+          longitude: newDefault.longitude,
+          source: 'search',
+        });
+        setCurrentLocationId(newDefault.locationId);
+      } else {
+        clearLocation();
+      }
+    } catch {
+      // The delete itself likely succeeded server-side; only the resync failed.
+      Alert.alert('오류', '위치 목록을 새로고침하지 못했어요. 화면을 다시 열어 확인해 주세요.');
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   return (
