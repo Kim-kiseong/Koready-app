@@ -86,16 +86,18 @@ export async function fetchBuddyRoute(
   placeId: string,
   destination: Destination,
 ): Promise<BuddyRoute> {
-  const fetchedAt = '2026-07-28T12:05:24.834Z';
+  const fetchedAtDate = new Date();
+  const fetchedAt = fetchedAtDate.toISOString();
+  const expiresAt = new Date(fetchedAtDate.getTime() + 5 * 60_000).toISOString();
   return {
     routeId: `route_${placeId}`,
     provider: 'TMAP_TRANSIT',
     origin: ORIGIN,
     destination,
     fetchedAt,
-    expiresAt: fetchedAt,
+    expiresAt,
     summary: {
-      recommendedTransportText: '지하철, KTX, 버스',
+      recommendedTransportText: '지하철, KTX,\n축제 셔틀버스',
       estimatedOneWayMinutes: 190,
       estimatedOneWayTimeText: '약 3시간 10분',
       transferCount: 3,
@@ -111,7 +113,7 @@ export async function fetchBuddyRoute(
         coverage: 'FULL_ROUTE',
         disclaimer: '실제 요금과 다를 수 있으며 일부 셔틀 비용은 제외될 수 있습니다.',
       },
-      transportModes: ['WALK'],
+      transportModes: ['WALK', 'SUBWAY', 'KTX', 'SHUTTLE'],
       tip: {
         code: 'TIP_GIMCHEON_GUMI_STATION',
         source: 'OPERATOR_CURATED',
@@ -121,10 +123,10 @@ export async function fetchBuddyRoute(
       },
       horiTips: [
         {
-          code: 'TIP_GIMCHEON_GUMI_STATION',
+          code: 'TIP_DAY_TRIP_RECOMMENDATION',
           source: 'OPERATOR_CURATED',
           title: 'Hori Tip',
-          body: '김천역과 김천(구미)역은 다른 역이에요. KTX를 이용할 때는 반드시 김천(구미)역으로 검색하세요.',
+          body: '서울에서 출발할 시 당일치기는 가능하지만, 오전 출발과 KTX 예매를 추천해요.',
           placement: 'TOP_SUMMARY',
         },
       ],
@@ -197,16 +199,16 @@ export async function fetchBuddyRoute(
   };
 }
 
-export async function fetchMockRouteDetail(routeId: string): Promise<BuddyRoute> {
-  return fetchBuddyRoute(routeId, {
-    name: '[전주] 이팝나무 축제',
-    address: '전북특별자치도 전주시 완산구 일대',
-  });
+export async function fetchMockRouteDetail(
+  routeId: string,
+  destination: Destination,
+): Promise<BuddyRoute> {
+  return fetchBuddyRoute(routeId, destination);
 }
 
 export async function fetchMockRouteDetailForDestination(
   routeId: string,
   destination: Destination,
 ): Promise<BuddyRoute> {
-  return fetchBuddyRoute(routeId, destination);
+  return fetchMockRouteDetail(routeId, destination);
 }

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchFeaturedEvents, fetchTravelGuides, FEATURED_EVENT_CATEGORIES } from '@/api/home';
 import type { FeaturedEvent, FeaturedEventCategory, GuideArticle } from '@/api/home';
 import type { LanguageCode } from '@/api/types';
+import { updateMyLanguage } from '@/api/user';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import EventCard from '@/components/EventCard';
@@ -25,6 +27,7 @@ import PillChip from '@/components/PillChip';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -44,7 +47,7 @@ export default function HomeScreen() {
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const language = useLanguageStore((state) => state.language);
-  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
   const { width: windowWidth } = useWindowDimensions();
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
@@ -206,9 +209,15 @@ export default function HomeScreen() {
           currentLanguage={language}
           targetLanguage={pendingLanguage}
           onCancel={() => setPendingLanguage(null)}
-          onConfirm={() => {
-            setLanguage(pendingLanguage);
-            setPendingLanguage(null);
+          onConfirm={async () => {
+            try {
+              const result = await updateMyLanguage(pendingLanguage);
+              applyLanguageChange(result);
+            } catch (error) {
+              Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
+            } finally {
+              setPendingLanguage(null);
+            }
           }}
         />
       )}

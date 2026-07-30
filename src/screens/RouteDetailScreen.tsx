@@ -4,13 +4,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchMockRouteDetailForDestination, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
+import { fetchMockRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Component13,
@@ -61,21 +62,25 @@ const DAY_TRIP_TEXT = {
 } as const;
 
 const HANDLE_OVERLAP = 180;
+const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
 export default function RouteDetailScreen() {
   const router = useRouter();
   const { routeId, placeName, placeAddress } = useLocalSearchParams<{ routeId: string; placeName?: string; placeAddress?: string }>();
   const [route, setRoute] = useState<BuddyRoute | null>(null);
+  const handleKtxCtaPress = useCallback(() => {
+    Alert.alert('준비 중', 'KTX 예매 안내는 추후 연결될 예정입니다.');
+  }, []);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
-    if (!routeId) return;
+    if (!routeId || typeof placeName !== 'string' || typeof placeAddress !== 'string') return;
     let active = true;
-    fetchMockRouteDetailForDestination(routeId, {
-      name: placeName ?? '[전주] 이팝나무 축제',
-      address: placeAddress ?? '전북특별자치도 전주시 완산구 일대',
+    fetchMockRouteDetail(routeId, {
+      name: placeName,
+      address: placeAddress,
     }).then((value) => {
       if (active) setRoute(value);
     });
@@ -147,18 +152,18 @@ export default function RouteDetailScreen() {
               <SummaryItem label="당일치기" value={DAY_TRIP_TEXT[route.summary.dayTripStatus]} highlight />
             </View>
 
-            {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} variant="summary" /> : null}
+            {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} /> : null}
 
             <View style={[styles.timeline, route.summary.horiTips?.[0] && styles.timelineAttached]}>
               {route.segments.map((segment) => {
                 const tip = segment.horiTips?.[0];
                 return (
-                  <View key={segment.order}>
-                    {tip ? <TipCard tip={tip} variant="segment" mode={segment.mode} /> : null}
-                    {/* 팁이 붙은 세그먼트는 아이콘만 숨기고, 폭/들여쓰기는 그대로 유지해서
-                        호리팁 박스와 같은 가로 크기를 갖게 함 */}
-                    <SegmentCard segment={segment} hideIcon={!!tip} />
-                  </View>
+                  <TimelineItem
+                    key={segment.order}
+                    segment={segment}
+                    tip={tip}
+                    onCtaPress={handleKtxCtaPress}
+                  />
                 );
               })}
             </View>
@@ -205,55 +210,7 @@ function SummaryItem({ label, value, highlight = false }: { label: string; value
   );
 }
 
-function TipCard({
-  tip,
-  variant,
-  mode,
-}: {
-  tip: RouteTip;
-  variant: 'summary' | 'segment';
-  mode?: TransportMode;
-}) {
-  const isSegmentTip = variant === 'segment';
-
-  if (isSegmentTip) {
-    // 세그먼트에 해당하는 실제 교통수단 아이콘/색상을 그대로 사용
-    // (하드코딩된 회색 철도 아이콘 대신, 그 세그먼트의 진짜 아이콘을 재사용)
-    const IconComp = mode ? SEGMENT_ICON[mode].Icon : Directions_railway_2;
-    const iconSize = mode ? SEGMENT_ICON[mode] : { width: 11, height: 16 };
-    const markerStyle = mode ? SEGMENT_MARKER_STYLE[mode] : undefined;
-
-    return (
-      <View style={styles.segmentTipRow}>
-        <View style={styles.segmentTipRail}>
-          <View style={[styles.segmentTipMarker, markerStyle]}>
-            <IconComp width={iconSize.width} height={iconSize.height} />
-          </View>
-          <View style={styles.segmentTipLine} />
-        </View>
-
-        <View style={styles.segmentTipContent}>
-          <View style={styles.tipWrapSegment}>
-            <Image
-              source={require('../../assets/images/horitipIcon.png')}
-              style={styles.tipMascotSegment}
-              contentFit="contain"
-            />
-            <View style={styles.tipCardSegment}>
-              <View style={styles.tipHeaderSegment}>
-                <View style={styles.tipIcon}>
-                  <CustomText style={styles.tipIconText}>i</CustomText>
-                </View>
-                <CustomText style={styles.tipTitle}>{tip.title}</CustomText>
-              </View>
-              <CustomText style={styles.tipBodySegment}>{tip.body}</CustomText>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
+function TipCard({ tip }: { tip: RouteTip }) {
   return (
     <View style={styles.tipWrapSummary}>
       <Image
@@ -274,41 +231,88 @@ function TipCard({
   );
 }
 
-function SegmentCard({ segment, hideIcon = false }: { segment: RouteSegment; hideIcon?: boolean }) {
+function SegmentTipContent({ tip }: { tip: RouteTip }) {
+  return (
+    <View style={styles.tipWrapSegment}>
+      <Image
+        source={require('../../assets/images/horitipIcon.png')}
+        style={styles.tipMascotSegment}
+        contentFit="contain"
+      />
+      <View style={styles.tipCardSegment}>
+        <View style={styles.tipHeaderSegment}>
+          <View style={styles.tipIcon}>
+            <CustomText style={styles.tipIconText}>i</CustomText>
+          </View>
+          <CustomText style={styles.tipTitle}>{tip.title}</CustomText>
+        </View>
+        <CustomText style={styles.tipBodySegment}>{tip.body}</CustomText>
+      </View>
+    </View>
+  );
+}
+
+function SegmentCardBody({ segment, onCtaPress }: { segment: RouteSegment; onCtaPress: () => void }) {
+  return (
+    <>
+      <CustomText style={styles.segmentTitle}>{segment.startName} → {segment.endName}</CustomText>
+      <View style={styles.segmentMetaRow}>
+        <RouteMetaIcon type={segment.mode} />
+        <CustomText style={styles.segmentMeta}>{MODE_LABEL[segment.mode]}</CustomText>
+        <RouteMetaClock />
+        <CustomText style={styles.segmentMeta}>약 {segment.durationMinutes}분</CustomText>
+      </View>
+      {segment.instruction ? (
+        <>
+          <View style={styles.segmentDivider} />
+          <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
+        </>
+      ) : null}
+      {segment.mode === 'KTX' ? (
+        <Pressable style={styles.ctaButton} onPress={onCtaPress}>
+          <CustomText style={styles.ctaButtonText}>KTX 예매하는 법 확인하기</CustomText>
+        </Pressable>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * 타임라인의 한 항목(팁 유무와 무관하게 공용).
+ *
+ * 구조:
+ * - 바깥 wrapper(position:relative, paddingBottom: 다음 카드와의 간격)의
+ *   전체 높이 = 콘텐츠 높이 + 간격(paddingBottom) 이 자동으로 계산됨.
+ * - 레일(선+마커)은 그 wrapper 안에서 position:absolute, top:0, bottom:0 으로
+ *   깔리기 때문에 "콘텐츠 높이 + 간격"을 통째로 채움 → 다음 마커까지 항상 이어짐.
+ * - 이 방식은 flex stretch 계산에 전혀 의존하지 않아서, 카드/팁 내용이
+ *   길어지거나 짧아져도 선이 끊기지 않음.
+ */
+function TimelineItem({
+  segment,
+  tip,
+  onCtaPress,
+}: {
+  segment: RouteSegment;
+  tip?: RouteTip;
+  onCtaPress: () => void;
+}) {
   const Icon = SEGMENT_ICON[segment.mode].Icon;
 
   return (
-    <View style={styles.segmentRow}>
-      <View style={styles.segmentRail}>
-        {/* 바로 위에 호리팁이 있으면 팁이 이미 아이콘을 보여주므로 여기서는 숨기되,
-            레일 폭(42)은 그대로 유지해서 카드가 호리팁 박스와 같은 위치/너비로 정렬되게 함 */}
-        {!hideIcon && (
-          <View style={[styles.segmentMarker, SEGMENT_MARKER_STYLE[segment.mode]]}>
-            <Icon width={SEGMENT_ICON[segment.mode].width} height={SEGMENT_ICON[segment.mode].height} />
-          </View>
-        )}
-        <View style={styles.segmentLine} />
+    <View style={styles.timelineItem}>
+      <View style={styles.timelineRail}>
+        <View style={styles.railLine} />
+        <View style={[styles.segmentMarker, SEGMENT_MARKER_STYLE[segment.mode]]}>
+          <Icon width={SEGMENT_ICON[segment.mode].width} height={SEGMENT_ICON[segment.mode].height} />
+        </View>
       </View>
 
-      <View style={styles.segmentCard}>
-        <CustomText style={styles.segmentTitle}>{segment.startName} → {segment.endName}</CustomText>
-        <View style={styles.segmentMetaRow}>
-          <RouteMetaIcon type={segment.mode} />
-          <CustomText style={styles.segmentMeta}>{MODE_LABEL[segment.mode]}</CustomText>
-          <RouteMetaClock />
-          <CustomText style={styles.segmentMeta}>약 {segment.durationMinutes}분</CustomText>
+      <View style={styles.timelineContent}>
+        {tip ? <SegmentTipContent tip={tip} /> : null}
+        <View style={styles.segmentCard}>
+          <SegmentCardBody segment={segment} onCtaPress={onCtaPress} />
         </View>
-        {segment.instruction ? (
-          <>
-            <View style={styles.segmentDivider} />
-            <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
-          </>
-        ) : null}
-        {segment.mode === 'KTX' ? (
-          <Pressable style={styles.ctaButton}>
-            <CustomText style={styles.ctaButtonText}>KTX 예매하는 법 확인하기</CustomText>
-          </Pressable>
-        ) : null}
       </View>
     </View>
   );
@@ -333,7 +337,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 40 },
 
   contentArea: { flex: 1, position: 'relative' },
-  mapArea: { position: 'absolute', top: 0, left: 0, right: 0},
+  mapArea: { position: 'absolute', top: 0, left: 0, right: 0 },
 
   locationCard: {
     marginHorizontal: 16,
@@ -378,17 +382,15 @@ const styles = StyleSheet.create({
   sheetHandle: { width: 118, height: 8, backgroundColor: '#E5E7EB' },
   sheetContent: { paddingBottom: 36 },
 
-  summaryBox: { marginTop: 24,marginHorizontal: 16, backgroundColor: '#F6F9FB', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryBox: { marginTop: 24, marginHorizontal: 16, backgroundColor: '#F6F9FB', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryItem: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
   summaryLabel: { fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 18.2, color: '#4E5968', textAlign: 'center' },
   summaryValue: { marginTop: 6, fontFamily: FontFamily.pretendard.bold, fontSize: 14, lineHeight: 19.6, color: '#1C1C1A', textAlign: 'center' },
   summaryHighlight: { color: '#399589' },
 
-  tipWrapSummary: { marginHorizontal: 16, marginTop: 36, marginBottom: 24, position: 'relative' },
-  // marginTop: 0 유지 - wrapper 자체는 tipCardSegment 바로 위에서 시작
-  tipWrapSegment: { marginTop: 24, marginBottom: 8, position: 'relative' },
+  tipWrapSummary: { marginHorizontal: 16, marginTop: 44, marginBottom: 24, position: 'relative' },
+  tipWrapSegment: { marginTop: 34, marginBottom: 8, position: 'relative' },
   tipMascotSummary: { position: 'absolute', left: -10, top: -38, width: 77, height: 80, zIndex: 2 },
-  // 마스코트가 그린박스(marginTop:10) 위쪽에 자연스럽게 겹치도록 오프셋 축소 (-36 → -20)
   tipMascotSegment: { position: 'absolute', left: -10, top: -46, width: 77, height: 80, zIndex: 3 },
   tipCardSummary: {
     marginTop: 18,
@@ -416,37 +418,54 @@ const styles = StyleSheet.create({
   tipBodySummary: { marginTop: 8, fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 22, color: '#4E5968' },
   tipBodySegment: { marginTop: 8, fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 22, color: '#4E5968' },
 
-  segmentTipRow: { flexDirection: 'row', marginTop: 8, marginBottom: 0 },
-  segmentTipRail: { width: 42, alignItems: 'center', justifyContent: 'flex-start' },
-  segmentTipMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5D9FF',
-    backgroundColor: '#F7F0FF',
-  },
-  segmentTipLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB' },
-  segmentTipContent: { flex: 1, marginLeft: 10 },
-
   timeline: { marginTop: 18, paddingHorizontal: 16 },
   timelineAttached: { marginTop: 0 },
 
-  segmentRow: { flexDirection: 'row' },
-  segmentRail: { width: 42, alignItems: 'center' },
+  // 타임라인 한 항목의 바깥 wrapper. paddingBottom이 "카드-카드 사이 간격"을
+  // wrapper 자기 자신의 박스 안으로 포함시켜서, 절대위치 선이 그 간격까지 덮게 함.
+  timelineItem: { position: 'relative', paddingBottom: ITEM_GAP },
+  timelineItemLast: { paddingBottom: 0 },
+
+  // 레일: wrapper 전체(top:0~bottom:0, 간격 포함)를 절대위치로 채움 →
+  // stretch 계산과 무관하게 항상 정확한 높이를 가짐
+  timelineRail: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 42,
+    alignItems: 'center',
+  },
+  // 선도 레일 내부에서 top:0~bottom:0으로 꽉 채움 (마커 뒤로 자연스럽게 가려짐)
+  railLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 20,
+    width: 2,
+    backgroundColor: '#E8EEF2',
+  },
   segmentMarker: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, borderWidth: 1 },
 
-  destinationRow: { flexDirection: 'row', paddingHorizontal: 16, alignItems: 'flex-start', marginTop: -2 },
+  // 콘텐츠(팁+카드): 레일이 절대위치라 in-flow 폭을 차지하지 않으므로,
+  // 레일 폭(42) + 기존 간격(10) = 52 만큼 marginLeft로 직접 비켜줌
+  timelineContent: { marginLeft: 52 },
+
+  segmentCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+
+  destinationRow: { flexDirection: 'row', paddingHorizontal: 16, alignItems: 'flex-start', marginTop: 0 },
   destinationRail: { width: 42, alignItems: 'center', justifyContent: 'flex-start' },
   destinationMarkerWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: -6 },
-  destinationRailLine: { width: 2, height: 12, backgroundColor: '#E5E7EB' },
+  destinationRailLine: { width: 2, height: 12, backgroundColor: '#E8EEF2' },
   destinationCard: { flex: 1, marginLeft: 10, marginBottom: 14, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
   destinationTitle: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 16, lineHeight: 26, color: Palette.text },
   destinationAddress: { marginTop: 6, fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 20, color: '#6B7684' },
-  segmentLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB' },
-  segmentCard: { flex: 1, marginLeft: 10, marginBottom: 14, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
   segmentTitle: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 16, lineHeight: 24, color: Palette.text },
   segmentMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' },
   segmentMeta: { fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: '#6B7684' },

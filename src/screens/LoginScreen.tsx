@@ -10,13 +10,14 @@ import type { SocialProvider } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 // Dev-only bypass: lets onboarding be tested before social login keys exist.
 const DEV_MOCK_SESSION = {
   tokenType: 'Bearer' as const,
-  accessToken: 'mock-token',
+  accessToken: DEV_MOCK_ACCESS_TOKEN,
   refreshToken: 'mock-refresh-token',
   accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -26,7 +27,12 @@ const DEV_MOCK_SESSION = {
     profileImageUrl: null,
     preferredLanguage: 'KO' as const,
   },
-  nextStep: 'LANGUAGE' as const,
+  nextStep: 'TERMS' as const,
+};
+
+const DEV_HOME_SESSION = {
+  ...DEV_MOCK_SESSION,
+  nextStep: 'COMPLETED' as const,
 };
 
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.
@@ -67,6 +73,11 @@ export default function LoginScreen() {
     router.replace(resolveNextStepRoute(DEV_MOCK_SESSION.nextStep));
   };
 
+  const handleDevHomeShortcut = () => {
+    setSession(DEV_HOME_SESSION);
+    router.replace('/home');
+  };
+
   const buttonsDisabled = !hasHydrated || isSubmitting;
 
   return (
@@ -79,9 +90,14 @@ export default function LoginScreen() {
 
       {__DEV__ && (
         <SafeAreaView edges={['top']} style={styles.devBanner}>
-          <Pressable style={styles.devButton} onPress={handleDevOnboardingBypass}>
-            <CustomText style={styles.devButtonText}>온보딩 화면 바로가기 (Dev)</CustomText>
-          </Pressable>
+          <View style={styles.devButtonGroup}>
+            <Pressable style={styles.devButton} onPress={handleDevOnboardingBypass}>
+              <CustomText style={styles.devButtonText}>온보딩 화면 바로가기 (Dev)</CustomText>
+            </Pressable>
+            <Pressable style={styles.devButton} onPress={handleDevHomeShortcut}>
+              <CustomText style={styles.devButtonText}>홈 화면 바로가기 (Dev)</CustomText>
+            </Pressable>
+          </View>
         </SafeAreaView>
       )}
 
@@ -173,8 +189,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  devButton: {
+  devButtonGroup: {
     marginTop: 8,
+    gap: 8,
+    alignItems: 'center',
+  },
+  devButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,

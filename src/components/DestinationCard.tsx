@@ -2,21 +2,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { Destination } from '@/api/onboarding';
+import type { OnboardingCandidateItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
-import { DestinationImages } from '@/constants/destination-images';
 import { FontFamily } from '@/constants/typography';
 
 export type DestinationCardProps = {
-  destination: Destination;
+  item: OnboardingCandidateItem;
   selected: boolean;
   onPress: () => void;
 };
 
-export default function DestinationCard({ destination, selected, onPress }: DestinationCardProps) {
+export default function DestinationCard({ item, selected, onPress }: DestinationCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={DestinationImages[destination.id]} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
         start={{ x: 0.5, y: 0.12 }}
@@ -31,9 +30,9 @@ export default function DestinationCard({ destination, selected, onPress }: Dest
       )}
 
       <View style={styles.content}>
-        <CustomText style={styles.title}>{destination.name}</CustomText>
+        <CustomText style={styles.title}>{item.title}</CustomText>
         <View style={styles.tagRow}>
-          {destination.tags.map((tag) => (
+          {item.tags.map((tag) => (
             <View key={tag} style={styles.tag}>
               <CustomText style={styles.tagText}>{tag}</CustomText>
             </View>

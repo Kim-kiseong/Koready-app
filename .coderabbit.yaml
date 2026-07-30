@@ -5,5 +5,5 @@ reviews:
   high_level_summary: true # PR 요약 작성
   auto_review:
     enabled: true
-    target_branches:
-      - "*" # main뿐만 아니라 develop 등 모든 브랜치 PR을 자동으로 리뷰하도록 설정
+    base_branches:
+      - ".*" 

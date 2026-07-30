@@ -1,5 +1,5 @@
 import type { EventDateFilterId, EventRegionId, FeaturedEventCategory, GuideCategoryId } from '@/api/home';
-import type { PurposeId, TravelStyleId } from '@/api/onboarding';
+import type { TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 
 export interface Translations {
@@ -7,12 +7,6 @@ export interface Translations {
     title: string;
     subtitle: string;
     next: string;
-  };
-  purpose: {
-    title: string;
-    subtitle: string;
-    next: string;
-    options: Record<PurposeId, string>;
   };
   location: {
     title: string;
@@ -115,6 +109,18 @@ export interface Translations {
     routePlaceholder: string;
     matePlaceholder: string;
   };
+  terms: {
+    headerTitle: string;
+    title: string;
+    agreeAll: string;
+    connector: string;
+    requiredSuffix: string;
+    optionalSuffix: string;
+    next: string;
+    loadError: string;
+    submitError: string;
+    linkOpenError: string;
+  };
 }
 
 export const ko: Translations = {
@@ -122,20 +128,6 @@ export const ko: Translations = {
     title: '언어를 선택해주세요',
     subtitle: 'Choose your language',
     next: '다음',
-  },
-  purpose: {
-    title: '한국에 오신 목적이 무엇인가요?',
-    subtitle: '여행 목적에 맞는 장소와 경험을 추천해드려요.',
-    next: '다음',
-    options: {
-      EXCHANGE_STUDENT: '교환학생',
-      LANGUAGE_COURSE: '어학연수',
-      SHORT_TRIP: '단기여행',
-      DEGREE_PROGRAM: '학위과정',
-      INTERN_JOB: '인턴/취업',
-      OTHER: '기타',
-      WORKING_HOLIDAY: '워킹홀리데이',
-    },
   },
   location: {
     title: '위치 검색',
@@ -155,9 +147,9 @@ export const ko: Translations = {
       LOCAL_FESTIVAL: '지역 축제',
       TRADITIONAL_MARKET: '전통시장',
       CULTURE_EXPERIENCE: '문화체험',
-      NATURE_SPOT: '자연 명소',
-      EXHIBITION_GALLERY: '전시/미술관',
-      DRAMA_FILMING_SITE: '드라마 촬영지',
+      NATURE: '자연 명소',
+      EXHIBITION_MUSEUM: '전시/미술관',
+      DRAMA_LOCATION: '드라마 촬영지',
     },
   },
   destination: {
@@ -183,8 +175,8 @@ export const ko: Translations = {
     categories: {
       POPULAR: '인기',
       LOCAL_FESTIVAL: '지역 축제',
-      EXHIBITION_GALLERY: '전시/미술관',
-      NATURE_SPOT: '자연 명소',
+      EXHIBITION_MUSEUM: '전시/미술관',
+      NATURE: '자연 명소',
     },
   },
   guideList: {
@@ -261,9 +253,9 @@ export const ko: Translations = {
       LOCAL_FESTIVAL: '지역축제',
       TRADITIONAL_MARKET: '전통시장',
       CULTURE_EXPERIENCE: '문화체험',
-      NATURE_SPOT: '자연명소',
-      EXHIBITION_GALLERY: '전시/미술관',
-      DRAMA_FILMING_SITE: '드라마 촬영지',
+      NATURE: '자연명소',
+      EXHIBITION_MUSEUM: '전시/미술관',
+      DRAMA_LOCATION: '드라마 촬영지',
     },
     cancel: '취소',
     apply: '적용하기',
@@ -279,5 +271,17 @@ export const ko: Translations = {
     nearbyTitle: '같이 가보면 좋은 명소',
     routePlaceholder: '이동 정보는 준비 중이에요.',
     matePlaceholder: '메이트 기능은 준비 중이에요.',
+  },
+  terms: {
+    headerTitle: '약관동의',
+    title: '여행을 떠나기 전\n약관에 동의해주세요!',
+    agreeAll: '전체 동의',
+    connector: ' 및 ',
+    requiredSuffix: ' 동의',
+    optionalSuffix: ' (선택)',
+    next: '다음',
+    loadError: '약관 정보를 불러오지 못했어요.',
+    submitError: '약관 동의에 실패했어요.',
+    linkOpenError: '페이지를 열지 못했어요.',
   },
 };

@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TRAVEL_STYLE_IDS } from '@/api/onboarding';
+import { TRAVEL_STYLE_IDS, type TravelStyleId } from '@/api/onboarding';
 import Chip from '@/components/Chip';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
@@ -12,11 +12,23 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
+const MAX_TRAVEL_STYLES = 4;
+
 export default function TravelStyleScreen() {
   const router = useRouter();
   const t = useTranslation();
   const travelStyles = useOnboardingStore((state) => state.travelStyles);
   const toggleTravelStyle = useOnboardingStore((state) => state.toggleTravelStyle);
+
+  // The store already caps selection at 4, but silently — block the 5th tap
+  // here with a notice instead of letting it no-op with no feedback.
+  const handleToggle = (style: TravelStyleId) => {
+    if (!travelStyles.includes(style) && travelStyles.length >= MAX_TRAVEL_STYLES) {
+      Alert.alert('안내', '여행 스타일은 최대 4개까지 선택할 수 있어요.');
+      return;
+    }
+    toggleTravelStyle(style);
+  };
 
   const handleNext = () => {
     if (travelStyles.length === 0) return;
@@ -25,7 +37,7 @@ export default function TravelStyleScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 2, totalSteps: 3 }} />
+      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 1, totalSteps: 2 }} />
 
       <View style={styles.content}>
         <View style={styles.headerGroup}>
@@ -39,7 +51,7 @@ export default function TravelStyleScreen() {
               key={id}
               label={t.travelStyle.options[id]}
               selected={travelStyles.includes(id)}
-              onPress={() => toggleTravelStyle(id)}
+              onPress={() => handleToggle(id)}
             />
           ))}
         </View>
