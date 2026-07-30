@@ -21,6 +21,8 @@ export default function AppNavigator() {
       <Stack.Screen name="picks" />
       <Stack.Screen name="saved" />
       <Stack.Screen name="my" />
+      <Stack.Screen name="places/[placeId]" />
+      <Stack.Screen name="routes/[routeId]" />
     </Stack>
   );
 }
