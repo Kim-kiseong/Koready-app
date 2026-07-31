@@ -27,6 +27,7 @@ import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { usePicksStore } from '@/store/picks-store';
@@ -43,11 +44,60 @@ const SWIPE_VELOCITY_THRESHOLD = 800;
 // Fallback only, used until the deck's own remainingThreshold arrives from the server.
 const FALLBACK_PREFETCH_THRESHOLD = 5;
 
+// Dev-only: the mock session's access token can't be refreshed by the real
+// backend, so calling the real API with it 401s and forces a logout (see
+// client.ts's response interceptor). Fall back to local sample cards instead —
+// exactly like TermsScreen does for the same reason. Once a real staging test
+// token is set via EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN, the dev session carries
+// that instead and this branch stops being hit automatically.
+function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
+  const cards: PicksCard[] =
+    scope === 'NATIONWIDE'
+      ? [
+          {
+            placeId: 1,
+            title: '경주 문화유산 나들이',
+            locationText: '경상북도 경주시',
+            imageUrl: 'https://picsum.photos/seed/gyeongju/800/1000',
+            saved: false,
+            tags: ['역', '카페 거리', '인생샷 명소'],
+            shortDescription:
+              '서울을 떠나 한국의 살아있는 박물관, 경주의 유구한 역사와 매력적인 로컬 거리를 탐험해 보세요.',
+            serviceRegionCode: 'GYEONGSANG',
+            travelStyle: 'CULTURE_EXPERIENCE',
+          },
+          {
+            placeId: 2,
+            title: '전주 한옥마을 나들이',
+            locationText: '전라북도 전주시',
+            imageUrl: 'https://picsum.photos/seed/jeonju/800/1000',
+            saved: false,
+            tags: ['한옥', '전통시장', '길거리 음식'],
+            shortDescription: '한옥이 늘어선 골목을 걸으며 전통 공예와 길거리 음식을 함께 즐길 수 있어요.',
+            serviceRegionCode: 'JEOLLA',
+            travelStyle: 'TRADITIONAL_MARKET',
+          },
+        ]
+      : [];
+
+  return {
+    deckId: 'dev-mock-deck',
+    scope,
+    originLocation: null,
+    cards,
+    nextCursor: null,
+    hasMore: false,
+    remainingThreshold: FALLBACK_PREFETCH_THRESHOLD,
+  };
+}
+
 export default function PicksScreen() {
   const router = useRouter();
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
   const defaultLocationId = useAuthStore((state) => state.defaultLocationId);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
   const [deckId, setDeckId] = useState<string | null>(null);
@@ -71,12 +121,14 @@ export default function PicksScreen() {
   };
 
   const loadDeck = (targetScope: PicksScope) => {
-    createRecommendationDeck(targetScope, defaultLocationId)
-      .then(applyDeck)
-      .catch(() => {
-        setHasError(true);
-        setIsLoading(false);
-      });
+    const request = isDevMockSession
+      ? Promise.resolve(buildDevFallbackDeck(targetScope))
+      : createRecommendationDeck(targetScope, defaultLocationId);
+
+    request.then(applyDeck).catch(() => {
+      setHasError(true);
+      setIsLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -122,7 +174,7 @@ export default function PicksScreen() {
   const card = cards[currentIndex];
 
   const recordEvent = (placeId: number, eventType: RecommendationEventType) => {
-    if (!deckId) return;
+    if (!deckId || isDevMockSession) return;
     recordRecommendationEvent(deckId, placeId, eventType).catch(() => {});
   };
 
