@@ -84,7 +84,6 @@ export default function PicksScreen() {
   };
 
   const card = cards[currentIndex];
-  const nextCard = cards[currentIndex + 1];
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -111,7 +110,6 @@ export default function PicksScreen() {
         {card && (
           <PicksDeck
             card={card}
-            nextCard={nextCard}
             saved={savedIds.has(card.id)}
             onToggleSave={() => toggleSaved(card.id)}
             onViewDetail={() =>
@@ -134,7 +132,6 @@ export default function PicksScreen() {
 
 type PicksDeckProps = {
   card: PicksCard;
-  nextCard?: PicksCard;
   saved: boolean;
   onToggleSave: () => void;
   onViewDetail: () => void;
@@ -146,7 +143,6 @@ type PicksDeckProps = {
 
 function PicksDeck({
   card,
-  nextCard,
   saved,
   onToggleSave,
   onViewDetail,
@@ -195,19 +191,11 @@ function PicksDeck({
   }));
 
   return (
-    <View style={styles.cardStack}>
-      {nextCard && (
-        <View style={[styles.card, styles.peekCard]}>
-          <Image source={PicksImages[nextCard.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
-        </View>
-      )}
-
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.cardStack, swipeStyle]}>
-          <PicksFlipCard key={card.id} card={card} saved={saved} onToggleSave={onToggleSave} onViewDetail={onViewDetail} />
-        </Animated.View>
-      </GestureDetector>
-    </View>
+    <GestureDetector gesture={pan}>
+      <Animated.View style={[styles.cardStack, swipeStyle]}>
+        <PicksFlipCard key={card.id} card={card} saved={saved} onToggleSave={onToggleSave} onViewDetail={onViewDetail} />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -417,13 +405,6 @@ const styles = StyleSheet.create({
   cardStack: {
     width: 343,
     height: CARD_HEIGHT,
-  },
-  peekCard: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: CARD_HEIGHT,
-    transform: [{ translateX: 20 }, { translateY: -14 }, { rotate: '6deg' }],
   },
   card: {
     width: 343,
