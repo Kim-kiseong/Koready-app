@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchPicksCards, type PicksCard, type PicksScope } from '@/api/picks';
@@ -18,6 +19,9 @@ const SCOPES: { id: PicksScope; label: string }[] = [
   { id: 'NEARBY', label: '근교' },
   { id: 'NATIONWIDE', label: '전국' },
 ];
+
+const CARD_HEIGHT = 485;
+const FLIP_DURATION = 400;
 
 export default function PicksScreen() {
   const router = useRouter();
@@ -66,14 +70,92 @@ export default function PicksScreen() {
         </View>
 
         {card && (
-          <View style={styles.card}>
-            <Pressable
-              style={styles.cardImageWrap}
-              onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: card.id } })}>
-              <Image source={PicksImages[card.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
-            </Pressable>
+          <PicksFlipCard
+            card={card}
+            saved={savedIds.has(card.id)}
+            onToggleSave={() => toggleSaved(card.id)}
+            onViewDetail={() =>
+              router.push({ pathname: '/places/[placeId]', params: { placeId: card.id } })
+            }
+          />
+        )}
+      </View>
 
-            <View style={styles.cardInfo}>
+      <BottomNavBar active="picks" />
+
+      {!hasSeenGuide && <PicksGuideOverlay onDismiss={dismissGuide} />}
+    </SafeAreaView>
+  );
+}
+
+type PicksFlipCardProps = {
+  card: PicksCard;
+  saved: boolean;
+  onToggleSave: () => void;
+  onViewDetail: () => void;
+};
+
+function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCardProps) {
+  const flip = useSharedValue(0);
+
+  const toggleFlip = () => {
+    flip.value = withTiming(flip.value === 0 ? 1 : 0, { duration: FLIP_DURATION });
+  };
+
+  const frontStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` }],
+    zIndex: flip.value < 0.5 ? 1 : 0,
+  }));
+
+  const backStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [180, 360])}deg` }],
+    zIndex: flip.value < 0.5 ? 0 : 1,
+  }));
+
+  const heartIcon = (
+    <SymbolView
+      name={{
+        ios: saved ? 'heart.fill' : 'heart',
+        android: saved ? 'favorite' : 'favorite_border',
+        web: saved ? 'favorite' : 'favorite_border',
+      }}
+      size={20}
+      weight="regular"
+      tintColor={saved ? Palette.red300 : Palette.grey400}
+    />
+  );
+
+  return (
+    <View style={styles.cardStack}>
+      <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
+        <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
+          <Image source={PicksImages[card.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
+        </Pressable>
+
+        <View style={styles.cardInfo}>
+          <View style={styles.cardTextGroup}>
+            <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+            <View style={styles.cardLocationRow}>
+              <SymbolView
+                name={{ ios: 'mappin', android: 'location_on', web: 'location_on' }}
+                size={20}
+                weight="regular"
+                tintColor={Palette.grey600}
+              />
+              <CustomText style={styles.cardLocation}>{card.location}</CustomText>
+            </View>
+          </View>
+
+          <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+            {heartIcon}
+          </Pressable>
+        </View>
+      </Animated.View>
+
+      <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, backStyle]}>
+        <Pressable style={styles.cardBackContent} onPress={toggleFlip}>
+          <View style={styles.cardBackTop}>
+            <View style={styles.cardHeaderRow}>
               <View style={styles.cardTextGroup}>
                 <CustomText style={styles.cardTitle}>{card.title}</CustomText>
                 <View style={styles.cardLocationRow}>
@@ -87,27 +169,34 @@ export default function PicksScreen() {
                 </View>
               </View>
 
-              <Pressable style={styles.saveButton} onPress={() => toggleSaved(card.id)} hitSlop={4}>
-                <SymbolView
-                  name={{
-                    ios: savedIds.has(card.id) ? 'heart.fill' : 'heart',
-                    android: savedIds.has(card.id) ? 'favorite' : 'favorite_border',
-                    web: savedIds.has(card.id) ? 'favorite' : 'favorite_border',
-                  }}
-                  size={20}
-                  weight="regular"
-                  tintColor={savedIds.has(card.id) ? Palette.red300 : Palette.grey400}
-                />
+              <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+                {heartIcon}
               </Pressable>
             </View>
+
+            <View style={styles.tagRow}>
+              {card.tags.map((tag) => (
+                <View key={tag} style={styles.tagChip}>
+                  <CustomText style={styles.tagLabel}>{tag}</CustomText>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.descriptionGroup}>
+              {card.description.map((paragraph) => (
+                <CustomText key={paragraph} style={styles.descriptionText}>
+                  {paragraph}
+                </CustomText>
+              ))}
+            </View>
           </View>
-        )}
-      </View>
 
-      <BottomNavBar active="picks" />
-
-      {!hasSeenGuide && <PicksGuideOverlay onDismiss={dismissGuide} />}
-    </SafeAreaView>
+          <Pressable style={styles.detailButton} onPress={onViewDetail}>
+            <CustomText style={styles.detailButtonText}>여행 코스 확인하기</CustomText>
+          </Pressable>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -202,6 +291,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey500,
   },
+  cardStack: {
+    width: 343,
+    height: CARD_HEIGHT,
+  },
   card: {
     width: 343,
     borderRadius: 16,
@@ -215,8 +308,72 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 4,
   },
+  cardFace: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: CARD_HEIGHT,
+    backfaceVisibility: 'hidden',
+  },
+  cardBack: {
+    flexDirection: 'column',
+  },
+  cardBackContent: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  cardBackTop: {
+    gap: 16,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tagChip: {
+    backgroundColor: Palette.grey150,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  tagLabel: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
+    letterSpacing: -0.28,
+  },
+  descriptionGroup: {
+    gap: 8,
+  },
+  descriptionText: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 22.4,
+    color: Palette.grey600,
+    letterSpacing: -0.28,
+  },
+  detailButton: {
+    height: 46,
+    borderRadius: 10,
+    backgroundColor: Palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 16,
+    color: '#ffffff',
+    letterSpacing: -0.32,
+  },
   cardImageWrap: {
-    height: 400,
+    flex: 1,
     width: '100%',
   },
   cardInfo: {
