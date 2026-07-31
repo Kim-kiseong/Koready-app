@@ -22,6 +22,7 @@ import {
   type PlaceDetailTab,
 } from '@/api/place';
 import CustomText from '@/components/CustomText';
+import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
 import NearbyPlaceCard from '@/components/place-detail/NearbyPlaceCard';
 import PlaceDescription from '@/components/place-detail/PlaceDescription';
@@ -257,8 +258,28 @@ export default function PlaceDetailScreen() {
           </>
         )}
 
-        {activeTab !==
-          'DESCRIPTION' && (
+        {activeTab === 'ROUTE' && placeId && (
+          <BuddyRouteTab
+            placeId={placeId}
+            destination={{
+              name: place.title,
+              address: place.address,
+            }}
+            onViewDetail={(routeId) =>
+              router.push({
+                pathname: '/routes/[routeId]',
+                params: {
+                  routeId,
+                  placeId,
+                  placeName: place.title,
+                  placeAddress: place.address,
+                },
+              })
+            }
+          />
+        )}
+
+        {activeTab === 'MATE' && (
           <View
             style={styles.placeholder}
           >
@@ -267,11 +288,7 @@ export default function PlaceDetailScreen() {
                 styles.placeholderText
               }
             >
-              {activeTab === 'ROUTE'
-                ? t.placeDetail
-                    .routePlaceholder
-                : t.placeDetail
-                    .matePlaceholder}
+              {t.placeDetail.matePlaceholder}
             </CustomText>
           </View>
         )}

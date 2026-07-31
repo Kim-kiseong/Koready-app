@@ -30,6 +30,11 @@ const DEV_MOCK_SESSION = {
   nextStep: 'TERMS' as const,
 };
 
+const DEV_HOME_SESSION = {
+  ...DEV_MOCK_SESSION,
+  nextStep: 'COMPLETED' as const,
+};
+
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.
 const FRAME_WIDTH = 375;
 const TITLE_TOP = 177;
@@ -68,6 +73,11 @@ export default function LoginScreen() {
     router.replace(resolveNextStepRoute(DEV_MOCK_SESSION.nextStep));
   };
 
+  const handleDevHomeShortcut = () => {
+    setSession(DEV_HOME_SESSION);
+    router.replace('/home');
+  };
+
   const buttonsDisabled = !hasHydrated || isSubmitting;
 
   return (
@@ -80,9 +90,14 @@ export default function LoginScreen() {
 
       {__DEV__ && (
         <SafeAreaView edges={['top']} style={styles.devBanner}>
-          <Pressable style={styles.devButton} onPress={handleDevOnboardingBypass}>
-            <CustomText style={styles.devButtonText}>온보딩 화면 바로가기 (Dev)</CustomText>
-          </Pressable>
+          <View style={styles.devButtonGroup}>
+            <Pressable style={styles.devButton} onPress={handleDevOnboardingBypass}>
+              <CustomText style={styles.devButtonText}>온보딩 화면 바로가기 (Dev)</CustomText>
+            </Pressable>
+            <Pressable style={styles.devButton} onPress={handleDevHomeShortcut}>
+              <CustomText style={styles.devButtonText}>홈 화면 바로가기 (Dev)</CustomText>
+            </Pressable>
+          </View>
         </SafeAreaView>
       )}
 
@@ -174,8 +189,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  devButton: {
+  devButtonGroup: {
     marginTop: 8,
+    gap: 8,
+    alignItems: 'center',
+  },
+  devButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
