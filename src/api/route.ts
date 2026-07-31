@@ -83,14 +83,14 @@ const ORIGIN: RoutePlace = {
 
 // TODO: Replace this mock factory with local route fixture loading first.
 export async function fetchBuddyRoute(
-  placeId: string,
+  routeId: string,
   destination: Destination,
 ): Promise<BuddyRoute> {
   const fetchedAtDate = new Date();
   const fetchedAt = fetchedAtDate.toISOString();
   const expiresAt = new Date(fetchedAtDate.getTime() + 5 * 60_000).toISOString();
   return {
-    routeId: `route_${placeId}`,
+    routeId,
     provider: 'TMAP_TRANSIT',
     origin: ORIGIN,
     destination,
@@ -203,12 +203,14 @@ export async function fetchMockRouteDetail(
   routeId: string,
   destination: Destination,
 ): Promise<BuddyRoute> {
-  return fetchBuddyRoute(routeId, destination);
+  const route = await fetchBuddyRoute(routeId, destination);
+  return { ...route, routeId };
 }
 
 export async function fetchMockRouteDetailForDestination(
   routeId: string,
   destination: Destination,
 ): Promise<BuddyRoute> {
-  return fetchMockRouteDetail(routeId, destination);
+  const route = await fetchBuddyRoute(routeId, destination);
+  return { ...route, routeId };
 }

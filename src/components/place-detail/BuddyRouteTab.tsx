@@ -60,12 +60,28 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
   const [hasError, setHasError] = useState(false);
 
   const loadRoute = () => {
+    let cancelled = false;
     setHasError(false);
     setRoute(null);
-    fetchBuddyRoute(placeId, destination).then(setRoute).catch(() => setHasError(true));
+
+    fetchBuddyRoute(placeId, destination)
+      .then((value) => {
+        if (!cancelled) {
+          setRoute(value);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasError(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   };
 
-  useEffect(() => { loadRoute(); }, [placeId]);
+  useEffect(() => loadRoute(), [placeId, destination.name, destination.address]);
 
   if (!route && !hasError) {
     return (
