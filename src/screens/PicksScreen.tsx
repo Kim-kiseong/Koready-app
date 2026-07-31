@@ -1,9 +1,17 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchPicksCards, type PicksCard, type PicksScope } from '@/api/picks';
@@ -22,6 +30,10 @@ const SCOPES: { id: PicksScope; label: string }[] = [
 
 const CARD_HEIGHT = 485;
 const FLIP_DURATION = 400;
+const SWIPE_THRESHOLD = 120;
+const SWIPE_VELOCITY_THRESHOLD = 800;
+// Once fewer than this many loaded cards remain ahead of the current one, fetch the next page.
+const PREFETCH_THRESHOLD = 5;
 
 export default function PicksScreen() {
   const router = useRouter();
@@ -30,11 +42,37 @@ export default function PicksScreen() {
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
   const [cards, setCards] = useState<PicksCard[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const isFetchingMoreRef = useRef(false);
 
   useEffect(() => {
-    fetchPicksCards(scope).then(setCards);
+    let cancelled = false;
+    fetchPicksCards(scope, null).then((page) => {
+      if (cancelled) return;
+      setCards(page.cards);
+      setCursor(page.nextCursor);
+      setCurrentIndex(0);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [scope]);
+
+  // Keep the client-side card stack topped up: once fewer than PREFETCH_THRESHOLD
+  // unseen cards remain ahead of currentIndex, pull the next page and append it.
+  useEffect(() => {
+    const remaining = cards.length - (currentIndex + 1);
+    if (remaining > PREFETCH_THRESHOLD || !cursor || isFetchingMoreRef.current) return;
+
+    isFetchingMoreRef.current = true;
+    fetchPicksCards(scope, cursor).then((page) => {
+      setCards((prev) => [...prev, ...page.cards]);
+      setCursor(page.nextCursor);
+      isFetchingMoreRef.current = false;
+    });
+  }, [cards.length, currentIndex, cursor, scope]);
 
   const toggleSaved = (id: string) => {
     setSavedIds((prev) => {
@@ -45,7 +83,8 @@ export default function PicksScreen() {
     });
   };
 
-  const card = cards[0];
+  const card = cards[currentIndex];
+  const nextCard = cards[currentIndex + 1];
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -70,13 +109,18 @@ export default function PicksScreen() {
         </View>
 
         {card && (
-          <PicksFlipCard
+          <PicksDeck
             card={card}
+            nextCard={nextCard}
             saved={savedIds.has(card.id)}
             onToggleSave={() => toggleSaved(card.id)}
             onViewDetail={() =>
               router.push({ pathname: '/places/[placeId]', params: { placeId: card.id } })
             }
+            canSwipeNext={currentIndex + 1 < cards.length}
+            canSwipePrev={currentIndex > 0}
+            onSwipeNext={() => setCurrentIndex((i) => Math.min(i + 1, cards.length - 1))}
+            onSwipePrev={() => setCurrentIndex((i) => Math.max(i - 1, 0))}
           />
         )}
       </View>
@@ -85,6 +129,85 @@ export default function PicksScreen() {
 
       {!hasSeenGuide && <PicksGuideOverlay onDismiss={dismissGuide} />}
     </SafeAreaView>
+  );
+}
+
+type PicksDeckProps = {
+  card: PicksCard;
+  nextCard?: PicksCard;
+  saved: boolean;
+  onToggleSave: () => void;
+  onViewDetail: () => void;
+  canSwipeNext: boolean;
+  canSwipePrev: boolean;
+  onSwipeNext: () => void;
+  onSwipePrev: () => void;
+};
+
+function PicksDeck({
+  card,
+  nextCard,
+  saved,
+  onToggleSave,
+  onViewDetail,
+  canSwipeNext,
+  canSwipePrev,
+  onSwipeNext,
+  onSwipePrev,
+}: PicksDeckProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const translateX = useSharedValue(0);
+
+  const pan = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-20, 20])
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+    })
+    .onEnd((event) => {
+      const isSwipeRight = event.translationX > SWIPE_THRESHOLD || event.velocityX > SWIPE_VELOCITY_THRESHOLD;
+      const isSwipeLeft = event.translationX < -SWIPE_THRESHOLD || event.velocityX < -SWIPE_VELOCITY_THRESHOLD;
+
+      if (isSwipeRight && canSwipeNext) {
+        translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
+          if (finished) {
+            translateX.value = 0;
+            runOnJS(onSwipeNext)();
+          }
+        });
+      } else if (isSwipeLeft && canSwipePrev) {
+        translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
+          if (finished) {
+            translateX.value = 0;
+            runOnJS(onSwipePrev)();
+          }
+        });
+      } else {
+        translateX.value = withSpring(0);
+      }
+    });
+
+  const swipeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { rotateZ: `${interpolate(translateX.value, [-screenWidth, 0, screenWidth], [-8, 0, 8])}deg` },
+    ],
+  }));
+
+  return (
+    <View style={styles.cardStack}>
+      {nextCard && (
+        <View style={[styles.card, styles.peekCard]}>
+          <Image source={PicksImages[nextCard.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
+        </View>
+      )}
+
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.cardStack, swipeStyle]}>
+          <PicksFlipCard key={card.id} card={card} saved={saved} onToggleSave={onToggleSave} onViewDetail={onViewDetail} />
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
@@ -294,6 +417,13 @@ const styles = StyleSheet.create({
   cardStack: {
     width: 343,
     height: CARD_HEIGHT,
+  },
+  peekCard: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: CARD_HEIGHT,
+    transform: [{ translateX: 20 }, { translateY: -14 }, { rotate: '6deg' }],
   },
   card: {
     width: 343,
