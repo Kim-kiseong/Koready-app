@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -14,13 +14,21 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchPicksCards, type PicksCard, type PicksScope } from '@/api/picks';
+import {
+  createRecommendationDeck,
+  fetchRecommendationDeckPage,
+  recordRecommendationEvent,
+  type PicksCard,
+  type PicksScope,
+  type RecommendationDeck,
+  type RecommendationEventType,
+} from '@/api/picks';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
-import { PicksImages } from '@/constants/picks-images';
 import { FontFamily } from '@/constants/typography';
+import { useAuthStore } from '@/store/auth-store';
 import { usePicksStore } from '@/store/picks-store';
 
 const SCOPES: { id: PicksScope; label: string }[] = [
@@ -32,58 +40,98 @@ const CARD_HEIGHT = 485;
 const FLIP_DURATION = 400;
 const SWIPE_THRESHOLD = 120;
 const SWIPE_VELOCITY_THRESHOLD = 800;
-// Once fewer than this many loaded cards remain ahead of the current one, fetch the next page.
-const PREFETCH_THRESHOLD = 5;
+// Fallback only, used until the deck's own remainingThreshold arrives from the server.
+const FALLBACK_PREFETCH_THRESHOLD = 5;
 
 export default function PicksScreen() {
   const router = useRouter();
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
+  const defaultLocationId = useAuthStore((state) => state.defaultLocationId);
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
+  const [deckId, setDeckId] = useState<string | null>(null);
   const [cards, setCards] = useState<PicksCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [hasMore, setHasMore] = useState(false);
+  const [remainingThreshold, setRemainingThreshold] = useState(FALLBACK_PREFETCH_THRESHOLD);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const isFetchingMoreRef = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchPicksCards(scope, null).then((page) => {
-      if (cancelled) return;
-      setCards(page.cards);
-      setCursor(page.nextCursor);
-      setCurrentIndex(0);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [scope]);
+  const applyDeck = (deck: RecommendationDeck) => {
+    setDeckId(deck.deckId);
+    setCards(deck.cards);
+    setCursor(deck.nextCursor);
+    setHasMore(deck.hasMore);
+    setRemainingThreshold(deck.remainingThreshold);
+    setCurrentIndex(0);
+    setIsLoading(false);
+  };
 
-  // Keep the client-side card stack topped up: once fewer than PREFETCH_THRESHOLD
-  // unseen cards remain ahead of currentIndex, pull the next page and append it.
+  const loadDeck = (targetScope: PicksScope) => {
+    createRecommendationDeck(targetScope, defaultLocationId)
+      .then(applyDeck)
+      .catch(() => {
+        setHasError(true);
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
+    loadDeck(scope);
+    // Runs once for the initial deck — scope switches and retries go through
+    // changeScope/retryLoad below instead, so they can reset UI state synchronously.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
+  // of currentIndex than the server's remainingThreshold, pull the next page.
+  useEffect(() => {
+    if (!deckId || !hasMore || isFetchingMoreRef.current) return;
     const remaining = cards.length - (currentIndex + 1);
-    if (remaining > PREFETCH_THRESHOLD || !cursor || isFetchingMoreRef.current) return;
+    if (remaining > remainingThreshold) return;
 
     isFetchingMoreRef.current = true;
-    fetchPicksCards(scope, cursor).then((page) => {
-      setCards((prev) => [...prev, ...page.cards]);
-      setCursor(page.nextCursor);
+    fetchRecommendationDeckPage(deckId, cursor).then((deck) => {
+      setCards((prev) => [...prev, ...deck.cards]);
+      setCursor(deck.nextCursor);
+      setHasMore(deck.hasMore);
+      setRemainingThreshold(deck.remainingThreshold);
       isFetchingMoreRef.current = false;
     });
-  }, [cards.length, currentIndex, cursor, scope]);
+  }, [cards.length, currentIndex, cursor, deckId, hasMore, remainingThreshold]);
 
-  const toggleSaved = (id: string) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const changeScope = (nextScope: PicksScope) => {
+    if (nextScope === scope) return;
+    setScope(nextScope);
+    setCards([]);
+    setCurrentIndex(0);
+    setIsLoading(true);
+    setHasError(false);
+    loadDeck(nextScope);
+  };
+
+  const retryLoad = () => {
+    setIsLoading(true);
+    setHasError(false);
+    loadDeck(scope);
   };
 
   const card = cards[currentIndex];
+
+  const recordEvent = (placeId: number, eventType: RecommendationEventType) => {
+    if (!deckId) return;
+    recordRecommendationEvent(deckId, placeId, eventType).catch(() => {});
+  };
+
+  const toggleSaved = () => {
+    if (!card) return;
+    const nextSaved = !card.saved;
+    recordEvent(card.placeId, nextSaved ? 'PLACE_SAVED' : 'PLACE_UNSAVED');
+    setCards((prev) => prev.map((c, i) => (i === currentIndex ? { ...c, saved: nextSaved } : c)));
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -97,7 +145,7 @@ export default function PicksScreen() {
               <Pressable
                 key={option.id}
                 style={[styles.scopeSegment, selected && styles.scopeSegmentSelected]}
-                onPress={() => setScope(option.id)}>
+                onPress={() => changeScope(option.id)}>
                 <CustomText
                   style={[styles.scopeLabel, selected ? styles.scopeLabelSelected : styles.scopeLabelUnselected]}>
                   {option.label}
@@ -107,18 +155,41 @@ export default function PicksScreen() {
           })}
         </View>
 
-        {card && (
+        {isLoading && (
+          <View style={styles.state}>
+            <ActivityIndicator color={Palette.primary} />
+            <CustomText style={styles.stateText}>추천 여행지를 불러오는 중이에요.</CustomText>
+          </View>
+        )}
+
+        {!isLoading && hasError && (
+          <View style={styles.state}>
+            <CustomText style={styles.stateText}>추천 여행지를 불러오지 못했어요.</CustomText>
+            <Pressable style={styles.retryButton} onPress={retryLoad}>
+              <CustomText style={styles.retryText}>다시 시도</CustomText>
+            </Pressable>
+          </View>
+        )}
+
+        {!isLoading && !hasError && card && (
           <PicksDeck
             card={card}
-            saved={savedIds.has(card.id)}
-            onToggleSave={() => toggleSaved(card.id)}
-            onViewDetail={() =>
-              router.push({ pathname: '/places/[placeId]', params: { placeId: card.id } })
-            }
+            onToggleSave={toggleSaved}
+            onExpand={() => recordEvent(card.placeId, 'CARD_EXPANDED')}
+            onViewDetail={() => {
+              recordEvent(card.placeId, 'PLACE_DETAIL_CLICKED');
+              router.push({ pathname: '/places/[placeId]', params: { placeId: String(card.placeId) } });
+            }}
             canSwipeNext={currentIndex + 1 < cards.length}
             canSwipePrev={currentIndex > 0}
-            onSwipeNext={() => setCurrentIndex((i) => Math.min(i + 1, cards.length - 1))}
-            onSwipePrev={() => setCurrentIndex((i) => Math.max(i - 1, 0))}
+            onSwipeNext={() => {
+              recordEvent(card.placeId, 'CARD_NEXT');
+              setCurrentIndex((i) => Math.min(i + 1, cards.length - 1));
+            }}
+            onSwipePrev={() => {
+              recordEvent(card.placeId, 'CARD_PREVIOUS');
+              setCurrentIndex((i) => Math.max(i - 1, 0));
+            }}
           />
         )}
       </View>
@@ -132,8 +203,8 @@ export default function PicksScreen() {
 
 type PicksDeckProps = {
   card: PicksCard;
-  saved: boolean;
   onToggleSave: () => void;
+  onExpand: () => void;
   onViewDetail: () => void;
   canSwipeNext: boolean;
   canSwipePrev: boolean;
@@ -143,8 +214,8 @@ type PicksDeckProps = {
 
 function PicksDeck({
   card,
-  saved,
   onToggleSave,
+  onExpand,
   onViewDetail,
   canSwipeNext,
   canSwipePrev,
@@ -193,7 +264,13 @@ function PicksDeck({
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={[styles.cardStack, swipeStyle]}>
-        <PicksFlipCard key={card.id} card={card} saved={saved} onToggleSave={onToggleSave} onViewDetail={onViewDetail} />
+        <PicksFlipCard
+          key={card.placeId}
+          card={card}
+          onToggleSave={onToggleSave}
+          onExpand={onExpand}
+          onViewDetail={onViewDetail}
+        />
       </Animated.View>
     </GestureDetector>
   );
@@ -201,16 +278,18 @@ function PicksDeck({
 
 type PicksFlipCardProps = {
   card: PicksCard;
-  saved: boolean;
   onToggleSave: () => void;
+  onExpand: () => void;
   onViewDetail: () => void;
 };
 
-function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCardProps) {
+function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlipCardProps) {
   const flip = useSharedValue(0);
 
   const toggleFlip = () => {
-    flip.value = withTiming(flip.value === 0 ? 1 : 0, { duration: FLIP_DURATION });
+    const isExpanding = flip.value === 0;
+    flip.value = withTiming(isExpanding ? 1 : 0, { duration: FLIP_DURATION });
+    if (isExpanding) onExpand();
   };
 
   const frontStyle = useAnimatedStyle(() => ({
@@ -226,13 +305,13 @@ function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCar
   const heartIcon = (
     <SymbolView
       name={{
-        ios: saved ? 'heart.fill' : 'heart',
-        android: saved ? 'favorite' : 'favorite_border',
-        web: saved ? 'favorite' : 'favorite_border',
+        ios: card.saved ? 'heart.fill' : 'heart',
+        android: card.saved ? 'favorite' : 'favorite_border',
+        web: card.saved ? 'favorite' : 'favorite_border',
       }}
       size={20}
       weight="regular"
-      tintColor={saved ? Palette.red300 : Palette.grey400}
+      tintColor={card.saved ? Palette.red300 : Palette.grey400}
     />
   );
 
@@ -240,7 +319,7 @@ function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCar
     <View style={styles.cardStack}>
       <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
         <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
-          <Image source={PicksImages[card.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Pressable>
 
         <View style={styles.cardInfo}>
@@ -253,7 +332,7 @@ function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCar
                 weight="regular"
                 tintColor={Palette.grey600}
               />
-              <CustomText style={styles.cardLocation}>{card.location}</CustomText>
+              <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
             </View>
           </View>
 
@@ -276,7 +355,7 @@ function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCar
                     weight="regular"
                     tintColor={Palette.grey600}
                   />
-                  <CustomText style={styles.cardLocation}>{card.location}</CustomText>
+                  <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
                 </View>
               </View>
 
@@ -293,13 +372,7 @@ function PicksFlipCard({ card, saved, onToggleSave, onViewDetail }: PicksFlipCar
               ))}
             </View>
 
-            <View style={styles.descriptionGroup}>
-              {card.description.map((paragraph) => (
-                <CustomText key={paragraph} style={styles.descriptionText}>
-                  {paragraph}
-                </CustomText>
-              ))}
-            </View>
+            <CustomText style={styles.descriptionText}>{card.shortDescription}</CustomText>
           </View>
 
           <Pressable style={styles.detailButton} onPress={onViewDetail}>
@@ -402,6 +475,27 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey500,
   },
+  state: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 52,
+  },
+  stateText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
+  },
+  retryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: Palette.primary,
+  },
+  retryText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    color: '#ffffff',
+  },
   cardStack: {
     width: 343,
     height: CARD_HEIGHT,
@@ -459,9 +553,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Palette.grey600,
     letterSpacing: -0.28,
-  },
-  descriptionGroup: {
-    gap: 8,
   },
   descriptionText: {
     fontFamily: FontFamily.pretendard.regular,
