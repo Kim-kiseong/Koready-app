@@ -50,41 +50,64 @@ const FALLBACK_PREFETCH_THRESHOLD = 5;
 // exactly like TermsScreen does for the same reason. Once a real staging test
 // token is set via EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN, the dev session carries
 // that instead and this branch stops being hit automatically.
-function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
-  const cards: PicksCard[] =
-    scope === 'NATIONWIDE'
-      ? [
-          {
-            placeId: 1,
-            title: '경주 문화유산 나들이',
-            locationText: '경상북도 경주시',
-            imageUrl: 'https://picsum.photos/seed/gyeongju/800/1000',
-            saved: false,
-            tags: ['역', '카페 거리', '인생샷 명소'],
-            shortDescription:
-              '서울을 떠나 한국의 살아있는 박물관, 경주의 유구한 역사와 매력적인 로컬 거리를 탐험해 보세요.',
-            serviceRegionCode: 'GYEONGSANG',
-            travelStyle: 'CULTURE_EXPERIENCE',
-          },
-          {
-            placeId: 2,
-            title: '전주 한옥마을 나들이',
-            locationText: '전라북도 전주시',
-            imageUrl: 'https://picsum.photos/seed/jeonju/800/1000',
-            saved: false,
-            tags: ['한옥', '전통시장', '길거리 음식'],
-            shortDescription: '한옥이 늘어선 골목을 걸으며 전통 공예와 길거리 음식을 함께 즐길 수 있어요.',
-            serviceRegionCode: 'JEOLLA',
-            travelStyle: 'TRADITIONAL_MARKET',
-          },
-        ]
-      : [];
+const DEV_FALLBACK_CARDS: Record<PicksScope, PicksCard[]> = {
+  NATIONWIDE: [
+    {
+      placeId: 1,
+      title: '경주 문화유산 나들이',
+      locationText: '경상북도 경주시',
+      imageUrl: 'https://picsum.photos/seed/gyeongju/800/1000',
+      saved: false,
+      tags: ['역', '카페 거리', '인생샷 명소'],
+      shortDescription:
+        '서울을 떠나 한국의 살아있는 박물관, 경주의 유구한 역사와 매력적인 로컬 거리를 탐험해 보세요.',
+      serviceRegionCode: 'GYEONGSANG',
+      travelStyle: 'CULTURE_EXPERIENCE',
+    },
+    {
+      placeId: 2,
+      title: '전주 한옥마을 나들이',
+      locationText: '전라북도 전주시',
+      imageUrl: 'https://picsum.photos/seed/jeonju/800/1000',
+      saved: false,
+      tags: ['한옥', '전통시장', '길거리 음식'],
+      shortDescription: '한옥이 늘어선 골목을 걸으며 전통 공예와 길거리 음식을 함께 즐길 수 있어요.',
+      serviceRegionCode: 'JEOLLA',
+      travelStyle: 'TRADITIONAL_MARKET',
+    },
+  ],
+  NEARBY: [
+    {
+      placeId: 101,
+      title: '성북천 카페거리 산책',
+      locationText: '서울 성북구',
+      imageUrl: 'https://picsum.photos/seed/seongbuk/800/1000',
+      saved: false,
+      tags: ['카페 거리', '도보 여행', '인생샷 명소'],
+      shortDescription: '학교에서 멀지 않은 성북천을 따라 걸으며 개성 있는 카페들을 구경해 보세요.',
+      serviceRegionCode: 'SEOUL',
+      travelStyle: 'LOCAL_FOOD',
+    },
+    {
+      placeId: 102,
+      title: '경춘선 숲길 나들이',
+      locationText: '서울 노원구',
+      imageUrl: 'https://picsum.photos/seed/gyeongchun/800/1000',
+      saved: false,
+      tags: ['자연', '피크닉', '자전거'],
+      shortDescription: '옛 철길을 개조한 숲길을 따라 가볍게 산책하거나 자전거를 탈 수 있어요.',
+      serviceRegionCode: 'SEOUL',
+      travelStyle: 'NATURE',
+    },
+  ],
+};
 
+function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
   return {
     deckId: 'dev-mock-deck',
     scope,
     originLocation: null,
-    cards,
+    cards: DEV_FALLBACK_CARDS[scope],
     nextCursor: null,
     hasMore: false,
     remainingThreshold: FALLBACK_PREFETCH_THRESHOLD,
