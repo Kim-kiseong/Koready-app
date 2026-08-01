@@ -8,9 +8,11 @@
     "scheme": "koreadyapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.koready.app"
     },
     "android": {
+      "package": "com.koready.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,6 +33,13 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      "expo-secure-store",
+      [
+        "react-native-nitro-google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1039304334068-jke8pl5f0itkiq8h41l3gonm7u5bkh2s"
         }
       ]
     ],
