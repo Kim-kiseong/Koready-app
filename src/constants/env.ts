@@ -30,5 +30,14 @@ export const GOOGLE_IOS_CLIENT_ID = googleIosClientId;
 // backend before real social login exists. Leave unset to keep using the
 // mock dev session (see constants/dev.ts) — every screen already falls back
 // to local mock data whenever it detects that sentinel token.
-export const DEV_TEST_ACCESS_TOKEN = process.env.EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN || null;
-export const DEV_TEST_REFRESH_TOKEN = process.env.EXPO_PUBLIC_DEV_TEST_REFRESH_TOKEN || null;
+//
+// Set these in a gitignored `.env.local` (never in the tracked `.env`) —
+// Expo loads it automatically and it overrides `.env`. The `__DEV__` guard
+// is a second layer: even if a real token ends up in a shared/tracked env
+// file, it never gets inlined into a non-dev (preview/production) bundle.
+export const DEV_TEST_ACCESS_TOKEN = __DEV__
+  ? process.env.EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN || null
+  : null;
+export const DEV_TEST_REFRESH_TOKEN = __DEV__
+  ? process.env.EXPO_PUBLIC_DEV_TEST_REFRESH_TOKEN || null
+  : null;
