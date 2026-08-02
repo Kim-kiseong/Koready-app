@@ -365,15 +365,21 @@ function PicksDeck({
       if (isSwipeRight && canSwipeNext) {
         translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
           if (finished) {
-            translateX.value = 0;
+            // Trigger the index update first, then snap the replacement card in
+            // from the opposite off-screen side (not center) and spring it into
+            // place — otherwise the still-old card would flash back to center
+            // for a frame before the new one renders.
             runOnJS(onSwipeNext)();
+            translateX.value = -screenWidth;
+            translateX.value = withSpring(0);
           }
         });
       } else if (isSwipeLeft && canSwipePrev) {
         translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
           if (finished) {
-            translateX.value = 0;
             runOnJS(onSwipePrev)();
+            translateX.value = screenWidth;
+            translateX.value = withSpring(0);
           }
         });
       } else {
