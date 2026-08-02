@@ -118,6 +118,7 @@ function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
 export default function PicksScreen() {
   const router = useRouter();
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
+  const hasSeenGuideHydrated = usePicksStore((state) => state.hasHydrated);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
   const defaultLocationId = useAuthStore((state) => state.defaultLocationId);
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -323,7 +324,7 @@ export default function PicksScreen() {
 
       <BottomNavBar active="picks" />
 
-      {!hasSeenGuide && <PicksGuideOverlay onDismiss={dismissGuide} />}
+      {hasSeenGuideHydrated && !hasSeenGuide && <PicksGuideOverlay onDismiss={dismissGuide} />}
     </SafeAreaView>
   );
 }
