@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { logout } from '@/api/auth';
+import { signOutOfGoogle } from '@/api/socialAuth';
 import { fetchMyUser } from '@/api/user';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
@@ -41,6 +42,7 @@ export default function MyScreen() {
     if (!refreshToken) {
       // No session to log out of server-side — nothing to wait on, so just
       // drop the local state instead of leaving the button a silent no-op.
+      await signOutOfGoogle();
       clearSession();
       router.replace('/login');
       return;
@@ -48,13 +50,15 @@ export default function MyScreen() {
     setIsLoggingOut(true);
     try {
       await logout({ refreshToken, deviceId });
-      // Only clear local token/user cache after the server confirms logout.
-      clearSession();
-      router.replace('/login');
     } catch {
-      Alert.alert('오류', '로그아웃에 실패했습니다.');
+      // The server call is best-effort — local sign-out must still happen so
+      // the user isn't stuck "logged in" on this device.
+      Alert.alert('오류', '서버 로그아웃 요청이 실패했지만 이 기기에서는 로그아웃되었습니다.');
     } finally {
+      await signOutOfGoogle();
+      clearSession();
       setIsLoggingOut(false);
+      router.replace('/login');
     }
   };
 
