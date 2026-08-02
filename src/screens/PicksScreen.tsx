@@ -134,8 +134,10 @@ export default function PicksScreen() {
   const [hasError, setHasError] = useState(false);
   const isFetchingMoreRef = useRef(false);
   const latestRequestIdRef = useRef(0);
+  const activeDeckIdRef = useRef<string | null>(null);
 
   const applyDeck = (deck: RecommendationDeck) => {
+    activeDeckIdRef.current = deck.deckId;
     setDeckId(deck.deckId);
     setCards(deck.cards);
     setCursor(deck.nextCursor);
@@ -186,14 +188,25 @@ export default function PicksScreen() {
     const remaining = cards.length - (currentIndex + 1);
     if (remaining > remainingThreshold) return;
 
+    const requestDeckId = deckId;
     isFetchingMoreRef.current = true;
-    fetchRecommendationDeckPage(deckId, cursor).then((deck) => {
-      setCards((prev) => [...prev, ...deck.cards]);
-      setCursor(deck.nextCursor);
-      setHasMore(deck.hasMore);
-      setRemainingThreshold(deck.remainingThreshold);
-      isFetchingMoreRef.current = false;
-    });
+    fetchRecommendationDeckPage(deckId, cursor)
+      .then((deck) => {
+        // The active deck can change (scope switch/retry) while this was in
+        // flight — drop a stale page instead of appending it to the wrong deck.
+        if (activeDeckIdRef.current !== requestDeckId) return;
+        setCards((prev) => [...prev, ...deck.cards]);
+        setCursor(deck.nextCursor);
+        setHasMore(deck.hasMore);
+        setRemainingThreshold(deck.remainingThreshold);
+      })
+      .catch(() => {
+        // Best-effort prefetch; leave the existing cards/cursor as-is and let
+        // the next threshold crossing retry.
+      })
+      .finally(() => {
+        isFetchingMoreRef.current = false;
+      });
   }, [cards.length, currentIndex, cursor, deckId, hasMore, remainingThreshold]);
 
   const changeScope = (nextScope: PicksScope) => {
