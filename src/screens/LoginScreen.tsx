@@ -11,14 +11,18 @@ import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { DEV_TEST_ACCESS_TOKEN, DEV_TEST_REFRESH_TOKEN } from '@/constants/env';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 // Dev-only bypass: lets onboarding be tested before social login keys exist.
+// When EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN is set, this carries a real staging
+// token instead, so screens that check for DEV_MOCK_ACCESS_TOKEN naturally
+// stop using their local fallback data and call the real backend.
 const DEV_MOCK_SESSION = {
   tokenType: 'Bearer' as const,
-  accessToken: DEV_MOCK_ACCESS_TOKEN,
-  refreshToken: 'mock-refresh-token',
+  accessToken: DEV_TEST_ACCESS_TOKEN ?? DEV_MOCK_ACCESS_TOKEN,
+  refreshToken: DEV_TEST_REFRESH_TOKEN ?? 'mock-refresh-token',
   accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   user: {
