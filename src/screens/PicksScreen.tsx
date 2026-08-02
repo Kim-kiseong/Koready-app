@@ -132,6 +132,7 @@ export default function PicksScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const isFetchingMoreRef = useRef(false);
+  const latestRequestIdRef = useRef(0);
 
   const applyDeck = (deck: RecommendationDeck) => {
     setDeckId(deck.deckId);
@@ -144,14 +145,26 @@ export default function PicksScreen() {
   };
 
   const loadDeck = (targetScope: PicksScope) => {
+    // Scope can change (or retry) before an in-flight request settles — track
+    // which call is newest so a slower, stale response can't clobber it, and
+    // drop any prefetch lock a scope switch left behind mid-flight.
+    const requestId = ++latestRequestIdRef.current;
+    isFetchingMoreRef.current = false;
+
     const request = isDevMockSession
       ? Promise.resolve(buildDevFallbackDeck(targetScope))
       : createRecommendationDeck(targetScope, defaultLocationId);
 
-    request.then(applyDeck).catch(() => {
-      setHasError(true);
-      setIsLoading(false);
-    });
+    request
+      .then((deck) => {
+        if (latestRequestIdRef.current !== requestId) return;
+        applyDeck(deck);
+      })
+      .catch(() => {
+        if (latestRequestIdRef.current !== requestId) return;
+        setHasError(true);
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => {
