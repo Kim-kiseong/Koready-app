@@ -31,6 +31,7 @@ import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { usePicksStore } from '@/store/picks-store';
+import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 const SCOPES: { id: PicksScope; label: string }[] = [
   { id: 'NEARBY', label: '근교' },
@@ -122,6 +123,8 @@ export default function PicksScreen() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
+  const initializeSavedPlace = useSavedPlaceStore((state) => state.initializePlace);
+  const toggleSavedPlace = useSavedPlaceStore((state) => state.togglePlace);
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
   const [deckId, setDeckId] = useState<string | null>(null);
@@ -239,6 +242,12 @@ export default function PicksScreen() {
     if (!card) return;
     const nextSaved = !card.saved;
     recordEvent(card.placeId, nextSaved ? 'PLACE_SAVED' : 'PLACE_UNSAVED');
+    // Keep the shared saved-place store (also used by PlaceDetailScreen) in
+    // sync — seed it with the deck's own saved value first so the toggle
+    // flips from the right baseline instead of an unset/undefined entry.
+    const placeIdKey = String(card.placeId);
+    initializeSavedPlace(placeIdKey, card.saved);
+    toggleSavedPlace(placeIdKey);
     setCards((prev) => prev.map((c, i) => (i === currentIndex ? { ...c, saved: nextSaved } : c)));
   };
 
@@ -274,6 +283,15 @@ export default function PicksScreen() {
         {!isLoading && hasError && (
           <View style={styles.state}>
             <CustomText style={styles.stateText}>추천 여행지를 불러오지 못했어요.</CustomText>
+            <Pressable style={styles.retryButton} onPress={retryLoad}>
+              <CustomText style={styles.retryText}>다시 시도</CustomText>
+            </Pressable>
+          </View>
+        )}
+
+        {!isLoading && !hasError && !card && (
+          <View style={styles.state}>
+            <CustomText style={styles.stateText}>추천할 만한 여행지가 없어요.</CustomText>
             <Pressable style={styles.retryButton} onPress={retryLoad}>
               <CustomText style={styles.retryText}>다시 시도</CustomText>
             </Pressable>
