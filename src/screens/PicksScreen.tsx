@@ -212,8 +212,11 @@ export default function PicksScreen() {
   const changeScope = (nextScope: PicksScope) => {
     if (nextScope === scope) return;
     setScope(nextScope);
+    setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
+    setCursor(null);
+    setHasMore(false);
     setIsLoading(true);
     setHasError(false);
     loadDeck(nextScope);
