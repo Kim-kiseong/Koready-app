@@ -19,8 +19,15 @@ import { useAuthStore } from '@/store/auth-store';
 
 function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
-    const data = error.response.data as { message?: unknown };
-    if (typeof data.message === 'string' && data.message.length > 0) return data.message;
+    const data = error.response.data as { message?: unknown; traceId?: unknown };
+    const base =
+      typeof data.message === 'string' && data.message.length > 0
+        ? data.message
+        : '알 수 없는 오류가 발생했습니다.';
+    // Surfaced so a failed real-device test can be reported to the backend
+    // with the exact status/traceId, per the Google-login verification spec.
+    const traceId = typeof data.traceId === 'string' ? data.traceId : null;
+    return traceId ? `${base}\n(status ${error.response?.status}, traceId ${traceId})` : base;
   }
   return error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
 }
