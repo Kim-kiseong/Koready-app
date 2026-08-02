@@ -12,6 +12,11 @@ export type SocialLoginRequest = {
   expoPushToken?: string | null;
 };
 
+export type GoogleLoginRequest = {
+  idToken: string;
+  deviceId: string;
+};
+
 export type RefreshTokenRequest = {
   refreshToken: string;
   deviceId: string;

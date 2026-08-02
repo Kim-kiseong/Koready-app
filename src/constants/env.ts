@@ -9,6 +9,22 @@ if (!value) {
 
 export const API_BASE_URL = value;
 
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+if (!googleWebClientId) {
+  throw new Error('Missing required environment variable: EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID');
+}
+
+export const GOOGLE_WEB_CLIENT_ID = googleWebClientId;
+
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+
+if (!googleIosClientId) {
+  throw new Error('Missing required environment variable: EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID');
+}
+
+export const GOOGLE_IOS_CLIENT_ID = googleIosClientId;
+
 // Optional: a real staging access/refresh token pair, used by LoginScreen's
 // dev-only bypass so authenticated endpoints can be tested against the real
 // backend before real social login exists. Leave unset to keep using the

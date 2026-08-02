@@ -34,7 +34,7 @@ async function refreshSession(): Promise<TokenResponse> {
 
   // Deliberately a bare axios call (not `client`), so this never re-enters
   // the response interceptor below and can't recurse.
-  const response = await axios.post<TokenEnvelope>(`${API_BASE_URL}/auth/refresh`, {
+  const response = await axios.post<TokenEnvelope>(`${API_BASE_URL}/api/v1/auth/refresh`, {
     refreshToken,
     deviceId,
   });
@@ -45,7 +45,7 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config: RetryableRequestConfig | undefined = error.config;
-    const isRefreshCall = config?.url?.includes('/auth/refresh');
+    const isRefreshCall = config?.url?.includes('/api/v1/auth/refresh');
 
     if (error.response?.status !== 401 || !config || config._retry || isRefreshCall) {
       return Promise.reject(error);
