@@ -120,6 +120,7 @@ export default function PicksScreen() {
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
   const defaultLocationId = useAuthStore((state) => state.defaultLocationId);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
@@ -168,11 +169,15 @@ export default function PicksScreen() {
   };
 
   useEffect(() => {
+    // Wait for auth-store hydration so the initial deck request carries the
+    // restored defaultLocationId instead of racing it with a stale null.
+    if (!hasHydrated) return;
     loadDeck(scope);
-    // Runs once for the initial deck — scope switches and retries go through
-    // changeScope/retryLoad below instead, so they can reset UI state synchronously.
+    // Still runs once — hasHydrated flips false→true exactly once, then stays
+    // true. Scope switches and retries go through changeScope/retryLoad below
+    // instead, so they can reset UI state synchronously.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasHydrated]);
 
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
