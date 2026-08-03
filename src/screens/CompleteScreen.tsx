@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -120,7 +121,7 @@ export default function CompleteScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} />
 
       <View style={styles.content}>
         <Image

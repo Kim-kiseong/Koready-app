@@ -5,10 +5,10 @@ export default function OnboardingScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+      <View style={styles.container}>
       <Text style={styles.title}>Onboarding Screen</Text>
       <Button title="Go to Home" onPress={() => router.push('/home')} />
-      <Button title="Back to Login" onPress={() => router.back()} />
+      <Button title="Back to Login" onPress={() => router.replace('/login')} />
     </View>
   );
 }

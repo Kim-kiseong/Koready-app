@@ -23,6 +23,7 @@ import SortBottomSheet from '@/components/SortBottomSheet';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -49,7 +50,7 @@ export default function EventListScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} title={title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={title} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthRow}>

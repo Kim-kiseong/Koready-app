@@ -24,6 +24,7 @@ import {
 import CustomText from '@/components/CustomText';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
+import MateTab from '@/components/place-detail/MateTab';
 import NearbyPlaceCard from '@/components/place-detail/NearbyPlaceCard';
 import PlaceDescription from '@/components/place-detail/PlaceDescription';
 import PlaceDetailTabs from '@/components/place-detail/PlaceDetailTabs';
@@ -32,6 +33,7 @@ import PlaceInfo from '@/components/place-detail/PlaceInfo';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 export default function PlaceDetailScreen() {
@@ -157,7 +159,7 @@ export default function PlaceDetailScreen() {
       <View style={styles.topBar}>
         <Pressable
           hitSlop={12}
-          onPress={() => router.back()}
+          onPress={() => goBackOrRoot(router)}
         >
           <SymbolView
             name={{
@@ -279,19 +281,7 @@ export default function PlaceDetailScreen() {
           />
         )}
 
-        {activeTab === 'MATE' && (
-          <View
-            style={styles.placeholder}
-          >
-            <CustomText
-              style={
-                styles.placeholderText
-              }
-            >
-              {t.placeDetail.matePlaceholder}
-            </CustomText>
-          </View>
-        )}
+        {activeTab === 'MATE' && <MateTab />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -342,15 +332,4 @@ const styles = StyleSheet.create({
     color: Palette.text,
   },
 
-  placeholder: {
-    paddingVertical: 48,
-    alignItems: 'center',
-  },
-
-  placeholderText: {
-    fontFamily:
-      FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.grey400,
-  },
 });

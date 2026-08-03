@@ -13,6 +13,7 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAddressStore } from '@/store/address-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -72,7 +73,7 @@ export default function AddressSearchScreen() {
       });
       setCurrentLocationId(saved.locationId);
       addSavedAddress(saved);
-      router.back();
+      goBackOrRoot(router);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 410) {
         Alert.alert('오류', '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.');
@@ -92,14 +93,14 @@ export default function AddressSearchScreen() {
       source: 'current',
     });
     setCurrentLocationId(null);
-    router.back();
+    goBackOrRoot(router);
   };
 
   const showResults = query.length > 0 && results.length > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} title={t.addressSearch.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} />
 
       <View style={styles.content}>
         <View

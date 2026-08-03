@@ -25,9 +25,12 @@ export default function Chip({ label, selected, onPress, style }: ChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    borderRadius: 8,
+    height: 36,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   unselected: {
     backgroundColor: '#ffffff',
@@ -36,16 +39,19 @@ const styles = StyleSheet.create({
   },
   selected: {
     backgroundColor: Palette.primary,
+    borderWidth: 1,
+    borderColor: Palette.primary,
   },
   label: {
     fontSize: 14,
+    lineHeight: 19.6,
   },
   labelUnselected: {
     fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey600,
   },
   labelSelected: {
-    fontFamily: FontFamily.pretendard.semiBold,
+    fontFamily: FontFamily.pretendard.medium,
     color: '#ffffff',
   },
 });

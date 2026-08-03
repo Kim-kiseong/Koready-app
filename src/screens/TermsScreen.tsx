@@ -16,6 +16,7 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
+import { goBackOrRoot } from '@/navigation/safe-back';
 
 function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
@@ -112,7 +113,7 @@ export default function TermsScreen() {
           return;
         }
         Alert.alert(t.terms.loadError, extractErrorMessage(error), [
-          { text: '확인', onPress: () => router.back() },
+          { text: '확인', onPress: () => goBackOrRoot(router, '/login') },
         ]);
       }
     })();
@@ -172,7 +173,7 @@ export default function TermsScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} title={t.terms.headerTitle} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.terms.headerTitle} />
 
       <View style={styles.content}>
         <CustomText style={styles.title}>{t.terms.title}</CustomText>

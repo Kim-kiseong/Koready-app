@@ -27,6 +27,7 @@ import {
 } from '@/components/place-detail/RouteIcons';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { goBackOrRoot } from '@/navigation/safe-back';
 
 const MODE_LABEL: Record<TransportMode, string> = {
   WALK: '도보',
@@ -109,7 +110,7 @@ export default function RouteDetailScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
+        <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
           <CustomText style={styles.back}>‹</CustomText>
         </Pressable>
         <CustomText style={styles.headerTitle}>상세 이동 경로</CustomText>

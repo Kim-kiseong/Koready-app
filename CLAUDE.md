@@ -17,8 +17,9 @@
 
 - 의존성 설치: `npx expo install <package-name>`
 - 로컬 개발 서버 구동: `npx expo start`
-- iOS 시뮬레이터 실행: 개발 서버 구동 중 터미널에 `i` 입력
-- 안드로이드 에뮬레이터 실행: 개발 서버 구동 중 터미널에 `a` 입력
+- iOS 시뮬레이터 실행: `npx expo run:ios`
+- 안드로이드 에뮬레이터 실행: `npx expo run:android`
+- Metro 번들러만 열어 둘 때: `npx expo start`
 - 우회 터널 구동 (연결 오류 발생 시): `npx expo start --tunnel`
 - 빌드 시스템: Expo EAS Build 활용
 

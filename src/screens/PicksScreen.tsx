@@ -29,6 +29,7 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { usePicksStore } from '@/store/picks-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
@@ -254,7 +255,7 @@ export default function PicksScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <OnboardingHeader onBack={() => router.back()} title="나를 위한 추천 여행지" />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title="나를 위한 추천 여행지" />
 
       <View style={styles.content}>
         <View style={styles.scopeToggle}>

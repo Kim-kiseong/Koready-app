@@ -21,6 +21,9 @@ export default function AppNavigator() {
       <Stack.Screen name="picks" />
       <Stack.Screen name="saved" />
       <Stack.Screen name="my" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="settings-language" />
+      <Stack.Screen name="profile-edit" options={{ headerBackButtonMenuEnabled: false }} />
       <Stack.Screen name="places/[placeId]" />
       <Stack.Screen name="routes/[routeId]" />
     </Stack>
