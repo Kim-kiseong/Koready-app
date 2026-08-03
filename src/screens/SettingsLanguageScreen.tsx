@@ -26,10 +26,8 @@ export default function SettingsLanguageScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
-  const preferredLanguage = useAuthStore((state) => state.user?.preferredLanguage ?? null);
   const hasHydrated = useLanguageStore((state) => state.hasHydrated);
-  const storedLanguage = useLanguageStore((state) => state.language);
-  const savedLanguage = preferredLanguage ?? storedLanguage;
+  const savedLanguage = useLanguageStore((state) => state.language);
   const [selected, setSelected] = useState<LanguageCode | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
