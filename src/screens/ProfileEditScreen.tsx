@@ -153,42 +153,52 @@ export default function ProfileEditScreen() {
     let cancelled = false;
 
     (async () => {
-      setLoadError(null);
       if (!onboardingHasHydrated) {
         setIsLoading(true);
         return;
       }
 
-      setIsLoading(true);
-      setProfileExists(false);
+      try {
+        setLoadError(null);
+        setIsLoading(true);
+        setProfileExists(false);
 
-      const [optionsResult, profileResult] = await Promise.allSettled([
-        fetchProfileOptions(),
-        fetchMyBuddyProfile(),
-      ]);
+        const [optionsResult, profileResult] = await Promise.allSettled([
+          fetchProfileOptions(),
+          fetchMyBuddyProfile(),
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (optionsResult.status === 'rejected') {
-        setLoadError(
-          optionsResult.reason instanceof Error
-            ? optionsResult.reason.message
-            : '프로필 옵션을 불러오지 못했습니다.',
-        );
-        setIsLoading(false);
-        return;
+        if (optionsResult.status === 'rejected') {
+          setLoadError(
+            optionsResult.reason instanceof Error
+              ? optionsResult.reason.message
+              : '프로필 옵션을 불러오지 못했습니다.',
+          );
+          return;
+        }
+
+        const loadedOptions = optionsResult.value;
+        const loadedProfile =
+          profileResult.status === 'fulfilled'
+            ? profileResult.value
+            : ({ exists: false, profile: null } as BuddyProfileResponse);
+
+        setOptions(loadedOptions);
+        setProfileExists(loadedProfile.exists);
+        const nextForm = buildInitialForm(loadedProfile, loadedOptions, onboardingTravelStyles);
+        setForm(nextForm);
+        setInitialForm(nextForm);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(extractErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-
-      const loadedOptions = optionsResult.value;
-      const loadedProfile =
-        profileResult.status === 'fulfilled' ? profileResult.value : ({ exists: false, profile: null } as BuddyProfileResponse);
-
-      setOptions(loadedOptions);
-      setProfileExists(loadedProfile.exists);
-      const nextForm = buildInitialForm(loadedProfile, loadedOptions, onboardingTravelStyles);
-      setForm(nextForm);
-      setInitialForm(nextForm);
-      setIsLoading(false);
     })();
 
     return () => {
@@ -347,8 +357,9 @@ export default function ProfileEditScreen() {
       if (!isMountedRef.current) return;
       Alert.alert('오류', extractErrorMessage(error));
     } finally {
-      if (!isMountedRef.current) return;
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -474,9 +485,11 @@ export default function ProfileEditScreen() {
       const completed = await completeProfileImageUpload({ imageId });
       if (!isMountedRef.current) return;
       const nextProfileImageUrl =
-        completed.profileImageUrl?.trim() ??
-        completed.profile?.profileImageUrl?.trim() ??
-        (completed.imageId ? buildProfileImagePath(completed.imageId) : null) ??
+        firstNonEmptyString(
+          completed.profileImageUrl,
+          completed.profile?.profileImageUrl,
+          completed.imageId ? buildProfileImagePath(completed.imageId) : null,
+        ) ??
         buildProfileImagePath(imageId);
 
       setForm((prev) => ({ ...prev, profileImageUrl: nextProfileImageUrl }));
@@ -486,8 +499,9 @@ export default function ProfileEditScreen() {
       setProfileImagePreviewUri(null);
       Alert.alert('오류', extractErrorMessage(error));
     } finally {
-      if (!isMountedRef.current) return;
-      setIsUploadingProfileImage(false);
+      if (isMountedRef.current) {
+        setIsUploadingProfileImage(false);
+      }
     }
   };
 
@@ -541,7 +555,7 @@ export default function ProfileEditScreen() {
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom -10}]}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom - 10, 0) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={[styles.section, styles.sectionAvatar]}>
@@ -747,7 +761,7 @@ export default function ProfileEditScreen() {
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom -40}]}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom - 40, 0) }]}>
           <PrimaryButton
             title="완료"
             onPress={handleSave}
@@ -1014,6 +1028,16 @@ function buildProfileImagePath(imageId: string) {
   return `${normalizedBaseUrl}/profile-images/${encodeURIComponent(imageId)}`;
 }
 
+function firstNonEmptyString(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
 function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={styles.sectionHeading}>
@@ -1072,7 +1096,9 @@ function AvatarActionSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <Pressable style={styles.avatarSheetOverlay} onPress={onCancel}>
-        <Pressable style={[styles.avatarSheet, { paddingBottom: insets.bottom -10 }]} onPress={() => {}}>
+        <Pressable
+          style={[styles.avatarSheet, { paddingBottom: Math.max(insets.bottom - 10, 0) }]}
+          onPress={() => {}}>
           <View style={styles.avatarSheetHandleArea}>
             <View style={styles.avatarSheetHandle} />
           </View>

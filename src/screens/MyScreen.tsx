@@ -44,6 +44,7 @@ export default function MyScreen() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [profileState, setProfileState] = useState<BuddyProfileState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
   const loadProfile = useCallback(() => {
     if (!hasHydrated) {
@@ -52,14 +53,21 @@ export default function MyScreen() {
 
     let cancelled = false;
     setIsLoading(true);
+    setProfileLoadError(null);
+    setProfileState(null);
 
     (async () => {
       try {
         const data = await fetchMyBuddyProfile();
-        if (!cancelled) setProfileState(data);
-      } catch {
         if (!cancelled) {
-          setProfileState({ exists: false, profile: null });
+          setProfileState(data);
+          setProfileLoadError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProfileLoadError(
+            error instanceof Error ? error.message : '프로필을 불러오지 못했어요.',
+          );
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -107,6 +115,12 @@ export default function MyScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={Palette.primary} />
           </View>
+        ) : profileLoadError ? (
+          <ErrorState
+            message="프로필 정보를 불러오지 못했어요."
+            description={profileLoadError}
+            onPressRetry={loadProfile ?? undefined}
+          />
         ) : hasProfile ? (
           <View style={styles.profileContent}>
             <View style={styles.profileCard}>
@@ -276,6 +290,29 @@ function EmptyState({ onPress }: { onPress: () => void }) {
       <Pressable style={styles.emptyButton} onPress={onPress}>
         <CustomText style={styles.emptyButtonText}>프로필 설정하기</CustomText>
       </Pressable>
+    </View>
+  );
+}
+
+function ErrorState({
+  message,
+  description,
+  onPressRetry,
+}: {
+  message: string;
+  description: string;
+  onPressRetry: (() => void) | undefined;
+}) {
+  return (
+    <View style={styles.errorState}>
+      <CustomText style={styles.errorTitle}>{message}</CustomText>
+      <CustomText style={styles.errorDescription}>{description}</CustomText>
+
+      {onPressRetry ? (
+        <Pressable style={styles.errorButton} onPress={onPressRetry}>
+          <CustomText style={styles.errorButtonText}>다시 시도</CustomText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -490,7 +527,7 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     minWidth: 152,
-    height: 25,
+    minHeight: 44,
     paddingHorizontal: 40,
     paddingVertical: 10,
     borderRadius: 10,
@@ -500,6 +537,46 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   emptyButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: '#ffffff',
+  },
+  errorState: {
+    flex: 1,
+    minHeight: 560,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    gap: 12,
+  },
+  errorTitle: {
+    textAlign: 'center',
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    lineHeight: 27,
+    color: Palette.text,
+  },
+  errorDescription: {
+    textAlign: 'center',
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey600,
+  },
+  errorButton: {
+    minWidth: 152,
+    minHeight: 44,
+    paddingHorizontal: 40,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  errorButtonText: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 14,
     lineHeight: 19.6,

@@ -26,10 +26,13 @@ export default function SettingsLanguageScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
+  const preferredLanguage = useAuthStore((state) => state.user?.preferredLanguage ?? null);
   const hasHydrated = useLanguageStore((state) => state.hasHydrated);
-  const savedLanguage = useLanguageStore((state) => state.language);
+  const storedLanguage = useLanguageStore((state) => state.language);
+  const savedLanguage = preferredLanguage ?? storedLanguage;
   const [selected, setSelected] = useState<LanguageCode | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
   const hasInitializedSelection = useRef(false);
@@ -45,12 +48,17 @@ export default function SettingsLanguageScreen() {
     setSelected((current) => (current === language ? null : language));
   };
 
-  const hasUnsavedChanges = selected !== savedLanguage;
+  const hasUnsavedChanges = !isLeaving && selected !== savedLanguage;
 
   usePreventRemove(hasUnsavedChanges, ({ data }) => {
     pendingNavigationActionRef.current = data.action;
     setUnsavedChangesModalOpen(true);
   });
+
+  useEffect(() => {
+    if (!isLeaving) return;
+    goBackOrRoot(router);
+  }, [isLeaving, router]);
 
   if (!hasHydrated) {
     return (
@@ -69,10 +77,9 @@ export default function SettingsLanguageScreen() {
     try {
       const result = await updateMyLanguage(selected);
       applyLanguageChange(result);
-      useLanguageStore.getState().setLanguage(result.language);
       pendingNavigationActionRef.current = null;
       setUnsavedChangesModalOpen(false);
-      goBackOrRoot(router);
+      setIsLeaving(true);
     } catch (error) {
       Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
     } finally {
@@ -96,20 +103,8 @@ export default function SettingsLanguageScreen() {
 
   const confirmLeaveScreen = () => {
     setUnsavedChangesModalOpen(false);
-    const pendingAction = pendingNavigationActionRef.current;
     pendingNavigationActionRef.current = null;
-
-    if (pendingAction) {
-      navigation.dispatch(pendingAction);
-      return;
-    }
-
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-
-    goBackOrRoot(router);
+    setIsLeaving(true);
   };
 
   const cancelLeaveScreen = () => {
@@ -152,7 +147,7 @@ export default function SettingsLanguageScreen() {
         </View>
       </View>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom -30}]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom - 30, 0) }]}>
         <PrimaryButton title="완료" disabled={!selected || isSubmitting} onPress={handleSave} />
       </View>
 
