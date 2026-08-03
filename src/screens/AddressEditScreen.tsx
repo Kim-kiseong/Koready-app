@@ -13,6 +13,7 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAddressStore } from '@/store/address-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -87,7 +88,7 @@ export default function AddressEditScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <OnboardingHeader
-        onBack={() => router.back()}
+        onBack={() => goBackOrRoot(router)}
         title={t.addressEdit.title}
         rightIcon={<Image source={require('@/assets/images/pencil.svg')} style={styles.pencilIcon} />}
       />

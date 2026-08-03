@@ -10,6 +10,7 @@ import { logout } from '@/api/auth';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -84,7 +85,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} style={styles.headerButton} onPress={() => router.back()}>
+        <Pressable hitSlop={10} style={styles.headerButton} onPress={() => goBackOrRoot(router)}>
           <SymbolView
             name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
             size={18}

@@ -13,6 +13,7 @@ import { Palette } from '@/constants/colors';
 import { GuideCategoryImages } from '@/constants/guide-category-images';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 
 export default function GuideListScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function GuideListScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} title={t.guideList.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.guideList.title} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.categoryRow}>

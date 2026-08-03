@@ -16,11 +16,19 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
+import { goBackOrRoot } from '@/navigation/safe-back';
 
 function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
-    const data = error.response.data as { message?: unknown };
-    if (typeof data.message === 'string' && data.message.length > 0) return data.message;
+    const data = error.response.data as { message?: unknown; traceId?: unknown };
+    const base =
+      typeof data.message === 'string' && data.message.length > 0
+        ? data.message
+        : '알 수 없는 오류가 발생했습니다.';
+    // Surfaced so a failed real-device test can be reported to the backend
+    // with the exact status/traceId, per the Google-login verification spec.
+    const traceId = typeof data.traceId === 'string' ? data.traceId : null;
+    return traceId ? `${base}\n(status ${error.response?.status}, traceId ${traceId})` : base;
   }
   return error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
 }
@@ -105,7 +113,7 @@ export default function TermsScreen() {
           return;
         }
         Alert.alert(t.terms.loadError, extractErrorMessage(error), [
-          { text: '확인', onPress: () => router.back() },
+          { text: '확인', onPress: () => goBackOrRoot(router, '/login') },
         ]);
       }
     })();
@@ -165,7 +173,7 @@ export default function TermsScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} title={t.terms.headerTitle} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.terms.headerTitle} />
 
       <View style={styles.content}>
         <CustomText style={styles.title}>{t.terms.title}</CustomText>

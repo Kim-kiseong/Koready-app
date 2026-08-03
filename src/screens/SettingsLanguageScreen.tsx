@@ -11,6 +11,7 @@ import CustomText from '@/components/CustomText';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -71,7 +72,7 @@ export default function SettingsLanguageScreen() {
       useLanguageStore.getState().setLanguage(result.language);
       pendingNavigationActionRef.current = null;
       setUnsavedChangesModalOpen(false);
-      router.back();
+      goBackOrRoot(router);
     } catch (error) {
       Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
     } finally {
@@ -90,7 +91,7 @@ export default function SettingsLanguageScreen() {
       return;
     }
 
-    router.back();
+    goBackOrRoot(router);
   };
 
   const confirmLeaveScreen = () => {
@@ -108,7 +109,7 @@ export default function SettingsLanguageScreen() {
       return;
     }
 
-    router.back();
+    goBackOrRoot(router);
   };
 
   const cancelLeaveScreen = () => {

@@ -41,6 +41,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { API_BASE_URL } from '@/constants/env';
 import { FontFamily } from '@/constants/typography';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
@@ -264,7 +265,7 @@ export default function ProfileEditScreen() {
       return;
     }
 
-    router.back();
+    goBackOrRoot(router);
   };
 
   const confirmLeaveScreen = () => {
@@ -272,17 +273,12 @@ export default function ProfileEditScreen() {
     const pendingAction = pendingNavigationActionRef.current;
     pendingNavigationActionRef.current = null;
 
-    if (pendingAction) {
+    if (pendingAction && navigation.canGoBack()) {
       navigation.dispatch(pendingAction);
       return;
     }
 
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-
-    router.back();
+    goBackOrRoot(router);
   };
 
   const cancelLeaveScreen = () => {
@@ -346,7 +342,7 @@ export default function ProfileEditScreen() {
         return;
       }
 
-      router.back();
+      goBackOrRoot(router);
     } catch (error) {
       if (!isMountedRef.current) return;
       Alert.alert('오류', extractErrorMessage(error));

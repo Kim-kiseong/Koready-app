@@ -33,6 +33,7 @@ import PlaceInfo from '@/components/place-detail/PlaceInfo';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 export default function PlaceDetailScreen() {
@@ -158,7 +159,7 @@ export default function PlaceDetailScreen() {
       <View style={styles.topBar}>
         <Pressable
           hitSlop={12}
-          onPress={() => router.back()}
+          onPress={() => goBackOrRoot(router)}
         >
           <SymbolView
             name={{

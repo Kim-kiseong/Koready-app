@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -33,10 +34,6 @@ export default function CompleteScreen() {
   const resetOnboarding = useOnboardingStore((state) => state.reset);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // TODO: currentLocationId/candidateSetId/candidateSetVersion/selectedPreferencePlaceIds
-  // are only populated once the location-registration and place-candidate-set
-  // APIs are wired into LocationScreen/DestinationScreen. Until then this stays
-  // false for a fresh onboarding run.
   const canComplete =
     currentLocationId != null &&
     candidateSetId != null &&
@@ -100,9 +97,7 @@ export default function CompleteScreen() {
   const handleNext = async () => {
     if (isSubmitting) return;
     if (!canComplete) {
-      // Expected until the location-registration and place-candidate-set
-      // APIs are wired into LocationScreen/DestinationScreen (next task).
-      Alert.alert('준비 중', '위치·여행지 선택 연동이 완료되면 이용할 수 있어요.');
+      Alert.alert('알림', '위치와 여행지를 모두 선택해야 완료할 수 있어요.');
       return;
     }
     setIsSubmitting(true);
@@ -126,7 +121,7 @@ export default function CompleteScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} />
 
       <View style={styles.content}>
         <Image

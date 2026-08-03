@@ -11,6 +11,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 export default function DestinationScreen() {
@@ -50,7 +51,7 @@ export default function DestinationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => router.back()} progress={{ currentStep: 2, totalSteps: 2 }} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 2, totalSteps: 2 }} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>

@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Button, StyleSheet, Text, View } from 'react-native';
 
+import { goBackOrRoot } from '@/navigation/safe-back';
+
 export default function OnboardingScreen() {
   const router = useRouter();
 
@@ -8,7 +10,7 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Onboarding Screen</Text>
       <Button title="Go to Home" onPress={() => router.push('/home')} />
-      <Button title="Back to Login" onPress={() => router.back()} />
+      <Button title="Back to Login" onPress={() => goBackOrRoot(router, '/login')} />
     </View>
   );
 }
