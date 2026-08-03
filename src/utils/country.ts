@@ -1,14 +1,5 @@
 import type { ProfileOptionItem } from '@/api/types';
 
-const COUNTRY_LABELS_BY_CODE: Record<string, string> = {
-  FR: 'France',
-  KR: 'Korea',
-  JP: 'Japan',
-  US: 'United States',
-  CN: 'China',
-  TW: 'Taiwan',
-};
-
 const COUNTRY_CODE_BY_VALUE: Record<string, string> = {
   fr: 'FR',
   france: 'FR',
@@ -65,11 +56,6 @@ export function getCountryDisplayName(value: string, options?: ProfileOptionItem
   const option = resolveCountryOption(value, options);
   if (option) {
     return option.labelEn;
-  }
-
-  const code = normalizeCountryCode(value);
-  if (code) {
-    return COUNTRY_LABELS_BY_CODE[code] ?? value.trim();
   }
 
   return value.trim();

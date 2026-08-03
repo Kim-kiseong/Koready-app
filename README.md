@@ -16,7 +16,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
-Use `npm run ios` or `npm run android` when you want to launch the native app in a simulator/emulator. Keep `npx expo start` running when you need the Metro bundler for live reload.
+Use `npx expo run:ios` or `npx expo run:android` when you want to launch the native app in a simulator/emulator. Keep `npx expo start` running when you need the Metro bundler for live reload.
 
 In the output, you'll find options to open the app in a
 

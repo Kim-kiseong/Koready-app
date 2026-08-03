@@ -45,7 +45,7 @@ export default function SettingsLanguageScreen() {
   }, [hasHydrated, savedLanguage]);
 
   const handleSelect = (language: LanguageCode) => {
-    setSelected((current) => (current === language ? null : language));
+    setSelected(language);
   };
 
   const hasUnsavedChanges = !isLeaving && selected !== savedLanguage;

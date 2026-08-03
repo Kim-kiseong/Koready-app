@@ -8,8 +8,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { fetchMyBuddyProfile } from '@/api/buddy-profile';
-import type { BuddyProfile } from '@/api/types';
+import { fetchMyBuddyProfile, fetchProfileOptions } from '@/api/buddy-profile';
+import type { BuddyProfile, ProfileOptionItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
@@ -43,6 +43,7 @@ export default function MyScreen() {
   const unreadMessageCount = useAuthStore((state) => state.unreadMessageCount);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [profileState, setProfileState] = useState<BuddyProfileState | null>(null);
+  const [countryOptions, setCountryOptions] = useState<ProfileOptionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
@@ -55,11 +56,16 @@ export default function MyScreen() {
     setIsLoading(true);
     setProfileLoadError(null);
     setProfileState(null);
+    setCountryOptions([]);
 
     (async () => {
       try {
-        const data = await fetchMyBuddyProfile();
+        const [options, data] = await Promise.all([
+          fetchProfileOptions(),
+          fetchMyBuddyProfile(),
+        ]);
         if (!cancelled) {
+          setCountryOptions(options.countries);
           setProfileState(data);
           setProfileLoadError(null);
         }
@@ -130,9 +136,9 @@ export default function MyScreen() {
                 <View style={styles.profileMeta}>
                   <View style={styles.nameRow}>
                     <CustomText style={styles.nickname}>{profile.nickname}</CustomText>
-                    <CustomText style={styles.nationality}>
+                  <CustomText style={styles.nationality}>
                       {' '}
-                      · {formatNationality(profile.nationality)}
+                      · {formatNationality(profile.nationality, countryOptions)}
                     </CustomText>
                   </View>
 
@@ -262,8 +268,8 @@ function MapPinIcon() {
   );
 }
 
-function formatNationality(nationality: string) {
-  return formatCountryDisplay(nationality);
+function formatNationality(nationality: string, options: ProfileOptionItem[]) {
+  return formatCountryDisplay(nationality, options);
 }
 
 function formatLanguageLine(languages: string[], koreanLevel: string) {
