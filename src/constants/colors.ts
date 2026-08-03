@@ -3,6 +3,7 @@ export const Palette = {
   primaryLight: '#79CEB2',
   primaryDark: '#399589',
   secondary: '#F4FFF8',
+  white: '#FFFFFF',
   text: '#1C1C1A',
   grey100: '#F6F9FB',
   grey150: '#F0F3F5',

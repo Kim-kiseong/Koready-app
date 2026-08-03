@@ -46,6 +46,130 @@ export type MyUserResponse = {
   termsNeedReAgreement: boolean;
 };
 
+export type ProfileOptionItem = {
+  code: string;
+  labelKo: string;
+  labelEn: string;
+  displayOrder: number;
+};
+
+export type ProfileOptionsResponse = {
+  countries: ProfileOptionItem[];
+  languages: ProfileOptionItem[];
+  koreanLevels: ProfileOptionItem[];
+  travelStyles: ProfileOptionItem[];
+  buddyStyles: ProfileOptionItem[];
+  socialPlatforms: ProfileOptionItem[];
+};
+
+export type ProfileOptionsEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: ProfileOptionsResponse;
+  traceId: string;
+};
+
+export type ProfileImageUploadUrlRequest = {
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+};
+
+export type ProfileImageUploadUrlResponse = {
+  imageId?: string;
+  uploadUrl?: string;
+  requiredHeaders?: Record<string, string>;
+  profileImageUrl?: string | null;
+};
+
+export type ProfileImageUploadUrlEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: ProfileImageUploadUrlResponse;
+  traceId: string;
+};
+
+export type ProfileImageCompleteRequest = {
+  imageId: string;
+};
+
+export type ProfileImageCompleteResponse = {
+  imageId?: string;
+  profileImageUrl?: string | null;
+  profile?: {
+    profileImageUrl?: string | null;
+  } | null;
+};
+
+export type ProfileImageCompleteEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: ProfileImageCompleteResponse;
+  traceId: string;
+};
+
+export type BuddyProfileSocialLink = {
+  type: string;
+  displayValue: string;
+  url: string;
+};
+
+export type BuddyProfileSocialLinkInput = {
+  type: string;
+  displayValue: string;
+  url?: string | null;
+};
+
+export type BuddyProfile = {
+  profileId: number;
+  profileImageUrl: string | null;
+  nickname: string;
+  nationality: string;
+  availableLanguages: string[];
+  koreanLevel: string;
+  travelStyles: string[];
+  bio: string;
+  buddyStyles: string[];
+  socialLinks: BuddyProfileSocialLink[];
+  profilePublic: boolean;
+  snsPublic: boolean;
+  allowsMessages: boolean;
+  canMessage: boolean;
+  blockedByMe: boolean;
+  updatedAt: string;
+};
+
+export type BuddyProfileUpdateRequest = {
+  profileImageUrl: string | null;
+  nickname: string;
+  nationality: string;
+  availableLanguages: string[];
+  koreanLevel: string;
+  bio: string;
+  travelStyles: string[];
+  buddyStyles: string[];
+  socialLinks: BuddyProfileSocialLinkInput[];
+  profilePublic: boolean;
+  snsPublic: boolean;
+  allowsMessages: boolean;
+};
+
+export type BuddyProfileResponse = {
+  exists: boolean;
+  profile: BuddyProfile | null;
+};
+
+export type BuddyProfileEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: BuddyProfileResponse;
+  traceId: string;
+};
+
 export type MyUserEnvelope = {
   success: true;
   code: string;
