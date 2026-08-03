@@ -32,10 +32,8 @@ export default function SettingsScreen() {
   const router = useRouter();
   const refreshToken = useAuthStore((state) => state.refreshToken);
   const deviceId = useAuthStore((state) => state.deviceId);
-  const preferredLanguage = useAuthStore((state) => state.user?.preferredLanguage ?? null);
   const clearSession = useAuthStore((state) => state.clearSession);
-  const storedLanguage = useLanguageStore((state) => state.language);
-  const language = preferredLanguage ?? storedLanguage;
+  const language = useLanguageStore((state) => state.language);
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const [pendingAccountAction, setPendingAccountAction] = useState<'logout' | 'withdraw' | null>(null);
 

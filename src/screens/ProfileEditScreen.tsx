@@ -179,11 +179,13 @@ export default function ProfileEditScreen() {
           return;
         }
 
+        if (profileResult.status === 'rejected') {
+          setLoadError(extractErrorMessage(profileResult.reason));
+          return;
+        }
+
         const loadedOptions = optionsResult.value;
-        const loadedProfile =
-          profileResult.status === 'fulfilled'
-            ? profileResult.value
-            : ({ exists: false, profile: null } as BuddyProfileResponse);
+        const loadedProfile = profileResult.value;
 
         setOptions(loadedOptions);
         setProfileExists(loadedProfile.exists);
