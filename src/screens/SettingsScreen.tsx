@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerButton: {
-    width: 44,
+    width: 16,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',

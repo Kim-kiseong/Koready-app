@@ -1,4 +1,12 @@
+import { client } from './client';
 import type { BuddyProfile } from './types';
+import type {
+  PlaceMate,
+  PlaceMatesEnvelope,
+  PlaceMatesResponse,
+} from './types';
+
+import { normalizeCountryCode } from '@/utils/country';
 
 export type MateRecommendation = {
   profile: BuddyProfile;
@@ -32,6 +40,16 @@ function createProfile(profile: BuddyProfile): BuddyProfile {
   return profile;
 }
 
+function cloneBuddyProfile(profile: BuddyProfile): BuddyProfile {
+  return {
+    ...profile,
+    availableLanguages: [...profile.availableLanguages],
+    travelStyles: [...profile.travelStyles],
+    buddyStyles: [...profile.buddyStyles],
+    socialLinks: profile.socialLinks.map((link) => ({ ...link })),
+  };
+}
+
 function buildResponse(
   placeId: string,
   placeTitle: string,
@@ -55,11 +73,12 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Japan',
         availableLanguages: ['JP', 'EN', 'KO'],
         koreanLevel: 'INTERMEDIATE',
-        travelStyles: ['LOCAL_FOOD', 'PHOTO_SPOT'],
+        travelStyles: ['LOCAL_FOOD', 'DRAMA_LOCATION'],
         bio: '한옥마을 골목과 길거리 음식을 천천히 즐기는 여행을 좋아해요.',
         buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
         socialLinks: [
           { type: 'INSTAGRAM', displayValue: '@mina.walks', url: 'https://instagram.com/mina.walks' },
+          { type: 'KAKAOTALK', displayValue: 'mina.walks', url: 'https://open.kakao.com/o/mina-walks' },
         ],
         profilePublic: true,
         snsPublic: true,
@@ -79,7 +98,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['WALKING', 'MARKET', 'CAFE'],
+        travelStyles: ['TRADITIONAL_MARKET', 'LOCAL_FOOD', 'CULTURE_EXPERIENCE'],
         bio: '시장 구경하고 사진 찍는 걸 좋아하는 편이에요. 느린 여행이 잘 맞아요.',
         buddyStyles: ['PHOTOGRAPHY', 'SLOW_TRAVEL'],
         socialLinks: [],
@@ -101,11 +120,12 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Taiwan',
         availableLanguages: ['EN', 'KO'],
         koreanLevel: 'BEGINNER',
-        travelStyles: ['LOCAL_FOOD', 'HISTORY', 'STREET_FOOD'],
+        travelStyles: ['LOCAL_FOOD', 'TRADITIONAL_MARKET', 'CULTURE_EXPERIENCE'],
         bio: '새로운 지역의 로컬 맛집과 역사적인 장소를 함께 둘러보는 걸 좋아해요.',
         buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
         socialLinks: [
-          { type: 'BLOG', displayValue: 'travel notes', url: 'https://example.com/yuna-travel' },
+          { type: 'INSTAGRAM', displayValue: '@yuna.travels', url: 'https://instagram.com/yuna.travels' },
+          { type: 'LINE', displayValue: 'yuna_travel', url: 'https://line.me/ti/p/yuna_travel' },
         ],
         profilePublic: true,
         snsPublic: true,
@@ -127,7 +147,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['NATURE', 'HEALING', 'PHOTO_SPOT'],
+        travelStyles: ['NATURE', 'CULTURE_EXPERIENCE', 'EXHIBITION_MUSEUM'],
         bio: '대나무숲과 자연 산책을 좋아해서 느긋한 여행 코스를 찾고 있어요.',
         buddyStyles: ['QUIET_TRAVEL', 'PHOTOGRAPHY'],
         socialLinks: [],
@@ -149,11 +169,12 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'France',
         availableLanguages: ['EN', 'KO'],
         koreanLevel: 'BEGINNER',
-        travelStyles: ['LOCAL_FOOD', 'WALKING', 'CAFE'],
+        travelStyles: ['LOCAL_FOOD', 'TRADITIONAL_MARKET', 'CULTURE_EXPERIENCE'],
         bio: '현지 음식 먹어보고 예쁜 카페를 천천히 찾아다니는 걸 좋아해요.',
         buddyStyles: ['FOODIE', 'SLOW_TRAVEL'],
         socialLinks: [
           { type: 'INSTAGRAM', displayValue: '@alex.trips', url: 'https://instagram.com/alex.trips' },
+          { type: 'TIKTOK', displayValue: '@alex.trips', url: 'https://tiktok.com/@alex.trips' },
         ],
         profilePublic: true,
         snsPublic: true,
@@ -173,7 +194,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'JP'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['HISTORY', 'TRADITIONAL_MARKET', 'NATURE'],
+        travelStyles: ['TRADITIONAL_MARKET', 'NATURE', 'CULTURE_EXPERIENCE'],
         bio: '지역 문화와 역사 공간을 함께 둘러보는 느린 여행을 선호해요.',
         buddyStyles: ['TRADITIONAL_CULTURE', 'QUIET_TRAVEL'],
         socialLinks: [],
@@ -197,7 +218,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['HISTORY', 'QUIET_TRAVEL', 'NATURE'],
+        travelStyles: ['EXHIBITION_MUSEUM', 'NATURE', 'CULTURE_EXPERIENCE'],
         bio: '조용한 사찰 산책과 전통적인 분위기를 좋아해요.',
         buddyStyles: ['TRADITIONAL_CULTURE', 'SLOW_TRAVEL'],
         socialLinks: [],
@@ -219,7 +240,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Japan',
         availableLanguages: ['JP', 'EN', 'KO'],
         koreanLevel: 'INTERMEDIATE',
-        travelStyles: ['PHOTOGRAPHY', 'HISTORY', 'CAFE'],
+        travelStyles: ['EXHIBITION_MUSEUM', 'CULTURE_EXPERIENCE', 'LOCAL_FOOD'],
         bio: '풍경 사진과 사찰 근처 카페를 함께 즐기고 싶어요.',
         buddyStyles: ['PHOTOGRAPHY', 'QUIET_TRAVEL'],
         socialLinks: [
@@ -243,7 +264,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'United States',
         availableLanguages: ['EN', 'KO'],
         koreanLevel: 'BEGINNER',
-        travelStyles: ['NATURE', 'WALKING', 'LOCAL_FOOD'],
+        travelStyles: ['NATURE', 'LOCAL_FOOD', 'TRADITIONAL_MARKET'],
         bio: '가벼운 산책과 지역 음식을 함께 즐길 여행 친구를 찾고 있어요.',
         buddyStyles: ['FOODIE', 'SLOW_TRAVEL'],
         socialLinks: [],
@@ -267,7 +288,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['WALKING', 'PHOTO_SPOT', 'RELAX'],
+        travelStyles: ['NATURE', 'DRAMA_LOCATION', 'CULTURE_EXPERIENCE'],
         bio: '공원 산책과 잔잔한 풍경을 좋아해요. 천천히 걷는 여행이 잘 맞아요.',
         buddyStyles: ['SLOW_TRAVEL', 'PHOTOGRAPHY'],
         socialLinks: [],
@@ -289,7 +310,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'France',
         availableLanguages: ['EN', 'KO'],
         koreanLevel: 'BEGINNER',
-        travelStyles: ['NATURE', 'CAFE', 'LOCAL_FOOD'],
+        travelStyles: ['NATURE', 'LOCAL_FOOD', 'TRADITIONAL_MARKET'],
         bio: '공원에서 쉬고 근처 맛집과 카페를 함께 찾아다니는 걸 좋아해요.',
         buddyStyles: ['FOODIE', 'QUIET_TRAVEL'],
         socialLinks: [],
@@ -313,7 +334,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['HISTORY', 'ART', 'QUIET_TRAVEL'],
+        travelStyles: ['EXHIBITION_MUSEUM', 'CULTURE_EXPERIENCE', 'NATURE'],
         bio: '박물관과 전시 공간을 천천히 둘러보는 여행을 좋아해요.',
         buddyStyles: ['TRADITIONAL_CULTURE', 'PHOTOGRAPHY'],
         socialLinks: [],
@@ -335,7 +356,7 @@ const MOCK_MATE_RECOMMENDATIONS: Record<string, MateRecommendationsResponse> = {
         nationality: 'United States',
         availableLanguages: ['EN', 'KO'],
         koreanLevel: 'BEGINNER',
-        travelStyles: ['MUSEUM', 'CAFE', 'LOCAL_FOOD'],
+        travelStyles: ['EXHIBITION_MUSEUM', 'LOCAL_FOOD', 'CULTURE_EXPERIENCE'],
         bio: '박물관 관람 후 근처 카페에서 쉬는 코스를 좋아해요.',
         buddyStyles: ['SLOW_TRAVEL', 'FOODIE'],
         socialLinks: [
@@ -364,7 +385,7 @@ function buildDefaultResponse(placeId: string, placeTitle: string): MateRecommen
         nationality: 'Korea',
         availableLanguages: ['KO', 'EN'],
         koreanLevel: 'ADVANCED',
-        travelStyles: ['LOCAL_FOOD', 'WALKING'],
+        travelStyles: ['LOCAL_FOOD', 'NATURE'],
         bio: `${placeTitle} 주변을 함께 천천히 둘러볼 여행 메이트예요.`,
         buddyStyles: ['SLOW_TRAVEL', 'FOODIE'],
         socialLinks: [],
@@ -392,4 +413,102 @@ export async function fetchMockMateRecommendations(
 
 export function getMockNationalityFlag(nationality: string) {
   return NATIONALITY_FLAGS[nationality] ?? '';
+}
+
+function clonePlaceMate(profile: BuddyProfile): PlaceMate {
+  return {
+    profileId: profile.profileId,
+    profileImageUrl: profile.profileImageUrl,
+    nickname: profile.nickname,
+    nationalityCode: normalizeCountryCode(profile.nationality) || profile.nationality,
+    availableLanguages: [...profile.availableLanguages],
+    koreanLevel: profile.koreanLevel,
+    travelStyles: [...profile.travelStyles],
+    bio: profile.bio,
+    buddyStyles: [...profile.buddyStyles],
+    socialLinks: profile.socialLinks.map((link) => ({ ...link })),
+    profilePublic: profile.profilePublic,
+    snsPublic: profile.snsPublic,
+    allowsMessages: profile.allowsMessages,
+    canMessage: profile.canMessage,
+    blockedByMe: profile.blockedByMe,
+    updatedAt: profile.updatedAt,
+  };
+}
+
+function toPlaceMatesResponse(response: MateRecommendationsResponse): PlaceMatesResponse {
+  return {
+    placeId: response.placeId,
+    items: response.recommendations.map((recommendation) => clonePlaceMate(recommendation.profile)),
+    nextCursor: null,
+    hasMore: false,
+  };
+}
+
+const MOCK_PLACE_MATES: Record<string, PlaceMatesResponse> = Object.fromEntries(
+  Object.entries(MOCK_MATE_RECOMMENDATIONS).map(([placeId, response]) => [
+    placeId,
+    toPlaceMatesResponse(response),
+  ]),
+) as Record<string, PlaceMatesResponse>;
+
+function clonePlaceMatesResponse(response: PlaceMatesResponse): PlaceMatesResponse {
+  return {
+    placeId: response.placeId,
+    items: response.items.map((item) => ({
+      ...item,
+      availableLanguages: [...item.availableLanguages],
+      travelStyles: [...item.travelStyles],
+      buddyStyles: [...item.buddyStyles],
+      socialLinks: item.socialLinks.map((link) => ({ ...link })),
+    })),
+    nextCursor: response.nextCursor,
+    hasMore: response.hasMore,
+  };
+}
+
+function buildDefaultPlaceMatesResponse(placeId: string): PlaceMatesResponse {
+  return toPlaceMatesResponse(buildDefaultResponse(placeId, '김천 김밥축제'));
+}
+
+export async function fetchMockPlaceMates(
+  placeId: string,
+  _cursor?: string | null,
+): Promise<PlaceMatesResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  return clonePlaceMatesResponse(
+    MOCK_PLACE_MATES[placeId] ?? buildDefaultPlaceMatesResponse(placeId),
+  );
+}
+
+export async function fetchPlaceMates(
+  placeId: string,
+  cursor?: string | null,
+): Promise<PlaceMatesResponse> {
+  try {
+    const response = await client.get<PlaceMatesEnvelope>(`/places/${placeId}/mates`, {
+      params: cursor ? { cursor } : undefined,
+    });
+    return clonePlaceMatesResponse(response.data.data);
+  } catch (error) {
+    if (__DEV__) {
+      return fetchMockPlaceMates(placeId, cursor);
+    }
+
+    throw error;
+  }
+}
+
+export function getMockBuddyProfileById(profileId: number): BuddyProfile | null {
+  for (const response of Object.values(MOCK_MATE_RECOMMENDATIONS)) {
+    const profile = response.recommendations.find(
+      (recommendation) => recommendation.profile.profileId === profileId,
+    )?.profile;
+
+    if (profile) {
+      return cloneBuddyProfile(profile);
+    }
+  }
+
+  return null;
 }

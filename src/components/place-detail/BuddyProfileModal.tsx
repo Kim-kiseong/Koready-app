@@ -1,0 +1,849 @@
+import { Asset } from 'expo-asset';
+import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SvgUri } from 'react-native-svg';
+
+import { BuddyProfileNotFoundError, fetchBuddyProfile } from '@/api/buddy-profile';
+import type { BuddyProfileDetail, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
+import CustomText from '@/components/CustomText';
+import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
+import { Palette } from '@/constants/colors';
+import { FontFamily } from '@/constants/typography';
+import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
+import { formatCountryDisplay } from '@/utils/country';
+
+const SOCIAL_PLATFORM_ICON_URIS = {
+  INSTAGRAM: Asset.fromModule(require('../../assets/images/social/instagram.svg')).uri,
+  TIKTOK: Asset.fromModule(require('../../assets/images/social/tiktok.svg')).uri,
+  WECHAT: Asset.fromModule(require('../../assets/images/social/wechat.svg')).uri,
+  XIAOHONGSHU: Asset.fromModule(require('../../assets/images/social/xiaohongshu.svg')).uri,
+  LINE: Asset.fromModule(require('../../assets/images/social/line.svg')).uri,
+  KAKAOTALK: Asset.fromModule(require('../../assets/images/social/kakaotalk.svg')).uri,
+} as const;
+
+const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
+  countries: [
+    { code: 'FR', labelKo: '프랑스', labelEn: 'France', displayOrder: 1 },
+    { code: 'KR', labelKo: '한국', labelEn: 'Korea', displayOrder: 2 },
+    { code: 'JP', labelKo: '일본', labelEn: 'Japan', displayOrder: 3 },
+    { code: 'US', labelKo: '미국', labelEn: 'United States', displayOrder: 4 },
+    { code: 'CN', labelKo: '중국', labelEn: 'China', displayOrder: 5 },
+    { code: 'TW', labelKo: '대만', labelEn: 'Taiwan', displayOrder: 6 },
+  ],
+  languages: [
+    { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
+    { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
+    { code: 'JP', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
+    { code: 'CN', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
+    { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
+  ],
+  koreanLevels: [
+    { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
+    { code: 'INTERMEDIATE', labelKo: '중급', labelEn: 'Intermediate', displayOrder: 2 },
+    { code: 'ADVANCED', labelKo: '고급', labelEn: 'Advanced', displayOrder: 3 },
+  ],
+  travelStyles: [
+    { code: 'LOCAL_FOOD', labelKo: '로컬 맛집', labelEn: 'Local Food', displayOrder: 1 },
+    { code: 'LOCAL_FESTIVAL', labelKo: '지역 축제', labelEn: 'Local Festival', displayOrder: 2 },
+    { code: 'TRADITIONAL_MARKET', labelKo: '전통시장', labelEn: 'Traditional Market', displayOrder: 3 },
+    { code: 'CULTURE_EXPERIENCE', labelKo: '문화 체험', labelEn: 'Culture Experience', displayOrder: 4 },
+    { code: 'NATURE', labelKo: '자연 명소', labelEn: 'Nature', displayOrder: 5 },
+    { code: 'EXHIBITION_MUSEUM', labelKo: '전시/미술관', labelEn: 'Exhibition / Museum', displayOrder: 6 },
+    { code: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'Drama Location', displayOrder: 7 },
+  ],
+  buddyStyles: [],
+  socialPlatforms: [
+    { code: 'INSTAGRAM', labelKo: 'Instagram', labelEn: 'Instagram', displayOrder: 1 },
+    { code: 'TIKTOK', labelKo: 'TikTok', labelEn: 'TikTok', displayOrder: 2 },
+    { code: 'WECHAT', labelKo: 'WeChat', labelEn: 'WeChat', displayOrder: 3 },
+    { code: 'XIAOHONGSHU', labelKo: 'Xiaohongshu', labelEn: 'Xiaohongshu', displayOrder: 4 },
+    { code: 'LINE', labelKo: 'LINE', labelEn: 'LINE', displayOrder: 5 },
+    { code: 'KAKAOTALK', labelKo: 'KakaoTalk', labelEn: 'KakaoTalk', displayOrder: 6 },
+  ],
+};
+
+const FALLBACK_LANGUAGE_LABELS: Record<string, string> = {
+  EN: '영어',
+  KO: '한국어',
+  JP: '일본어',
+  CN: '중국어',
+  FR: '프랑스어',
+};
+
+const FALLBACK_KOREAN_LEVEL_LABELS: Record<string, string> = {
+  BEGINNER: '초급',
+  ELEMENTARY: '초급',
+  INTERMEDIATE: '중급',
+  ADVANCED: '고급',
+  FLUENT: '유창',
+  NATIVE: '원어민 수준',
+};
+
+const FALLBACK_TRAVEL_STYLE_LABELS: Record<string, string> = {
+  LOCAL_FOOD: '로컬 맛집',
+  LOCAL_FESTIVAL: '지역 축제',
+  TRADITIONAL_MARKET: '전통시장',
+  CULTURE_EXPERIENCE: '문화 체험',
+  NATURE: '자연 명소',
+  EXHIBITION_MUSEUM: '전시/미술관',
+  DRAMA_LOCATION: '드라마 촬영지',
+};
+
+const LANGUAGE_CODE_ALIASES: Record<string, string> = {
+  EN: 'EN',
+  ENGLISH: 'EN',
+  '영어': 'EN',
+  KO: 'KO',
+  KOREAN: 'KO',
+  '한국어': 'KO',
+  JP: 'JP',
+  JAPANESE: 'JP',
+  '일본어': 'JP',
+  CN: 'CN',
+  CHINESE: 'CN',
+  '중국어': 'CN',
+  FR: 'FR',
+  FRENCH: 'FR',
+  '프랑스어': 'FR',
+};
+
+const TRAVEL_STYLE_CODE_ALIASES: Record<string, string> = {
+  LOCAL_FOOD: 'LOCAL_FOOD',
+  'LOCAL FOOD': 'LOCAL_FOOD',
+  '로컬 맛집': 'LOCAL_FOOD',
+  LOCAL_FESTIVAL: 'LOCAL_FESTIVAL',
+  'LOCAL FESTIVAL': 'LOCAL_FESTIVAL',
+  '지역 축제': 'LOCAL_FESTIVAL',
+  TRADITIONAL_MARKET: 'TRADITIONAL_MARKET',
+  'TRADITIONAL MARKET': 'TRADITIONAL_MARKET',
+  전통시장: 'TRADITIONAL_MARKET',
+  CULTURE_EXPERIENCE: 'CULTURE_EXPERIENCE',
+  'CULTURE EXPERIENCE': 'CULTURE_EXPERIENCE',
+  '문화 체험': 'CULTURE_EXPERIENCE',
+  NATURE: 'NATURE',
+  '자연 명소': 'NATURE',
+  EXHIBITION_MUSEUM: 'EXHIBITION_MUSEUM',
+  'EXHIBITION MUSEUM': 'EXHIBITION_MUSEUM',
+  '전시/미술관': 'EXHIBITION_MUSEUM',
+  DRAMA_LOCATION: 'DRAMA_LOCATION',
+  'DRAMA LOCATION': 'DRAMA_LOCATION',
+  '드라마 촬영지': 'DRAMA_LOCATION',
+};
+
+const KOREAN_LEVEL_CODE_ALIASES: Record<string, string> = {
+  BEGINNER: 'BEGINNER',
+  '초급': 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  '중급': 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+  '고급': 'ADVANCED',
+  FLUENT: 'FLUENT',
+  '유창': 'FLUENT',
+  NATIVE: 'NATIVE',
+  '원어민 수준': 'NATIVE',
+};
+
+type BuddyProfileModalProps = {
+  visible: boolean;
+  profileId: number | null;
+  options: ProfileOptionsResponse | null;
+  fallbackProfile?: BuddyProfileDetail | null;
+  onPressMessage?: (profileId: number) => void;
+  onClose: () => void;
+};
+
+export default function BuddyProfileModal({
+  visible,
+  profileId,
+  options,
+  fallbackProfile = null,
+  onPressMessage,
+  onClose,
+}: BuddyProfileModalProps) {
+  const [profile, setProfile] = useState<BuddyProfileDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
+  const languageOptions = resolvedOptions.languages;
+  const koreanLevelOptions = resolvedOptions.koreanLevels;
+  const travelStyleOptions = resolvedOptions.travelStyles;
+  const socialPlatformOptions = resolvedOptions.socialPlatforms;
+
+  const handleClose = useCallback(() => {
+    setProfile(null);
+    setError(null);
+    setIsLoading(false);
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!visible || profileId == null) {
+      setProfile(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setIsLoading(true);
+    setError(null);
+    setProfile(fallbackProfile ?? null);
+
+    (async () => {
+      try {
+        const loadedProfile = await fetchBuddyProfile(profileId);
+        if (cancelled) {
+          return;
+        }
+
+        setProfile(loadedProfile);
+      } catch (loadError) {
+        if (cancelled) {
+          return;
+        }
+
+        if (loadError instanceof BuddyProfileNotFoundError) {
+          const mockProfile = fallbackProfile ?? getMockBuddyProfileDetailById(profileId);
+          if (mockProfile) {
+            setProfile(mockProfile);
+            setError(null);
+            return;
+          }
+
+          handleClose();
+          return;
+        }
+
+        const mockProfile = fallbackProfile ?? getMockBuddyProfileDetailById(profileId);
+        if (mockProfile) {
+          setProfile(mockProfile);
+          setError(null);
+          return;
+        }
+
+        setError(loadError instanceof Error ? loadError.message : '프로필을 불러오지 못했어요.');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackProfile, handleClose, profileId, reloadKey, visible]);
+
+  const languageChips = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
+
+    const sortedLanguages = sortCodesByOptionOrder(
+      profile.availableLanguages.map(normalizeLanguageCode),
+      languageOptions,
+    );
+    const levelLabel = getLabel(
+      normalizeKoreanLevel(profile.koreanLevel),
+      koreanLevelOptions,
+      FALLBACK_KOREAN_LEVEL_LABELS,
+    );
+    const hasKorean = sortedLanguages.includes('KO');
+
+    return sortedLanguages.map((languageCode, index) => {
+      const languageLabel = getLabel(languageCode, languageOptions, FALLBACK_LANGUAGE_LABELS);
+      const shouldAppendLevel = languageCode === 'KO' || (!hasKorean && index === 0);
+      return shouldAppendLevel && levelLabel ? `${languageLabel} (${levelLabel})` : languageLabel;
+    });
+  }, [koreanLevelOptions, languageOptions, profile]);
+
+  const travelStyleChips = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
+
+    return sortCodesByOptionOrder(
+      profile.travelStyles.map(normalizeTravelStyleCode),
+      travelStyleOptions,
+    ).map((code) =>
+      getLabel(code, travelStyleOptions, FALLBACK_TRAVEL_STYLE_LABELS),
+    );
+  }, [profile, travelStyleOptions]);
+
+  const socialLinks = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
+
+    return profile.socialLinks
+      .map((link) => {
+        const type = normalizeSocialType(link.type);
+        return {
+          ...link,
+          type,
+          label: getLabel(type, socialPlatformOptions, type),
+        };
+      })
+      .filter((link) => Boolean(link.url.trim()));
+  }, [profile, socialPlatformOptions]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={handleClose} />
+
+        <View style={styles.card}>
+          {isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={Palette.primary} />
+              <CustomText style={styles.loadingText}>프로필을 불러오는 중이에요</CustomText>
+            </View>
+          ) : error ? (
+            <View style={styles.loadingState}>
+              <CustomText style={styles.errorTitle}>프로필을 불러오지 못했어요</CustomText>
+              <CustomText style={styles.errorDescription}>{error}</CustomText>
+              <Pressable style={styles.retryButton} onPress={() => setReloadKey((value) => value + 1)}>
+                <CustomText style={styles.retryButtonText}>다시 시도</CustomText>
+              </Pressable>
+            </View>
+          ) : profile ? (
+            <>
+              <ScrollView
+                style={styles.scrollArea}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}>
+                <View style={styles.headerRow}>
+                  <ProfileAvatar imageUrl={profile.profileImageUrl} nickname={profile.nickname} />
+
+                  <View style={styles.headerMeta}>
+                    <View style={styles.nameRow}>
+                      <CustomText style={styles.nickname}>{profile.nickname}</CustomText>
+                      <CustomText style={styles.separator}>·</CustomText>
+                      <CustomText style={styles.country}>
+                        {formatCountryDisplay(
+                          profile.nationalityCode ?? profile.nationality ?? '',
+                          resolvedOptions.countries,
+                        )}
+                      </CustomText>
+                    </View>
+
+                    <View style={styles.chipRow}>
+                      {languageChips.map((chipLabel) => (
+                        <View key={chipLabel} style={styles.languageChip}>
+                          <CustomText style={styles.languageChipText}>{chipLabel}</CustomText>
+                        </View>
+                      ))}
+                    </View>
+
+                    <CustomText style={styles.subtitle}>
+                      같은 여행지에 관심 있는 Buddy예요.
+                    </CustomText>
+                  </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.section}>
+                  <CustomText style={styles.sectionTitle}>한 줄 소개</CustomText>
+                  <CustomText style={styles.bioText}>{profile.bio || '소개가 아직 없어요.'}</CustomText>
+                </View>
+
+                {travelStyleChips.length > 0 ? (
+                  <View style={styles.section}>
+                    <CustomText style={styles.sectionTitle}>관심 여행 스타일</CustomText>
+                    <View style={styles.travelChipWrap}>
+                      {travelStyleChips.map((chipLabel) => (
+                        <View key={chipLabel} style={styles.travelChip}>
+                          <CustomText style={styles.travelChipText}>{chipLabel}</CustomText>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                <View style={styles.section}>
+                  <CustomText style={styles.sectionTitle}>연락 정보</CustomText>
+                  <CustomText style={styles.contactDescription}>
+                    공개로 설정한 정보만 표시됩니다.
+                  </CustomText>
+
+                  <View style={styles.socialList}>
+                    {socialLinks.map((link) => (
+                      <Pressable
+                        key={`${link.type}-${link.displayValue}`}
+                        style={({ pressed }) => [styles.socialRow, pressed && styles.pressed]}
+                        onPress={async () => {
+                          try {
+                            await Linking.openURL(link.url);
+                          } catch {
+                            Alert.alert('링크를 열 수 없어요', '잠시 후 다시 시도해 주세요.');
+                          }
+                        }}>
+                        <SocialPlatformIcon code={link.type} size={40} />
+
+                        <View style={styles.socialTextGroup}>
+                          <CustomText style={styles.socialLabel}>{link.label}</CustomText>
+                          <CustomText style={styles.socialValue}>{link.displayValue}</CustomText>
+                        </View>
+
+                        <SymbolView
+                          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                          size={14}
+                          weight="semibold"
+                          tintColor={Palette.grey400}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.messageButton,
+                  pressed && styles.pressed,
+                  !profile.canMessage && styles.messageButtonDisabled,
+                ]}
+                disabled={!profile.canMessage}
+                onPress={() => {
+                  if (!profile.canMessage) {
+                    return;
+                  }
+
+                  if (onPressMessage) {
+                    onPressMessage(profile.profileId);
+                    return;
+                  }
+
+                  Alert.alert('준비 중', '쪽지 보내기 기능은 다음 단계에서 연결됩니다.');
+                }}>
+                <SendPlaneIcon color={profile.canMessage ? '#FFFFFF' : Palette.grey500} />
+                <CustomText
+                  style={[
+                    styles.messageButtonText,
+                    !profile.canMessage && styles.messageButtonTextDisabled,
+                  ]}>
+                  {profile.canMessage ? '쪽지 보내기' : '쪽지 불가'}
+                </CustomText>
+              </Pressable>
+            </>
+          ) : null}
+
+          <Pressable style={styles.closeButton} onPress={handleClose}>
+            <SymbolView
+              name={{ ios: 'xmark', android: 'close', web: 'close' }}
+              size={16}
+              weight="regular"
+              tintColor={Palette.grey350}
+            />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ProfileAvatar({ imageUrl, nickname }: { imageUrl: string | null; nickname: string }) {
+  return (
+    <View style={styles.avatarFrame}>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
+      ) : (
+        <View style={styles.avatarFallback}>
+          <CustomText style={styles.avatarInitial}>{nickname.trim().charAt(0).toUpperCase() || 'M'}</CustomText>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function SocialPlatformIcon({ code, size = 40}: { code: string; size?: number }) {
+  const uri = SOCIAL_PLATFORM_ICON_URIS[normalizeSocialType(code) as keyof typeof SOCIAL_PLATFORM_ICON_URIS];
+
+  if (uri) {
+    return <SvgUri uri={uri} width={size} height={size} />;
+  }
+
+  return (
+    <View style={[styles.fallbackIcon, { width: size, height: size, borderRadius: size * 0.2 }]}>
+      <CustomText style={styles.fallbackGlyph}>{code.slice(0, 2)}</CustomText>
+    </View>
+  );
+}
+
+function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
+  return [...codes].sort((left, right) => {
+    const leftIndex = options.findIndex((option) => option.code === left);
+    const rightIndex = options.findIndex((option) => option.code === right);
+
+    if (leftIndex === -1 && rightIndex === -1) {
+      return left.localeCompare(right);
+    }
+
+    if (leftIndex === -1) {
+      return 1;
+    }
+
+    if (rightIndex === -1) {
+      return -1;
+    }
+
+    return leftIndex - rightIndex;
+  });
+}
+
+function getLabel(
+  code: string,
+  options: ProfileOptionItem[],
+  fallbackLabel?: string | Record<string, string>,
+) {
+  const matchedLabel = options.find((option) => option.code === code)?.labelKo;
+
+  if (matchedLabel) {
+    return matchedLabel;
+  }
+
+  if (typeof fallbackLabel === 'string') {
+    return fallbackLabel;
+  }
+
+  if (fallbackLabel && code in fallbackLabel) {
+    return fallbackLabel[code];
+  }
+
+  return code;
+}
+
+function normalizeLanguageCode(value: string) {
+  const key = normalizeLookupKey(value);
+  return LANGUAGE_CODE_ALIASES[key] ?? value.trim().toUpperCase();
+}
+
+function normalizeTravelStyleCode(value: string) {
+  const key = normalizeLookupKey(value);
+  return TRAVEL_STYLE_CODE_ALIASES[key] ?? value.trim().toUpperCase();
+}
+
+function normalizeKoreanLevel(value: string) {
+  const key = normalizeLookupKey(value);
+  return KOREAN_LEVEL_CODE_ALIASES[key] ?? value.trim().toUpperCase();
+}
+
+function normalizeLookupKey(value: string) {
+  return value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+}
+
+function normalizeSocialType(type: string) {
+  return type.trim().toUpperCase();
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 7,
+    right: 5,
+    bottom: 0,
+    left: 0,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 343,
+    height: '70%',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    position: 'relative',
+    overflow: 'visible',
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: {
+      width: 5,
+      height: 5,
+    },
+    elevation: 4,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 7,
+    right: 5,
+    zIndex: 20,
+    elevation: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 25,
+    paddingBottom: 16,
+  },
+  loadingState: {
+    minHeight: 420,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Palette.grey600,
+  },
+  errorTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    lineHeight: 26,
+    color: Palette.text,
+    textAlign: 'center',
+  },
+  errorDescription: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Palette.grey600,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 8,
+    minHeight: 44,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: Palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#FFFFFF',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+    paddingRight: 8,
+  },
+  avatarFrame: {
+    width: 66,
+    height: 66,
+    padding: 10,
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 66,
+    height: 66,
+    borderRadius: 100,
+    backgroundColor: '#E8EEF2',
+  },
+  avatarFallback: {
+    width: 66,
+    height: 66,
+    borderRadius: 100,
+    backgroundColor: '#E8EEF2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    color: Palette.grey500,
+  },
+  headerMeta: {
+    flex: 1,
+    paddingTop: 0,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  nickname: {
+    fontFamily: FontFamily.pretendard.bold,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.text,
+  },
+  separator: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
+  },
+  country: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  languageChip: {
+    minHeight: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: '#9BE6C6',
+    backgroundColor: '#F4FFF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageChipText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: Palette.primary,
+  },
+  subtitle: {
+    marginTop: 8,
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 18.2,
+    color: Palette.grey400,
+  },
+  divider: {
+    marginTop: 16,
+    marginBottom: 16,
+    height: 1,
+    backgroundColor: Palette.grey200,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.primary,
+    marginBottom: 12,
+  },
+  bioText: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.text,
+  },
+  travelChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  travelChip: {
+    minHeight: 28,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Palette.grey100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  travelChipText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: Palette.grey600,
+  },
+  contactDescription: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 18.2,
+    color: Palette.grey400,
+    marginBottom: 12,
+  },
+  socialList: {
+    gap: 16,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  socialTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  socialLabel: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: Palette.grey400,
+  },
+  socialValue: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.text,
+  },
+  messageButton: {
+    minHeight: 46,
+    borderRadius: 10,
+    backgroundColor: Palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  messageButtonDisabled: {
+    backgroundColor: Palette.grey300,
+  },
+  messageButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 16,
+    lineHeight: 22.4,
+    color: '#FFFFFF',
+  },
+  messageButtonTextDisabled: {
+    color: Palette.grey500,
+  },
+  fallbackIcon: {
+    backgroundColor: Palette.grey100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fallbackGlyph: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 12,
+    color: Palette.grey500,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+});

@@ -24,6 +24,21 @@ const COUNTRY_CODE_BY_VALUE: Record<string, string> = {
   tw: 'TW',
   taiwan: 'TW',
   대만: 'TW',
+  gb: 'GB',
+  uk: 'GB',
+  'united kingdom': 'GB',
+  unitedkingdom: 'GB',
+  영국: 'GB',
+};
+
+const COUNTRY_LABEL_BY_CODE: Record<string, string> = {
+  FR: 'France',
+  KR: 'Korea',
+  JP: 'Japan',
+  US: 'United States',
+  CN: 'China',
+  TW: 'Taiwan',
+  GB: 'United Kingdom',
 };
 
 export function resolveCountryOption(value: string, options?: ProfileOptionItem[]) {
@@ -44,18 +59,28 @@ export function normalizeCountryCode(value: string) {
     return '';
   }
 
+  const mappedCode = COUNTRY_CODE_BY_VALUE[trimmed.toLowerCase()];
+  if (mappedCode) {
+    return mappedCode;
+  }
+
   const upper = trimmed.toUpperCase();
   if (/^[A-Z]{2}$/.test(upper)) {
     return upper;
   }
 
-  return COUNTRY_CODE_BY_VALUE[trimmed.toLowerCase()] ?? '';
+  return '';
 }
 
 export function getCountryDisplayName(value: string, options?: ProfileOptionItem[]) {
   const option = resolveCountryOption(value, options);
   if (option) {
     return option.labelEn;
+  }
+
+  const normalizedCode = normalizeCountryCode(value);
+  if (normalizedCode && COUNTRY_LABEL_BY_CODE[normalizedCode]) {
+    return COUNTRY_LABEL_BY_CODE[normalizedCode];
   }
 
   return value.trim();
