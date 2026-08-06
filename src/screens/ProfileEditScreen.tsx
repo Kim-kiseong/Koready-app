@@ -1703,8 +1703,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerButton: {
-    width: 44,
-    height: 44,
+    width: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

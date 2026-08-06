@@ -26,6 +26,8 @@ export type RelatedPlace = {
 
 export type PlaceDetail = {
   id: string;
+  routeId?: string;
+  numericId?: number;
   title: string;
   address: string;
   tags: string[];
@@ -36,6 +38,8 @@ export type PlaceDetail = {
 };
 
 const DEFAULT_PLACE_DETAIL: Omit<PlaceDetail, 'id' | 'title'> = {
+  routeId: 'gimcheon-gimbap-festival',
+  numericId: 1101,
   address: '경상북도 김천시 직지사길 130 (대항면 운수리)',
   tags: ['지역축제', '음식', '시즌추천'],
   isSaved: false,
@@ -81,60 +85,96 @@ const DEFAULT_PLACE_DETAIL: Omit<PlaceDetail, 'id' | 'title'> = {
   ],
 };
 
+const GIMCHEON_GIMBAP_FESTIVAL_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: '1101',
+  routeId: 'gimcheon-gimbap-festival',
+  numericId: 1101,
+  title: '김천 김밥축제',
+  address: '경상북도 김천시 직지사길 130 (대항면 운수리)',
+};
+
+const JEONJU_IPAP_FESTIVAL_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: 'jeonju-ipap-festival',
+  routeId: 'jeonju-ipap-festival',
+  numericId: 1102,
+  title: '[전주] 이팝나무 축제',
+  address: '전북특별자치도 전주시 완산구 일대',
+  images: [
+    { source: HomeImages.JEONJU_IPAP_FESTIVAL, order: 1, altText: '전주 이팝나무 축제' },
+    ...DEFAULT_PLACE_DETAIL.images.slice(1),
+  ],
+};
+
+const DAMYANG_BAMBOO_FESTIVAL_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: 'damyang-bamboo-festival',
+  routeId: 'damyang-bamboo-festival',
+  numericId: 1103,
+  title: '[담양] 대나무 축제',
+  address: '전라남도 담양군 담양읍 죽녹원로 119',
+  images: [
+    { source: HomeImages.DAMYANG_BAMBOO_FESTIVAL, order: 1, altText: '담양 대나무 축제' },
+    ...DEFAULT_PLACE_DETAIL.images.slice(1),
+  ],
+};
+
+const JIKKJISA_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: 'jikkjisa',
+  routeId: 'jikkjisa',
+  numericId: 1104,
+  title: '직지사',
+  address: '경상북도 김천시 대항면 직지사길 95',
+  tags: ['사찰', '역사', '산책'],
+  images: [
+    { source: { uri: 'https://picsum.photos/id/1036/300/300' }, order: 1, altText: '직지사' },
+    ...DEFAULT_PLACE_DETAIL.images.slice(1),
+  ],
+};
+
+const SAMYUNG_PARK_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: 'samyung-park',
+  routeId: 'samyung-park',
+  numericId: 1105,
+  title: '사명대사공원',
+  address: '경상북도 김천시 대항면 운수리 31-1',
+  tags: ['공원', '산책', '사진'],
+  images: [
+    { source: { uri: 'https://picsum.photos/id/1041/300/300' }, order: 1, altText: '사명대사공원' },
+    ...DEFAULT_PLACE_DETAIL.images.slice(1),
+  ],
+};
+
+const GIMCHEON_MUSEUM_DETAIL: PlaceDetail = {
+  ...DEFAULT_PLACE_DETAIL,
+  id: 'gimcheon-museum',
+  routeId: 'gimcheon-museum',
+  numericId: 1106,
+  title: '김천시립박물관',
+  address: '경상북도 김천시 대항면 직지사길 130',
+  tags: ['박물관', '역사', '문화'],
+  images: [
+    { source: { uri: 'https://picsum.photos/id/1057/300/300' }, order: 1, altText: '김천시립박물관' },
+    ...DEFAULT_PLACE_DETAIL.images.slice(1),
+  ],
+};
+
 const MOCK_PLACE_DETAILS: Record<string, PlaceDetail> = {
-  'jeonju-ipap-festival': {
-    ...DEFAULT_PLACE_DETAIL,
-    id: 'jeonju-ipap-festival',
-    title: '[전주] 이팝나무 축제',
-    address: '전북특별자치도 전주시 완산구 일대',
-    images: [
-      { source: HomeImages.JEONJU_IPAP_FESTIVAL, order: 1, altText: '전주 이팝나무 축제' },
-      ...DEFAULT_PLACE_DETAIL.images.slice(1),
-    ],
-  },
-  'damyang-bamboo-festival': {
-    ...DEFAULT_PLACE_DETAIL,
-    id: 'damyang-bamboo-festival',
-    title: '[담양] 대나무 축제',
-    address: '전라남도 담양군 담양읍 죽녹원로 119',
-    images: [
-      { source: HomeImages.DAMYANG_BAMBOO_FESTIVAL, order: 1, altText: '담양 대나무 축제' },
-      ...DEFAULT_PLACE_DETAIL.images.slice(1),
-    ],
-  },
-  jikkjisa: {
-    ...DEFAULT_PLACE_DETAIL,
-    id: 'jikkjisa',
-    title: '직지사',
-    address: '경상북도 김천시 대항면 직지사길 95',
-    tags: ['사찰', '역사', '산책'],
-    images: [
-      { source: { uri: 'https://picsum.photos/id/1036/300/300' }, order: 1, altText: '직지사' },
-      ...DEFAULT_PLACE_DETAIL.images.slice(1),
-    ],
-  },
-  'samyung-park': {
-    ...DEFAULT_PLACE_DETAIL,
-    id: 'samyung-park',
-    title: '사명대사공원',
-    address: '경상북도 김천시 대항면 운수리 31-1',
-    tags: ['공원', '산책', '사진'],
-    images: [
-      { source: { uri: 'https://picsum.photos/id/1041/300/300' }, order: 1, altText: '사명대사공원' },
-      ...DEFAULT_PLACE_DETAIL.images.slice(1),
-    ],
-  },
-  'gimcheon-museum': {
-    ...DEFAULT_PLACE_DETAIL,
-    id: 'gimcheon-museum',
-    title: '김천시립박물관',
-    address: '경상북도 김천시 대항면 직지사길 130',
-    tags: ['박물관', '역사', '문화'],
-    images: [
-      { source: { uri: 'https://picsum.photos/id/1057/300/300' }, order: 1, altText: '김천시립박물관' },
-      ...DEFAULT_PLACE_DETAIL.images.slice(1),
-    ],
-  },
+  '1101': GIMCHEON_GIMBAP_FESTIVAL_DETAIL,
+  'gimcheon-gimbap-festival': GIMCHEON_GIMBAP_FESTIVAL_DETAIL,
+  '1102': JEONJU_IPAP_FESTIVAL_DETAIL,
+  'jeonju-ipap-festival': JEONJU_IPAP_FESTIVAL_DETAIL,
+  '1103': DAMYANG_BAMBOO_FESTIVAL_DETAIL,
+  'damyang-bamboo-festival': DAMYANG_BAMBOO_FESTIVAL_DETAIL,
+  '1104': JIKKJISA_DETAIL,
+  jikkjisa: JIKKJISA_DETAIL,
+  '1105': SAMYUNG_PARK_DETAIL,
+  'samyung-park': SAMYUNG_PARK_DETAIL,
+  '1106': GIMCHEON_MUSEUM_DETAIL,
+  'gimcheon-museum': GIMCHEON_MUSEUM_DETAIL,
 };
 
 // TODO: replace with client.get<PlaceDetail>(`/places/${placeId}`).
@@ -143,6 +183,8 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
     MOCK_PLACE_DETAILS[placeId] ?? {
       ...DEFAULT_PLACE_DETAIL,
       id: placeId,
+      routeId: placeId,
+      numericId: Number.isFinite(Number(placeId)) ? Number(placeId) : undefined,
       title: '김천 김밥축제',
     }
   );

@@ -4,11 +4,12 @@ import { useFocusEffect } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { fetchMyBuddyProfile, fetchProfileOptions } from '@/api/buddy-profile';
+import { fetchMessageThreads } from '@/api/messages';
 import type { BuddyProfile, ProfileOptionItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
@@ -85,7 +86,31 @@ export default function MyScreen() {
     };
   }, [hasHydrated]);
 
+  const syncUnreadMessageCount = useCallback(() => {
+    if (!hasHydrated) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const threads = await fetchMessageThreads();
+        if (!cancelled) {
+          useAuthStore.setState({ unreadMessageCount: threads.unreadTotal });
+        }
+      } catch {
+        // Keep the existing badge state if unread count cannot be refreshed.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated]);
+
   useFocusEffect(loadProfile);
+  useFocusEffect(syncUnreadMessageCount);
 
   const profile = profileState?.profile ?? null;
   const hasProfile = !!profileState?.exists && !!profile;
@@ -175,7 +200,7 @@ export default function MyScreen() {
               <ShortcutCard
                 title="쪽지함"
                 icon={<MessageIcon hasBadge={unreadMessageCount > 0} />}
-                onPress={() => Alert.alert('준비 중', '쪽지함은 다음 단계에서 연결됩니다.')}
+                onPress={() => router.push('/message-threads' as never)}
               />
 
               <ShortcutCard

@@ -1,8 +1,12 @@
+import axios from 'axios';
+
 import { client } from './client';
 import { publicClient } from './public-client';
 import type {
   BuddyProfile,
   BuddyProfileEnvelope,
+  BuddyProfileDetailEnvelope,
+  BuddyProfileDetail,
   BuddyProfileResponse,
   BuddyProfileUpdateRequest,
   ProfileImageCompleteEnvelope,
@@ -17,6 +21,7 @@ import type {
 } from './types';
 
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useAuthStore } from '@/store/auth-store';
 
 const NOW_ISO = '2026-07-31T02:49:51.377Z';
@@ -126,6 +131,23 @@ function cloneBuddyProfileResponse(response: BuddyProfileResponse): BuddyProfile
   };
 }
 
+function cloneBuddyProfile(profile: BuddyProfile | BuddyProfileDetail): BuddyProfileDetail {
+  return {
+    ...profile,
+    availableLanguages: [...profile.availableLanguages],
+    travelStyles: [...profile.travelStyles],
+    buddyStyles: [...profile.buddyStyles],
+    socialLinks: profile.socialLinks.map((link) => ({ ...link })),
+  };
+}
+
+export class BuddyProfileNotFoundError extends Error {
+  constructor() {
+    super('Buddy profile not found');
+    this.name = 'BuddyProfileNotFoundError';
+  }
+}
+
 function sortProfileOptions(response: ProfileOptionsResponse): ProfileOptionsResponse {
   return {
     countries: sortOptions(response.countries),
@@ -210,6 +232,40 @@ export async function updateMyBuddyProfile(
 
   const response = await client.put<BuddyProfileEnvelope>('/users/me/buddy-profile', payload);
   return response.data.data;
+}
+
+export async function fetchBuddyProfile(profileId: number): Promise<BuddyProfileDetail> {
+  try {
+    if (isDevMockSession()) {
+      const mockProfile = getMockBuddyProfileDetailById(profileId);
+      if (mockProfile) {
+        return cloneBuddyProfile(mockProfile);
+      }
+    }
+
+    const response = await client.get<BuddyProfileDetailEnvelope>(`/buddy-profiles/${profileId}`);
+    return cloneBuddyProfile(response.data.data);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      if (isDevMockSession()) {
+        const mockProfile = getMockBuddyProfileDetailById(profileId);
+        if (mockProfile) {
+          return cloneBuddyProfile(mockProfile);
+        }
+      }
+
+      throw new BuddyProfileNotFoundError();
+    }
+
+    if (isDevMockSession()) {
+      const mockProfile = getMockBuddyProfileDetailById(profileId);
+      if (mockProfile) {
+        return cloneBuddyProfile(mockProfile);
+      }
+    }
+
+    throw error;
+  }
 }
 
 export async function requestProfileImageUploadUrl(

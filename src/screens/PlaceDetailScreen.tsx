@@ -39,20 +39,25 @@ import { useSavedPlaceStore } from '@/store/saved-place-store';
 export default function PlaceDetailScreen() {
   const router = useRouter();
 
-  const { placeId } =
+  const { placeId, tab } =
     useLocalSearchParams<{
       placeId: string;
+      tab?: string;
     }>();
+  const normalizedTab = Array.isArray(tab) ? tab[0] : tab;
 
   const t = useTranslation();
 
   const [place, setPlace] =
     useState<PlaceDetail | null>(null);
 
+  const initialTab: PlaceDetailTab =
+    normalizedTab === 'ROUTE' || normalizedTab === 'MATE'
+      ? normalizedTab
+      : 'DESCRIPTION';
+
   const [activeTab, setActiveTab] =
-    useState<PlaceDetailTab>(
-      'DESCRIPTION',
-    );
+    useState<PlaceDetailTab>(initialTab);
 
   const hasHydrated =
     useSavedPlaceStore(
@@ -97,6 +102,10 @@ export default function PlaceDetailScreen() {
       isMounted = false;
     };
   }, [placeId]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab, placeId]);
 
   /*
    * SecureStore 복원이 끝난 뒤에만
@@ -167,7 +176,7 @@ export default function PlaceDetailScreen() {
               android: 'arrow_back_ios',
               web: 'arrow_back_ios',
             }}
-            size={30}
+            size={18}
             weight="semibold"
             tintColor={Palette.text}
           />
@@ -281,10 +290,29 @@ export default function PlaceDetailScreen() {
           />
         )}
 
-        {activeTab === 'MATE' && <MateTab />}
+        {activeTab === 'MATE' && placeId ? (
+          <MateTab
+            placeId={placeId}
+            placeTitle={place.title}
+            placeRouteId={place.routeId ?? place.id}
+            placeAddress={place.address}
+            placeImageUrl={getFirstPlaceImageUrl(place)}
+            placeNumericId={place.numericId}
+          />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getFirstPlaceImageUrl(place: PlaceDetail) {
+  const source = place.images[0]?.source;
+
+  if (!source || typeof source !== 'object' || Array.isArray(source) || !('uri' in source)) {
+    return undefined;
+  }
+
+  return typeof source.uri === 'string' ? source.uri : undefined;
 }
 
 const styles = StyleSheet.create({
@@ -294,7 +322,7 @@ const styles = StyleSheet.create({
   },
 
   topBar: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
   },

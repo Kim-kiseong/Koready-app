@@ -24,6 +24,9 @@ export default function AppNavigator() {
       <Stack.Screen name="settings" />
       <Stack.Screen name="settings-language" />
       <Stack.Screen name="profile-edit" options={{ headerBackButtonMenuEnabled: false }} />
+      <Stack.Screen name="message-threads" />
+      <Stack.Screen name="message-threads/new" />
+      <Stack.Screen name="message-threads/[threadId]" />
       <Stack.Screen name="places/[placeId]" />
       <Stack.Screen name="routes/[routeId]" />
     </Stack>

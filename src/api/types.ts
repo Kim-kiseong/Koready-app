@@ -122,6 +122,159 @@ export type BuddyProfileSocialLink = {
   url: string;
 };
 
+export type PlaceMateSocialLink = BuddyProfileSocialLink;
+
+export type PlaceMate = {
+  profileId: number;
+  profileImageUrl: string | null;
+  nickname: string;
+  nationalityCode: string;
+  availableLanguages: string[];
+  koreanLevel: string;
+  travelStyles: string[];
+  bio: string;
+  buddyStyles: string[];
+  socialLinks: PlaceMateSocialLink[];
+  profilePublic: boolean;
+  snsPublic: boolean;
+  allowsMessages: boolean;
+  canMessage: boolean;
+  blockedByMe: boolean;
+  updatedAt: string;
+};
+
+export type PlaceMatesResponse = {
+  placeId: string;
+  items: PlaceMate[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+export type PlaceMatesEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: PlaceMatesResponse;
+  traceId: string;
+};
+
+export type MessageThreadCreateRequest = {
+  receiverProfileId: number;
+  placeId: number;
+  content: string;
+};
+
+export type MessageThreadRequestContext = {
+  placeRouteId?: string;
+  placeTitle?: string;
+  placeAddress?: string | null;
+  placeImageUrl?: string | null;
+};
+
+export type MessageThreadPlace = {
+  placeId: number;
+  title: string;
+  imageUrl: string;
+  routeId?: string;
+  address?: string | null;
+};
+
+export type MessageThreadProfile = {
+  profileId: number;
+  nickname: string;
+  profileImageUrl: string | null;
+  nationalityCode?: string | null;
+  nationality?: string | null;
+};
+
+export type MessageThreadListProfile = MessageThreadProfile & {
+  nationalityCode?: string | null;
+  nationality?: string | null;
+};
+
+export type MessageThreadListItem = {
+  threadId: string;
+  place: MessageThreadPlace;
+  otherProfile: MessageThreadListProfile;
+  preview: string;
+  updatedAt: string;
+  unreadCount: number;
+  blocked: boolean;
+  canReply: boolean;
+};
+
+export type MessageThreadMessage = {
+  messageId: number;
+  threadId: string;
+  senderProfileId: number;
+  receiverProfileId: number;
+  placeId: number;
+  content: string;
+  sentAt: string;
+  read: boolean;
+  readAt: string | null;
+};
+
+export type MessageThreadResponse = {
+  threadId: string;
+  place: MessageThreadPlace;
+  otherProfile: MessageThreadProfile;
+  messages: MessageThreadMessage[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  canReply: boolean;
+};
+
+export type MessageThreadEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: MessageThreadResponse;
+  traceId: string;
+};
+
+export type MessageThreadMessageEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: MessageThreadMessage;
+  traceId: string;
+};
+
+export type MessageThreadReplyRequest = {
+  content: string;
+};
+
+export type MessageThreadReadResponse = {
+  threadId: string;
+  readAt: string;
+  threadUnreadCount: number;
+  unreadTotal: number;
+};
+
+export type MessageThreadReadEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: MessageThreadReadResponse;
+  traceId: string;
+};
+
+export type MessageThreadsResponse = {
+  items: MessageThreadListItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  unreadTotal: number;
+};
+
+export type MessageThreadsEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: MessageThreadsResponse;
+  traceId: string;
+};
+
 export type BuddyProfileSocialLinkInput = {
   type: string;
   displayValue: string;
@@ -172,6 +325,19 @@ export type BuddyProfileEnvelope = {
   code: string;
   message: string;
   data: BuddyProfileResponse;
+  traceId: string;
+};
+
+export type BuddyProfileDetail = Omit<BuddyProfile, 'nationality'> & {
+  nationality?: string;
+  nationalityCode?: string;
+};
+
+export type BuddyProfileDetailEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: BuddyProfileDetail;
   traceId: string;
 };
 
