@@ -34,7 +34,7 @@ async function refreshSession(): Promise<TokenResponse> {
 
   // Deliberately a bare axios call (not `client`), so this never re-enters
   // the response interceptor below and can't recurse.
-  const response = await axios.post<TokenEnvelope>(`${API_BASE_URL}/auth/refresh`, {
+  const response = await axios.post<TokenEnvelope>(`${API_BASE_URL}/api/v1/auth/refresh`, {
     refreshToken,
     deviceId,
   });
