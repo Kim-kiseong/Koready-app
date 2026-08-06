@@ -127,6 +127,7 @@ export default function PicksScreen() {
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const initializeSavedPlace = useSavedPlaceStore((state) => state.initializePlace);
   const toggleSavedPlace = useSavedPlaceStore((state) => state.togglePlace);
+  const savedPlaceHydrated = useSavedPlaceStore((state) => state.hasHydrated);
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
   const [deckId, setDeckId] = useState<string | null>(null);
@@ -141,10 +142,25 @@ export default function PicksScreen() {
   const latestRequestIdRef = useRef(0);
   const activeDeckIdRef = useRef<string | null>(null);
 
+  // The deck endpoint always returns each card's server-side saved flag, which
+  // doesn't know about toggles the user made locally (dev mock session never
+  // reports them back, and a freshly created deck elsewhere may lag). Overlay
+  // the persisted saved-place store so a previously-toggled heart survives a
+  // scope switch or a fresh deck fetch instead of resetting to the API value.
+  const reconcileSaved = (deckCards: PicksCard[]): PicksCard[] => {
+    const savedByPlaceId = useSavedPlaceStore.getState().savedByPlaceId;
+    return deckCards.map((c) => {
+      const key = String(c.placeId);
+      return Object.prototype.hasOwnProperty.call(savedByPlaceId, key)
+        ? { ...c, saved: savedByPlaceId[key] }
+        : c;
+    });
+  };
+
   const applyDeck = (deck: RecommendationDeck) => {
     activeDeckIdRef.current = deck.deckId;
     setDeckId(deck.deckId);
-    setCards(deck.cards);
+    setCards(reconcileSaved(deck.cards));
     setCursor(deck.nextCursor);
     setHasMore(deck.hasMore);
     setRemainingThreshold(deck.remainingThreshold);
@@ -177,14 +193,16 @@ export default function PicksScreen() {
 
   useEffect(() => {
     // Wait for auth-store hydration so the initial deck request carries the
-    // restored defaultLocationId instead of racing it with a stale null.
-    if (!hasHydrated) return;
+    // restored defaultLocationId instead of racing it with a stale null, and
+    // for saved-place-store hydration so reconcileSaved has the restored
+    // heart state available instead of an empty map on a cold start.
+    if (!hasHydrated || !savedPlaceHydrated) return;
     loadDeck(scope);
-    // Still runs once — hasHydrated flips false→true exactly once, then stays
-    // true. Scope switches and retries go through changeScope/retryLoad below
-    // instead, so they can reset UI state synchronously.
+    // Still runs once — both hydration flags flip false→true exactly once,
+    // then stay true. Scope switches and retries go through changeScope/
+    // retryLoad below instead, so they can reset UI state synchronously.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated]);
+  }, [hasHydrated, savedPlaceHydrated]);
 
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
@@ -200,7 +218,7 @@ export default function PicksScreen() {
         // The active deck can change (scope switch/retry) while this was in
         // flight — drop a stale page instead of appending it to the wrong deck.
         if (activeDeckIdRef.current !== requestDeckId) return;
-        setCards((prev) => [...prev, ...deck.cards]);
+        setCards((prev) => [...prev, ...reconcileSaved(deck.cards)]);
         setCursor(deck.nextCursor);
         setHasMore(deck.hasMore);
         setRemainingThreshold(deck.remainingThreshold);
