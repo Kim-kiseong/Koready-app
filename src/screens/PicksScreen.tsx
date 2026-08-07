@@ -23,6 +23,11 @@ import {
   type RecommendationDeck,
   type RecommendationEventType,
 } from '@/api/picks';
+import {
+  buildSavedPlaceFromPickCard,
+  savePlace,
+  unsavePlace,
+} from '@/api/saved-place';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
@@ -125,8 +130,8 @@ export default function PicksScreen() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
-  const initializeSavedPlace = useSavedPlaceStore((state) => state.initializePlace);
-  const toggleSavedPlace = useSavedPlaceStore((state) => state.togglePlace);
+  const upsertSavedPlace = useSavedPlaceStore((state) => state.upsertSavedPlace);
+  const removeSavedPlace = useSavedPlaceStore((state) => state.removeSavedPlace);
   const savedPlaceHydrated = useSavedPlaceStore((state) => state.hasHydrated);
 
   const [scope, setScope] = useState<PicksScope>('NATIONWIDE');
@@ -160,12 +165,18 @@ export default function PicksScreen() {
   const applyDeck = (deck: RecommendationDeck) => {
     activeDeckIdRef.current = deck.deckId;
     setDeckId(deck.deckId);
-    setCards(reconcileSaved(deck.cards));
+    const reconciledCards = reconcileSaved(deck.cards);
+    setCards(reconciledCards);
     setCursor(deck.nextCursor);
     setHasMore(deck.hasMore);
     setRemainingThreshold(deck.remainingThreshold);
     setCurrentIndex(0);
     setIsLoading(false);
+
+    for (const card of reconciledCards) {
+      if (!card.saved) continue;
+      upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS'));
+    }
   };
 
   const loadDeck = (targetScope: PicksScope) => {
@@ -218,10 +229,16 @@ export default function PicksScreen() {
         // The active deck can change (scope switch/retry) while this was in
         // flight — drop a stale page instead of appending it to the wrong deck.
         if (activeDeckIdRef.current !== requestDeckId) return;
-        setCards((prev) => [...prev, ...reconcileSaved(deck.cards)]);
+        const reconciledCards = reconcileSaved(deck.cards);
+        setCards((prev) => [...prev, ...reconciledCards]);
         setCursor(deck.nextCursor);
         setHasMore(deck.hasMore);
         setRemainingThreshold(deck.remainingThreshold);
+
+        for (const card of reconciledCards) {
+          if (!card.saved) continue;
+          upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS'));
+        }
       })
       .catch(() => {
         // Best-effort prefetch; leave the existing cards/cursor as-is and let
@@ -262,13 +279,18 @@ export default function PicksScreen() {
     if (!card) return;
     const nextSaved = !card.saved;
     recordEvent(card.placeId, nextSaved ? 'PLACE_SAVED' : 'PLACE_UNSAVED');
-    // Keep the shared saved-place store (also used by PlaceDetailScreen) in
-    // sync — seed it with the deck's own saved value first so the toggle
-    // flips from the right baseline instead of an unset/undefined entry.
-    const placeIdKey = String(card.placeId);
-    initializeSavedPlace(placeIdKey, card.saved);
-    toggleSavedPlace(placeIdKey);
+
     setCards((prev) => prev.map((c, i) => (i === currentIndex ? { ...c, saved: nextSaved } : c)));
+
+    if (nextSaved) {
+      const snapshot = buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS');
+      upsertSavedPlace(snapshot);
+      void savePlace(card.placeId, 'PICKS', snapshot).catch(() => {});
+      return;
+    }
+
+    removeSavedPlace(card.placeId);
+    void unsavePlace(card.placeId).catch(() => {});
   };
 
   return (

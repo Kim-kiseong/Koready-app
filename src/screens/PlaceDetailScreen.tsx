@@ -21,6 +21,11 @@ import {
   type PlaceDetail,
   type PlaceDetailTab,
 } from '@/api/place';
+import {
+  buildSavedPlaceFromPlaceDetail,
+  savePlace,
+  unsavePlace,
+} from '@/api/saved-place';
 import CustomText from '@/components/CustomText';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
@@ -58,32 +63,42 @@ export default function PlaceDetailScreen() {
 
   const [activeTab, setActiveTab] =
     useState<PlaceDetailTab>(initialTab);
+  const [optimisticSavedState, setOptimisticSavedState] = useState<boolean | null>(null);
 
   const hasHydrated =
     useSavedPlaceStore(
       (state) => state.hasHydrated,
     );
 
-  const savedByPlaceId =
-    useSavedPlaceStore(
-      (state) => state.savedByPlaceId,
+  const localSavedState =
+    useSavedPlaceStore((state) =>
+      placeId ? state.savedByPlaceId[placeId] : undefined,
     );
 
-  const initializePlace =
+  const savedPlaceSnapshot = useSavedPlaceStore((state) =>
+    placeId ? state.savedPlacesByPlaceId[placeId] : undefined,
+  );
+
+  const upsertSavedPlace =
     useSavedPlaceStore(
-      (state) => state.initializePlace,
+      (state) => state.upsertSavedPlace,
     );
 
-  const togglePlace =
+  const removeSavedPlace =
     useSavedPlaceStore(
-      (state) => state.togglePlace,
+      (state) => state.removeSavedPlace,
     );
 
-  const isSaved = placeId
-    ? Boolean(savedByPlaceId[placeId])
-    : false;
+  const isSaved =
+    optimisticSavedState ??
+    savedPlaceSnapshot?.saved ??
+    localSavedState ??
+    place?.isSaved ??
+    false;
 
   useEffect(() => {
+    setOptimisticSavedState(null);
+
     if (!placeId) {
       return;
     }
@@ -115,23 +130,21 @@ export default function PlaceDetailScreen() {
    * initializePlace 내부에서 덮어쓰지 않습니다.
    */
   useEffect(() => {
-    if (
-      !placeId ||
-      !place ||
-      !hasHydrated
-    ) {
+    if (!placeId || !place || !hasHydrated || !place.isSaved) {
       return;
     }
 
-    initializePlace(
-      placeId,
-      place.isSaved,
-    );
+    if (localSavedState === false) {
+      return;
+    }
+
+    upsertSavedPlace(buildSavedPlaceFromPlaceDetail(place, 'PLACE_DETAIL'));
   }, [
     hasHydrated,
-    initializePlace,
     place,
     placeId,
+    localSavedState,
+    upsertSavedPlace,
   ]);
 
   if (!place || !hasHydrated) {
@@ -157,7 +170,27 @@ export default function PlaceDetailScreen() {
       return;
     }
 
-    togglePlace(placeId);
+    const placeNumericId = place.numericId ?? Number(placeId);
+    if (!Number.isFinite(placeNumericId)) {
+      return;
+    }
+
+    const nextSavedState = !isSaved;
+    setOptimisticSavedState(nextSavedState);
+
+    if (isSaved) {
+      removeSavedPlace(placeId);
+      void unsavePlace(placeNumericId).catch(() => {
+        setOptimisticSavedState(true);
+      });
+      return;
+    }
+
+    const snapshot = buildSavedPlaceFromPlaceDetail(place, 'PLACE_DETAIL');
+    upsertSavedPlace(snapshot);
+    void savePlace(placeNumericId, 'PLACE_DETAIL', snapshot).catch(() => {
+      setOptimisticSavedState(false);
+    });
   };
 
   return (
