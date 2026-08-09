@@ -31,8 +31,11 @@ export default function TravelStyleScreen() {
     toggleTravelStyle(style);
   };
 
+  // PUT /users/me/onboarding requires exactly 4 travel styles
+  // (CompletionRequest.travelStyles has minItems: 4, maxItems: 4) — fewer
+  // than 4 submits fine here but fails backend validation on CompleteScreen.
   const handleNext = () => {
-    if (travelStyles.length === 0) return;
+    if (travelStyles.length !== MAX_TRAVEL_STYLES) return;
     router.push('/destinations');
   };
 
@@ -61,7 +64,7 @@ export default function TravelStyleScreen() {
       <View style={styles.footer}>
         <PrimaryButton
           title={t.travelStyle.next}
-          disabled={travelStyles.length === 0}
+          disabled={travelStyles.length !== MAX_TRAVEL_STYLES}
           onPress={handleNext}
         />
       </View>

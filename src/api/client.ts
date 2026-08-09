@@ -9,8 +9,13 @@ import type { ApiErrorEnvelope, TokenEnvelope, TokenResponse } from './types';
 
 type RetryableRequestConfig = AxiosRequestConfig & { _retry?: boolean };
 
+// No timeout previously meant a hung backend response (slow query, deadlock,
+// ...) left the caller waiting forever with no error and no loading feedback.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 export const client = axios.create({
   baseURL: API_V1_BASE_URL,
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 client.interceptors.request.use((config) => {

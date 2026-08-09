@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchCurrentCandidateSet, type OnboardingCandidateSetResponse } from '@/api/onboarding';
@@ -75,24 +75,32 @@ export default function DestinationScreen() {
   const setCandidateSet = useOnboardingStore((state) => state.setCandidateSet);
   const [candidateSet, setCandidateSetData] = useState<OnboardingCandidateSetResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
+  const loadCandidateSet = useCallback(() => {
     if (isDevMockSession) {
       setCandidateSetData(DEV_MOCK_CANDIDATE_SET);
       setCandidateSet(DEV_MOCK_CANDIDATE_SET.candidateSetId, DEV_MOCK_CANDIDATE_SET.version);
       setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    setHasError(false);
     fetchCurrentCandidateSet()
       .then((data) => {
         setCandidateSetData(data);
         setCandidateSet(data.candidateSetId, data.version);
       })
       .catch(() => {
-        Alert.alert('오류', '여행지 후보를 불러오지 못했습니다.');
+        setHasError(true);
       })
       .finally(() => setIsLoading(false));
   }, [setCandidateSet, isDevMockSession]);
+
+  useEffect(() => {
+    loadCandidateSet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDevMockSession]);
 
   const handleNext = () => {
     if (selectedPreferencePlaceIds.length === 0) return;
@@ -116,16 +124,34 @@ export default function DestinationScreen() {
           <CustomText style={styles.subtitle}>{t.destination.subtitle}</CustomText>
         </View>
 
-        <View style={styles.grid}>
-          {sortedItems.map((item) => (
-            <DestinationCard
-              key={item.placeId}
-              item={item}
-              selected={selectedPreferencePlaceIds.includes(item.placeId)}
-              onPress={() => toggleSelectedPreferencePlace(item.placeId, maxSelection)}
-            />
-          ))}
-        </View>
+        {isLoading && (
+          <View style={styles.statusBox}>
+            <ActivityIndicator color={Palette.primary} />
+            <CustomText style={styles.statusText}>여행지 후보를 불러오는 중이에요.</CustomText>
+          </View>
+        )}
+
+        {!isLoading && hasError && (
+          <View style={styles.statusBox}>
+            <CustomText style={styles.statusText}>여행지 후보를 불러오지 못했어요.</CustomText>
+            <Pressable style={styles.retryButton} onPress={loadCandidateSet}>
+              <CustomText style={styles.retryButtonText}>다시 시도</CustomText>
+            </Pressable>
+          </View>
+        )}
+
+        {!isLoading && !hasError && (
+          <View style={styles.grid}>
+            {sortedItems.map((item) => (
+              <DestinationCard
+                key={item.placeId}
+                item={item}
+                selected={selectedPreferencePlaceIds.includes(item.placeId)}
+                onPress={() => toggleSelectedPreferencePlace(item.placeId, maxSelection)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -168,6 +194,29 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     columnGap: 13,
     rowGap: 15,
+  },
+  statusBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  statusText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
+  },
+  retryButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Palette.grey200,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  retryButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    color: Palette.primary,
   },
   footer: {
     paddingHorizontal: 16,
