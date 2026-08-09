@@ -1,5 +1,16 @@
 import { client } from './client';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { useAuthStore } from '@/store/auth-store';
+
+// The dev-bypass session's token isn't real — sending it to GET /home or GET
+// /monthly-recommendations 401s, which trips client.ts's refresh-then-logout
+// cascade (the interceptor clears the session and redirects to /login before
+// the caller's own try/catch ever runs). Mirrors the same guard used in
+// mate.ts/messages.ts/buddy-profile.ts.
+function isDevMockSession() {
+  return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
+}
 
 export type FeaturedEventCategory =
   | 'POPULAR'
@@ -174,10 +185,87 @@ type HomeEnvelope = {
   traceId: string;
 };
 
+const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
+  {
+    placeId: 9001,
+    title: '[전주] 이팝나무 축제',
+    serviceRegionCode: 'JEOLLA',
+    serviceRegionName: '전라',
+    addressSummary: '전북특별자치도 전주시 완산구 일대',
+    imageUrl: 'https://picsum.photos/seed/jeonju-ipap/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 1,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-04-25',
+      endDate: '2026-04-26',
+      status: 'UPCOMING',
+      dateRangeText: '4.25(토)~4.26(일)',
+    },
+    travelStyle: 'LOCAL_FESTIVAL',
+    tags: ['지역축제', '봄'],
+    shortDescription: '전주 한옥마을 인근 이팝나무 축제예요.',
+    saved: false,
+  },
+  {
+    placeId: 9002,
+    title: '[담양] 대나무 축제',
+    serviceRegionCode: 'JEOLLA',
+    serviceRegionName: '전라',
+    addressSummary: '전라남도 담양군 담양읍 죽녹원로 119',
+    imageUrl: 'https://picsum.photos/seed/damyang-bamboo/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 2,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-05-01',
+      endDate: '2026-05-05',
+      status: 'UPCOMING',
+      dateRangeText: '5.1(금)~5.5(화)',
+    },
+    travelStyle: 'NATURE',
+    tags: ['자연', '대나무'],
+    shortDescription: '담양 대나무숲을 즐겨보세요.',
+    saved: false,
+  },
+  {
+    placeId: 9003,
+    title: '국립현대미술관',
+    serviceRegionCode: 'SEOUL',
+    serviceRegionName: '서울',
+    addressSummary: '서울 종로구 삼청로 30',
+    imageUrl: 'https://picsum.photos/seed/mmca/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 3,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-05-03',
+      endDate: '2026-06-15',
+      status: 'ONGOING',
+      dateRangeText: '5.3(일)~6.15(월)',
+    },
+    travelStyle: 'EXHIBITION_MUSEUM',
+    tags: ['전시', '미술관'],
+    shortDescription: '국립현대미술관 특별전을 감상해보세요.',
+    saved: false,
+  },
+];
+
 // GET /home — currentLocation/preferredLanguage aren't consumed here since
 // HomeScreen already sources those from onboarding-store/language-store; this
 // exists mainly to back the "POPULAR" featured-events tab with real data.
 export async function fetchHome(): Promise<HomeResponse> {
+  if (isDevMockSession()) {
+    const now = new Date();
+    return {
+      currentLocation: null,
+      preferredLanguage: 'KO',
+      monthlyRecommendation: {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        title: '이달의 인기 추천',
+        totalCount: DEV_MOCK_PLACE_CARDS.length,
+        items: DEV_MOCK_PLACE_CARDS,
+      },
+    };
+  }
   const response = await client.get<HomeEnvelope>('/home');
   return response.data.data;
 }
@@ -218,6 +306,28 @@ type MonthlyRecommendationsEnvelope = {
 export async function fetchMonthlyRecommendations(
   params: MonthlyRecommendationsParams,
 ): Promise<MonthlyRecommendationsResponse> {
+  if (isDevMockSession()) {
+    let items = DEV_MOCK_PLACE_CARDS;
+    if (params.serviceRegionCode) {
+      items = items.filter((card) => card.serviceRegionCode === params.serviceRegionCode);
+    }
+    if (params.travelStyles?.length) {
+      items = items.filter((card) => params.travelStyles!.includes(card.travelStyle));
+    }
+    if (params.sort === 'DEADLINE') {
+      items = [...items].sort((a, b) =>
+        (a.festivalOccurrence?.endDate ?? '').localeCompare(b.festivalOccurrence?.endDate ?? ''),
+      );
+    }
+    return {
+      year: params.year,
+      month: params.month,
+      items,
+      nextCursor: null,
+      hasMore: false,
+      totalCount: items.length,
+    };
+  }
   const response = await client.get<MonthlyRecommendationsEnvelope>('/monthly-recommendations', {
     params: {
       year: params.year,

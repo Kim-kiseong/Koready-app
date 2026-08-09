@@ -25,6 +25,7 @@ import GuideCard from '@/components/GuideCard';
 import LanguageSwitchModal from '@/components/LanguageSwitchModal';
 import PillChip from '@/components/PillChip';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
@@ -47,7 +48,12 @@ export default function HomeScreen() {
   const t = useTranslation();
   const location = useOnboardingStore((state) => state.location);
   const language = useLanguageStore((state) => state.language);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
+  // The dev-bypass session's token isn't real — sending it to PATCH
+  // /users/me/language 401s, which trips client.ts's refresh-then-logout
+  // cascade. Mirrors LanguageScreen's/TermsScreen's same dev-only bypass.
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const { width: windowWidth } = useWindowDimensions();
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
@@ -210,6 +216,15 @@ export default function HomeScreen() {
           targetLanguage={pendingLanguage}
           onCancel={() => setPendingLanguage(null)}
           onConfirm={async () => {
+            if (isDevMockSession) {
+              applyLanguageChange({
+                language: pendingLanguage,
+                nextStep: 'COMPLETED',
+                updatedAt: new Date().toISOString(),
+              });
+              setPendingLanguage(null);
+              return;
+            }
             try {
               const result = await updateMyLanguage(pendingLanguage);
               applyLanguageChange(result);
