@@ -38,7 +38,7 @@ export default function CompleteScreen() {
     (state) => state.clearPreferencePlaceSelection,
   );
   const setNextStep = useAuthStore((state) => state.setNextStep);
-  const resetOnboarding = useOnboardingStore((state) => state.reset);
+  const clearCompletedFlowSelections = useOnboardingStore((state) => state.clearCompletedFlowSelections);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canComplete = isDevMockSession
@@ -65,7 +65,7 @@ export default function CompleteScreen() {
         const progress = await fetchOnboardingProgress();
         if (progress.completed) {
           setNextStep('COMPLETED');
-          resetOnboarding();
+          clearCompletedFlowSelections();
           router.replace('/home');
         } else {
           Alert.alert('오류', '이미 다른 선택으로 완료된 온보딩이에요.');
@@ -110,7 +110,7 @@ export default function CompleteScreen() {
     }
     if (isDevMockSession) {
       setNextStep('COMPLETED');
-      resetOnboarding();
+      clearCompletedFlowSelections();
       router.replace('/home');
       return;
     }
@@ -127,7 +127,7 @@ export default function CompleteScreen() {
         selectedPreferencePlaceIds,
       });
       setNextStep(result.nextStep);
-      resetOnboarding();
+      clearCompletedFlowSelections();
       router.replace('/home');
     } catch (error) {
       await handleCompletionError(error);

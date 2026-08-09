@@ -43,6 +43,12 @@ type OnboardingState = {
   // don't belong to the set now shown on screen.
   setCandidateSet: (candidateSetId: string, version: number) => void;
   applyProgress: (progress: OnboardingProgressResponse) => void;
+  // Called once onboarding completes — clears only the flow-scoped selection
+  // state (travel styles, candidate set, preference picks). Deliberately
+  // keeps location/currentLocationId: HomeScreen and PicksScreen read those
+  // as the user's current location long after onboarding is done, not just
+  // during the flow itself.
+  clearCompletedFlowSelections: () => void;
   reset: () => void;
 };
 
@@ -81,6 +87,13 @@ export const useOnboardingStore = create<OnboardingState>()(
           candidateSetId: progress.candidateSetId,
           candidateSetVersion: progress.candidateSetVersion,
           selectedPreferencePlaceIds: progress.selectedPreferencePlaceIds,
+        }),
+      clearCompletedFlowSelections: () =>
+        set({
+          travelStyles: [],
+          candidateSetId: null,
+          candidateSetVersion: null,
+          selectedPreferencePlaceIds: [],
         }),
       reset: () =>
         set({
