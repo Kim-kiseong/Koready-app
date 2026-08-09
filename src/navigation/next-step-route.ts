@@ -13,7 +13,11 @@ export function resolveNextStepRoute(nextStep: NextStep): Href {
     case 'COMPLETED':
       return '/home';
     case 'TERMS':
-      return '/terms';
+      // TEMP: terms screen disabled for testing — backend's terms endpoints
+      // (/terms/required, /users/me/term-agreements) are still not ready.
+      // Skip straight to LANGUAGE, the step that normally follows TERMS.
+      // Revert to `return '/terms';` once terms is ready to test again.
+      return '/language';
   }
 }
 
