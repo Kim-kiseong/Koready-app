@@ -16,11 +16,12 @@ const styles = StyleSheet.create({
   tag: {
     borderRadius: 8,
     backgroundColor: Palette.grey150,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   label: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: 'Inter',
+    fontWeight: '500',
     fontSize: 12,
     lineHeight: 16.8,
     color: Palette.grey600,

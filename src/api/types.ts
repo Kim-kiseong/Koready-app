@@ -136,6 +136,47 @@ export type PlaceMatesEnvelope = {
   traceId: string;
 };
 
+export type SavedPlaceSource = 'PICKS' | 'PLACE_DETAIL' | 'SAVED';
+
+export type SavedPlaceFestivalOccurrence = {
+  occurrenceId: number;
+  eventYear: number;
+  startDate: string;
+  endDate: string;
+  status: 'UPCOMING' | 'ONGOING' | 'ENDED';
+  dateRangeText: string;
+};
+
+export type SavedPlaceItem = {
+  placeId: number;
+  title: string;
+  serviceRegionCode: string;
+  serviceRegionName: string;
+  addressSummary: string;
+  imageUrl: string;
+  festivalOccurrence: SavedPlaceFestivalOccurrence | null;
+  travelStyle: string;
+  tags: string[];
+  scheduleText?: string | null;
+  shortDescription: string | null;
+  overview?: string | null;
+  saved: boolean;
+  savedAt: string;
+  source?: SavedPlaceSource | string;
+};
+
+export type SavedPlacesResponse = {
+  items: SavedPlaceItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+export type SavedPlaceToggleResponse = {
+  placeId: number;
+  saved: boolean;
+  savedAt: string;
+};
+
 export type MessageThreadCreateRequest = {
   receiverProfileId: number;
   placeId: number;
