@@ -9,14 +9,65 @@ import DestinationCard from '@/components/DestinationCard';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
+
+// The dev-bypass session's token isn't real — sending it to GET
+// /onboarding/place-candidate-sets/current 401s, which trips client.ts's
+// refresh-then-logout cascade. Mirrors TermsScreen's same dev-only bypass.
+const DEV_MOCK_CANDIDATE_SET: OnboardingCandidateSetResponse = {
+  candidateSetId: 'dev-mock-candidate-set',
+  version: 1,
+  status: 'PUBLISHED',
+  publishedAt: new Date().toISOString(),
+  minSelection: 1,
+  maxSelection: 3,
+  items: [
+    {
+      placeId: 1,
+      title: '경주 문화유산 나들이',
+      imageUrl: 'https://picsum.photos/seed/gyeongju/600/600',
+      serviceRegionCode: 'GYEONGSANG',
+      serviceRegionName: '경상',
+      travelStyle: 'CULTURE_EXPERIENCE',
+      tags: ['역사', '전통'],
+      curatorMessage: '경주의 문화유산을 느껴보세요.',
+      displayOrder: 1,
+    },
+    {
+      placeId: 2,
+      title: '전주 한옥마을 나들이',
+      imageUrl: 'https://picsum.photos/seed/jeonju/600/600',
+      serviceRegionCode: 'JEOLLA',
+      serviceRegionName: '전라',
+      travelStyle: 'TRADITIONAL_MARKET',
+      tags: ['한옥', '전통시장'],
+      curatorMessage: '전주의 정취를 느껴보세요.',
+      displayOrder: 2,
+    },
+    {
+      placeId: 3,
+      title: '부산 해운대 나들이',
+      imageUrl: 'https://picsum.photos/seed/haeundae/600/600',
+      serviceRegionCode: 'GYEONGSANG',
+      serviceRegionName: '경상',
+      travelStyle: 'NATURE',
+      tags: ['바다', '산책'],
+      curatorMessage: '해운대 바다를 즐겨보세요.',
+      displayOrder: 3,
+    },
+  ],
+};
 
 export default function DestinationScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const selectedPreferencePlaceIds = useOnboardingStore((state) => state.selectedPreferencePlaceIds);
   const toggleSelectedPreferencePlace = useOnboardingStore(
     (state) => state.toggleSelectedPreferencePlace,
@@ -26,6 +77,12 @@ export default function DestinationScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isDevMockSession) {
+      setCandidateSetData(DEV_MOCK_CANDIDATE_SET);
+      setCandidateSet(DEV_MOCK_CANDIDATE_SET.candidateSetId, DEV_MOCK_CANDIDATE_SET.version);
+      setIsLoading(false);
+      return;
+    }
     fetchCurrentCandidateSet()
       .then((data) => {
         setCandidateSetData(data);
@@ -35,7 +92,7 @@ export default function DestinationScreen() {
         Alert.alert('오류', '여행지 후보를 불러오지 못했습니다.');
       })
       .finally(() => setIsLoading(false));
-  }, [setCandidateSet]);
+  }, [setCandidateSet, isDevMockSession]);
 
   const handleNext = () => {
     if (selectedPreferencePlaceIds.length === 0) return;

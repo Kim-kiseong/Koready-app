@@ -11,16 +11,41 @@ import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
+// The dev-bypass session's token isn't real — sending it to GET /locations/search
+// or POST /users/me/locations 401s, which trips client.ts's refresh-then-logout
+// cascade. Mirrors TermsScreen's/LanguageScreen's same dev-only bypass.
+const DEV_MOCK_SEARCH_RESULTS: LocationSearchItem[] = [
+  {
+    searchResultToken: 'dev-mock-search-token',
+    provider: 'KAKAO',
+    resultType: 'ADDRESS',
+    providerPlaceId: null,
+    name: '성신여자대학교',
+    roadAddress: '서울 성북구 보문로34다길 2',
+    address: '서울 성북구 동선동4가 389',
+    latitude: 37.5926,
+    longitude: 127.016,
+    sido: '서울',
+    sigungu: '성북구',
+    dong: '동선동',
+    serviceRegionCode: 'SEOUL',
+  },
+];
+
 export default function LocationScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const location = useOnboardingStore((state) => state.location);
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
@@ -35,6 +60,10 @@ export default function LocationScreen() {
     // The API accepts 1 char, but 2+ keeps result quality reasonable.
     if (q.length < 2) {
       setResults([]);
+      return;
+    }
+    if (isDevMockSession) {
+      setResults(DEV_MOCK_SEARCH_RESULTS);
       return;
     }
     const controller = new AbortController();
@@ -53,10 +82,24 @@ export default function LocationScreen() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, isDevMockSession]);
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;
+    if (isDevMockSession) {
+      setLocation({
+        displayAddress: item.roadAddress ?? item.name,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        source: 'search',
+      });
+      // Fake numeric id — good enough for later onboarding steps that just
+      // need currentLocationId to be non-null, without a real backend row.
+      setCurrentLocationId(1);
+      setQuery(item.roadAddress ?? item.name);
+      setResults([]);
+      return;
+    }
     setIsSaving(true);
     try {
       const saved = await createMyLocation({
