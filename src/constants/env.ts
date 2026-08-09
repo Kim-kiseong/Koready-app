@@ -9,6 +9,11 @@ if (!value) {
 
 export const API_BASE_URL = value;
 
+// Every endpoint on the real backend (see the staging Swagger spec) is
+// mounted under /api/v1 with no exceptions — centralized here so individual
+// api/*.ts modules never hardcode the prefix themselves.
+export const API_V1_BASE_URL = `${API_BASE_URL}/api/v1`;
+
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
 if (!googleWebClientId) {

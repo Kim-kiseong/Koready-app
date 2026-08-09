@@ -2,50 +2,37 @@ import type { Href } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { fetchMyUser } from '@/api/user';
 import { resolveNextStepRoute, resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function Index() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const applyMyUser = useAuthStore((state) => state.applyMyUser);
+  const nextStep = useAuthStore((state) => state.nextStep);
   const [route, setRoute] = useState<Href | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) return;
-    if (!accessToken) {
+    if (!accessToken || !nextStep) {
       setRoute('/login');
       return;
     }
 
-    fetchMyUser()
-      .then(async (data) => {
-        applyMyUser(data);
-        if (data.signupStatus === 'ACTIVE') {
-          setRoute('/home');
-          return;
-        }
-        if (data.nextStep === 'ONBOARDING') {
-          // Resume on the exact onboarding screen the server has progress
-          // for, instead of always restarting at /location.
-          try {
-            setRoute(await resolveOnboardingResumeRoute());
-            return;
-          } catch {
-            // Falls through to the default ONBOARDING route below.
-          }
-        }
-        setRoute(resolveNextStepRoute(data.nextStep));
-      })
-      .catch(() => {
-        // 401s already clear the session and redirect via the client's response
-        // interceptor. For other failures (e.g. offline), fall back to the last
-        // known step instead of losing the session.
-        const cachedNextStep = useAuthStore.getState().nextStep;
-        setRoute(cachedNextStep ? resolveNextStepRoute(cachedNextStep) : '/login');
-      });
-  }, [hasHydrated, accessToken, applyMyUser]);
+    // There is no GET /users/me on the real backend to refresh this from —
+    // `nextStep` is persisted from login and kept current by every flow that
+    // can change it (language switch, onboarding completion, ...), so the
+    // cached value is already authoritative on a cold restart.
+    if (nextStep === 'ONBOARDING') {
+      // Resume on the exact onboarding screen the server has progress for,
+      // instead of always restarting at /location.
+      resolveOnboardingResumeRoute()
+        .then(setRoute)
+        .catch(() => setRoute(resolveNextStepRoute(nextStep)));
+      return;
+    }
+
+    setRoute(resolveNextStepRoute(nextStep));
+  }, [hasHydrated, accessToken, nextStep]);
 
   if (!route) return null;
   return <Redirect href={route} />;

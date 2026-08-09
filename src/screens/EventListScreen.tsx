@@ -97,7 +97,7 @@ export default function EventListScreen() {
 
         <View style={styles.grid}>
           {events.map((event) => (
-            <EventGridCard key={event.id} event={event} categoryLabel={t.home.categories[event.category]} />
+            <EventGridCard key={event.id} event={event} categoryLabel={t.eventFilter.typeOptions[event.category]} />
           ))}
         </View>
       </ScrollView>

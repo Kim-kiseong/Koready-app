@@ -29,28 +29,6 @@ export type AuthUser = {
   preferredLanguage: LanguageCode;
 };
 
-// Same shape as AuthUser — named separately to match the /users/me schema (UserSummary).
-export type UserSummary = AuthUser;
-
-export type SignupStatus =
-  | 'TERMS_REQUIRED'
-  | 'LANGUAGE_REQUIRED'
-  | 'ONBOARDING_REQUIRED'
-  | 'ACTIVE';
-
-export type MyUserResponse = {
-  user: UserSummary;
-  // Server-computed signup progress — do not recompute from terms/language/onboarding client-side.
-  signupStatus: SignupStatus;
-  nextStep: NextStep;
-  // null means the location-registration screen is still needed.
-  defaultLocationId: number | null;
-  onboardingCompleted: boolean;
-  buddyProfileExists: boolean;
-  unreadMessageCount: number;
-  termsNeedReAgreement: boolean;
-};
-
 export type ProfileOptionItem = {
   code: string;
   labelKo: string;
@@ -379,14 +357,6 @@ export type BuddyProfileDetailEnvelope = {
   code: string;
   message: string;
   data: BuddyProfileDetail;
-  traceId: string;
-};
-
-export type MyUserEnvelope = {
-  success: true;
-  code: string;
-  message: string;
-  data: MyUserResponse;
   traceId: string;
 };
 

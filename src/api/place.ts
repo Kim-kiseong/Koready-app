@@ -1,8 +1,11 @@
 export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATE';
 
+import axios from 'axios';
 import type { ImageSource } from 'expo-image';
 
 import { HomeImages } from '@/constants/home-images';
+
+import { client } from './client';
 
 export type PlaceImage = {
   source: ImageSource;
@@ -177,8 +180,65 @@ const MOCK_PLACE_DETAILS: Record<string, PlaceDetail> = {
   'gimcheon-museum': GIMCHEON_MUSEUM_DETAIL,
 };
 
-// TODO: replace with client.get<PlaceDetail>(`/places/${placeId}`).
-export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
+type PlaceDetailApiImage = {
+  imageUrl: string;
+  order: number;
+  altText: string;
+};
+
+type PlaceDetailApiRelatedPlace = {
+  placeId: number;
+  title: string;
+  imageUrl: string;
+  shortDescription: string;
+};
+
+type PlaceDetailApiResponse = {
+  placeId: number;
+  title: string;
+  address: string;
+  tags: string[];
+  isSaved: boolean;
+  images: PlaceDetailApiImage[];
+  description: PlaceDescription;
+  relatedPlaces: PlaceDetailApiRelatedPlace[];
+};
+
+type PlaceDetailEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: PlaceDetailApiResponse;
+  traceId: string;
+};
+
+function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
+  return {
+    id: String(response.placeId),
+    routeId: String(response.placeId),
+    numericId: response.placeId,
+    title: response.title,
+    address: response.address,
+    tags: response.tags,
+    isSaved: response.isSaved,
+    images: [...response.images]
+      .sort((a, b) => a.order - b.order)
+      .map((image) => ({
+        source: { uri: image.imageUrl },
+        order: image.order,
+        altText: image.altText,
+      })),
+    description: response.description,
+    relatedPlaces: response.relatedPlaces.map((related) => ({
+      id: String(related.placeId),
+      title: related.title,
+      imageUrl: related.imageUrl,
+      shortDescription: related.shortDescription,
+    })),
+  };
+}
+
+function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
   return (
     MOCK_PLACE_DETAILS[placeId] ?? {
       ...DEFAULT_PLACE_DETAIL,
@@ -188,4 +248,23 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
       title: '김천 김밥축제',
     }
   );
+}
+
+// GET /places/{placeId} — real place ids (from GET /home, GET /monthly-recommendations,
+// GET /places) are numeric. Demo ids like 'jeonju-ipap-festival' used by the mock fixtures
+// elsewhere in the app (dev-mock session, MateTab sample data, ...) aren't real backend
+// rows, so those — and any id the backend 404s on — fall back to the local mock below
+// instead of surfacing an error.
+export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
+  const numericId = Number(placeId);
+  if (Number.isFinite(numericId) && numericId > 0) {
+    try {
+      const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
+      return mapPlaceDetailResponse(response.data.data);
+    } catch (error) {
+      if (!axios.isAxiosError(error)) throw error;
+    }
+  }
+
+  return buildFallbackPlaceDetail(placeId);
 }
