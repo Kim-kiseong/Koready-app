@@ -31,6 +31,7 @@ import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import { usePicksStore } from '@/store/picks-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
@@ -121,7 +122,12 @@ export default function PicksScreen() {
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
   const hasSeenGuideHydrated = usePicksStore((state) => state.hasHydrated);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
-  const defaultLocationId = useAuthStore((state) => state.defaultLocationId);
+  // There is no GET /users/me on the real backend to source a defaultLocationId
+  // from — onboarding-store's currentLocationId is the real backend location id
+  // for the user's current location, kept current by the onboarding flow and by
+  // LocationScreen's POST /users/me/locations call, and persists across restarts.
+  const originLocationId = useOnboardingStore((state) => state.currentLocationId);
+  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const accessToken = useAuthStore((state) => state.accessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
@@ -177,7 +183,7 @@ export default function PicksScreen() {
 
     const request = isDevMockSession
       ? Promise.resolve(buildDevFallbackDeck(targetScope))
-      : createRecommendationDeck(targetScope, defaultLocationId);
+      : createRecommendationDeck(targetScope, originLocationId);
 
     request
       .then((deck) => {
@@ -192,17 +198,18 @@ export default function PicksScreen() {
   };
 
   useEffect(() => {
-    // Wait for auth-store hydration so the initial deck request carries the
-    // restored defaultLocationId instead of racing it with a stale null, and
-    // for saved-place-store hydration so reconcileSaved has the restored
-    // heart state available instead of an empty map on a cold start.
-    if (!hasHydrated || !savedPlaceHydrated) return;
+    // Wait for auth-store hydration so the initial deck request doesn't race a
+    // stale accessToken, for onboarding-store hydration so it carries the
+    // restored originLocationId instead of a stale null, and for
+    // saved-place-store hydration so reconcileSaved has the restored heart
+    // state available instead of an empty map on a cold start.
+    if (!hasHydrated || !onboardingHasHydrated || !savedPlaceHydrated) return;
     loadDeck(scope);
-    // Still runs once — both hydration flags flip false→true exactly once,
+    // Still runs once — all hydration flags flip false→true exactly once,
     // then stay true. Scope switches and retries go through changeScope/
     // retryLoad below instead, so they can reset UI state synchronously.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, savedPlaceHydrated]);
+  }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated]);
 
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.

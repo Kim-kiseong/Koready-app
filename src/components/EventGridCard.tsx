@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { EventListing } from '@/api/home';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
-import { EventImages } from '@/constants/event-images';
 import { FontFamily } from '@/constants/typography';
 
 export type EventGridCardProps = {
@@ -18,7 +17,7 @@ export default function EventGridCard({ event, categoryLabel, onPress }: EventGr
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.photoSection}>
-        <Image source={EventImages[event.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <View style={styles.badge}>
           <CustomText style={styles.badgeText}>{categoryLabel}</CustomText>
         </View>

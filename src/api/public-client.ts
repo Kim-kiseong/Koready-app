@@ -1,10 +1,10 @@
 import axios from 'axios';
 
-import { API_BASE_URL } from '@/constants/env';
+import { API_V1_BASE_URL } from '@/constants/env';
 import { useLanguageStore } from '@/store/language-store';
 
 export const publicClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_V1_BASE_URL,
 });
 
 publicClient.interceptors.request.use((config) => {

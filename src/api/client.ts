@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { router } from 'expo-router';
 
-import { API_BASE_URL } from '@/constants/env';
+import { API_V1_BASE_URL } from '@/constants/env';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -10,7 +10,7 @@ import type { ApiErrorEnvelope, TokenEnvelope, TokenResponse } from './types';
 type RetryableRequestConfig = AxiosRequestConfig & { _retry?: boolean };
 
 export const client = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_V1_BASE_URL,
 });
 
 client.interceptors.request.use((config) => {
@@ -34,7 +34,7 @@ async function refreshSession(): Promise<TokenResponse> {
 
   // Deliberately a bare axios call (not `client`), so this never re-enters
   // the response interceptor below and can't recurse.
-  const response = await axios.post<TokenEnvelope>(`${API_BASE_URL}/api/v1/auth/refresh`, {
+  const response = await axios.post<TokenEnvelope>(`${API_V1_BASE_URL}/auth/refresh`, {
     refreshToken,
     deviceId,
   });
@@ -45,12 +45,14 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config: RetryableRequestConfig | undefined = error.config;
-    // Neither call has a session to refresh yet — /api/v1/auth/refresh itself
-    // would recurse, and /api/v1/auth/google is the login call that creates
-    // the session in the first place. Retrying either on 401 just replaces
-    // the real backend error with a confusing "no refresh token" one.
+    // Neither call has a session to refresh yet — /auth/refresh itself would
+    // recurse, and /auth/google is the login call that creates the session in
+    // the first place. Retrying either on 401 just replaces the real backend
+    // error with a confusing "no refresh token" one. `config.url` here is the
+    // relative path passed to `client` (baseURL already carries /api/v1), not
+    // the resolved absolute URL.
     const isRefreshCall =
-      config?.url?.includes('/api/v1/auth/refresh') || config?.url?.includes('/api/v1/auth/google');
+      config?.url?.includes('/auth/refresh') || config?.url?.includes('/auth/google');
 
     if (error.response?.status !== 401 || !config || config._retry || isRefreshCall) {
       return Promise.reject(error);
