@@ -47,6 +47,7 @@ export default function LocationScreen() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const location = useOnboardingStore((state) => state.location);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
 
@@ -128,26 +129,13 @@ export default function LocationScreen() {
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    setLocation({
-      displayAddress: t.location.currentLocationValue,
-      latitude: null,
-      longitude: null,
-      source: 'current',
-    });
-    // Not a saved location (no search token), so it can't back a real locationId.
-    setCurrentLocationId(null);
-    setQuery(t.location.currentLocationValue);
-    setResults([]);
-  };
-
   const handleClear = () => {
     setQuery('');
     setResults([]);
   };
 
   const handleNext = () => {
-    if (!location) return;
+    if (!location || currentLocationId == null) return;
     router.push('/travel-style');
   };
 
@@ -190,7 +178,7 @@ export default function LocationScreen() {
           )}
         </View>
 
-        {showResults ? (
+        {showResults && (
           <View style={styles.resultList}>
             {results.map((result) => (
               <View key={result.searchResultToken} style={styles.resultGroup}>
@@ -219,23 +207,15 @@ export default function LocationScreen() {
               </View>
             ))}
           </View>
-        ) : (
-          <Pressable style={styles.currentLocationButton} onPress={handleUseCurrentLocation}>
-            <SymbolView
-              name={{ ios: 'location.fill', android: 'my_location', web: 'my_location' }}
-              size={18}
-              weight="regular"
-              tintColor={Palette.text}
-            />
-            <CustomText style={styles.currentLocationText}>
-              {t.location.currentLocationButton}
-            </CustomText>
-          </Pressable>
         )}
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton title={t.location.next} disabled={!location || isSaving} onPress={handleNext} />
+        <PrimaryButton
+          title={t.location.next}
+          disabled={!location || currentLocationId == null || isSaving}
+          onPress={handleNext}
+        />
       </View>
     </SafeAreaView>
   );
@@ -275,22 +255,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Palette.text,
     padding: 0,
-  },
-  currentLocationButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Palette.grey200,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  currentLocationText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.text,
   },
   resultList: {
     gap: 8,
