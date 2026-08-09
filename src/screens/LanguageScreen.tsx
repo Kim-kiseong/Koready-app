@@ -12,7 +12,7 @@ import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { resolveNextStepRoute } from '@/navigation/next-step-route';
+import { resolveNextStepRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function LanguageScreen() {
@@ -39,7 +39,10 @@ export default function LanguageScreen() {
     try {
       const result = await updateMyLanguage(selected);
       applyLanguageChange(result);
-      router.push(resolveNextStepRoute(result.nextStep));
+      // Real backend only advances past TERMS once agreements are actually
+      // submitted — if terms still aren't agreed, result.nextStep comes back
+      // as 'TERMS' again here. Auto-agree instead of looping back to /language.
+      router.push(await resolveNextStepRouteSkippingTerms(result.nextStep));
     } catch (error) {
       Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
     } finally {

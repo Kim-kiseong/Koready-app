@@ -2,7 +2,7 @@ import type { Href } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { resolveNextStepRoute, resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
+import { resolveOnboardingResumeRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function Index() {
@@ -27,11 +27,11 @@ export default function Index() {
       // instead of always restarting at /location.
       resolveOnboardingResumeRoute()
         .then(setRoute)
-        .catch(() => setRoute(resolveNextStepRoute(nextStep)));
+        .catch(() => resolveNextStepRouteSkippingTerms(nextStep).then(setRoute));
       return;
     }
 
-    setRoute(resolveNextStepRoute(nextStep));
+    resolveNextStepRouteSkippingTerms(nextStep).then(setRoute);
   }, [hasHydrated, accessToken, nextStep]);
 
   if (!route) return null;

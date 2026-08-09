@@ -1,6 +1,7 @@
 import type { Href } from 'expo-router';
 
 import { fetchOnboardingProgress, type OnboardingStep } from '@/api/onboarding';
+import { fetchRequiredTerms, submitTermAgreements } from '@/api/terms';
 import type { NextStep } from '@/api/types';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -13,11 +14,31 @@ export function resolveNextStepRoute(nextStep: NextStep): Href {
     case 'COMPLETED':
       return '/home';
     case 'TERMS':
-      // TEMP: terms screen disabled for testing — backend's terms endpoints
-      // (/terms/required, /users/me/term-agreements) are still not ready.
-      // Skip straight to LANGUAGE, the step that normally follows TERMS.
-      // Revert to `return '/terms';` once terms is ready to test again.
-      return '/language';
+      return '/terms';
+  }
+}
+
+// TEMP: terms screen disabled for testing. The backend only advances nextStep
+// past TERMS once agreements are actually submitted — just rerouting away
+// from '/terms' (without calling the real API) makes the backend keep
+// reporting nextStep: 'TERMS' forever, so every later step (language, ...)
+// loops back here. Auto-agreeing for real is what actually unblocks it.
+// Revert callers to `resolveNextStepRoute` directly once terms is ready to
+// test again.
+export async function resolveNextStepRouteSkippingTerms(nextStep: NextStep): Promise<Href> {
+  if (nextStep !== 'TERMS') {
+    return resolveNextStepRoute(nextStep);
+  }
+  try {
+    const { terms } = await fetchRequiredTerms();
+    const result = await submitTermAgreements(
+      terms.map((term) => ({ termVersionId: term.termVersionId, agreed: true })),
+    );
+    return resolveNextStepRouteSkippingTerms(result.nextStep);
+  } catch {
+    // Real terms endpoints unreachable — fall back to just skipping the
+    // screen visually (may loop back to TERMS on the next step).
+    return '/language';
   }
 }
 
