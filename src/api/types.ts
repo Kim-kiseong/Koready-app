@@ -193,6 +193,30 @@ export type SavedPlacesResponse = {
   hasMore: boolean;
 };
 
+export type PlaceSortOrder = 'RECOMMENDED' | 'DEADLINE';
+
+export type PlaceListItem = {
+  placeId: number;
+  title: string;
+  serviceRegionCode: string;
+  serviceRegionName: string;
+  addressSummary: string;
+  imageUrl: string;
+  festivalOccurrence: SavedPlaceFestivalOccurrence | null;
+  travelStyle: string;
+  tags: string[];
+  shortDescription: string | null;
+  overview: string | null;
+  saved: boolean;
+  savedAt?: string | null;
+};
+
+export type PlaceListResponse = {
+  items: PlaceListItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
 export type SavedPlaceToggleResponse = {
   placeId: number;
   saved: boolean;

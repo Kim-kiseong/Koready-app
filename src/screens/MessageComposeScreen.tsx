@@ -554,30 +554,28 @@ export default function MessageComposeScreen() {
           <Pressable style={StyleSheet.absoluteFill} onPress={handleContinueBrowsing} />
 
           <View style={styles.successSheet}>
-            <View style={styles.successIconWrap}>
-              <View style={styles.successIconHalo}>
-                <View style={styles.successIconCore}>
-                  <SymbolView
-                    name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                    size={16}
-                    weight="bold"
-                    tintColor="#FFFFFF"
-                  />
-                </View>
-              </View>
+            <View style={styles.successHandleArea}>
+              <View style={styles.successHandle} />
             </View>
 
-            <CustomText style={styles.successTitle}>쪽지를 보냈어요!</CustomText>
-            <CustomText style={styles.successDescription}>답장은 바로 오지 않을 수 있어요.</CustomText>
-            <CustomText style={styles.successDescription}>새로운 답장은 쪽지함에서 확인할 수 있어요.</CustomText>
+            <View style={styles.successContent}>
+              <View style={styles.successTextGroup}>
+                <CustomText style={styles.successTitle}>쪽지를 보냈어요!</CustomText>
+                <CustomText style={styles.successDescription}>
+                  {`답장은 바로 오지않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.`}
+                </CustomText>
+              </View>
 
-            <Pressable style={styles.successPrimaryButton} onPress={handleViewThread}>
-              <CustomText style={styles.successPrimaryButtonText}>쪽지함 보기</CustomText>
-            </Pressable>
+              <View style={styles.successActions}>
+                <Pressable style={styles.successPrimaryButton} onPress={handleViewThread}>
+                  <CustomText style={styles.successPrimaryButtonText}>쪽지함 보기</CustomText>
+                </Pressable>
 
-            <Pressable style={styles.successSecondaryButton} onPress={handleContinueBrowsing}>
-              <CustomText style={styles.successSecondaryButtonText}>계속 둘러보기</CustomText>
-            </Pressable>
+                <Pressable style={styles.successSecondaryButton} onPress={handleContinueBrowsing}>
+                  <CustomText style={styles.successSecondaryButtonText}>계속 둘러보기</CustomText>
+                </Pressable>
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
@@ -968,84 +966,84 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   successSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    width: '100%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 32,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
+    alignItems: 'stretch',
   },
-  successIconWrap: {
-    width: 50,
-    height: 50,
+  successHandleArea: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+    width: '100%',
+    paddingTop: 8,
+    paddingBottom: 24,
   },
-  successIconHalo: {
-    width: 55,
-    height: 55,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(79, 174, 152, 0.12)',
+  successHandle: {
+    width: 48,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E8EB',
   },
-  successIconCore: {
-    width: 25,
-    height: 25,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Palette.primary,
+  successContent: {
+    alignSelf: 'stretch',
+    gap: 32,
   },
   successTitle: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 22,
-    marginBottom:4,
-    lineHeight: 25.6,
+    fontSize: 18,
+    lineHeight: 25.2,
     color: Palette.text,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  successTextGroup: {
+    alignSelf: 'stretch',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   successDescription: {
-    marginTop: 4,
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22.4,
     color: Palette.grey600,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  successActions: {
+    alignSelf: 'stretch',
+    gap: 12,
   },
   successPrimaryButton: {
     width: '100%',
     minHeight: 52,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: Palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
   },
   successPrimaryButtonText: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 16,
-    lineHeight: 22.4,
+    fontSize: 18,
+    lineHeight: 25.2,
     color: '#FFFFFF',
   },
   successSecondaryButton: {
     width: '100%',
     minHeight: 52,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Palette.primary,
+    borderColor: '#D7DEE5',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
   },
   successSecondaryButtonText: {
-    fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 16,
-    lineHeight: 22.4,
-    color: Palette.primary,
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    fontSize: 18,
+    lineHeight: 25.2,
+    color: '#8B95A1',
   },
   unsavedChangesOverlay: {
     flex: 1,
