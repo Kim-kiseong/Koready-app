@@ -233,7 +233,9 @@ function SavedPlaceCard({
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.imageWrap}>
-        <Image source={{ uri: place.imageUrl }} style={styles.image} contentFit="cover" />
+        {place.imageUrl && (
+          <Image source={{ uri: place.imageUrl }} style={styles.image} contentFit="cover" />
+        )}
         {place.festivalOccurrence ? (
           <View style={styles.dDayBadge}>
             <CustomText style={styles.dDayText}>{getDDayLabel(place)}</CustomText>

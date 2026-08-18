@@ -3,6 +3,17 @@ import { Asset } from 'expo-asset';
 import { client } from './client';
 import { API_BASE_URL } from '@/constants/env';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { useAuthStore } from '@/store/auth-store';
+
+// The dev-bypass session's token isn't real — sending it to GET /home or GET
+// /monthly-recommendations 401s, which trips client.ts's refresh-then-logout
+// cascade (the interceptor clears the session and redirects to /login before
+// the caller's own try/catch ever runs). Mirrors the same guard used in
+// mate.ts/messages.ts/buddy-profile.ts.
+function isDevMockSession() {
+  return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
+}
 
 export type FeaturedEventCategory =
   | 'POPULAR'
@@ -21,7 +32,7 @@ export type FeaturedEvent = {
   id: string;
   title: string;
   dateRangeLabel: string;
-  imageUrl: string;
+  imageUrl: string | null;
 };
 
 const DEFAULT_FEATURED_EVENT_IMAGE_URI = Asset.fromModule(
@@ -69,7 +80,19 @@ export type GuideVideo = {
   id: string;
   title: string;
   tags: [string, string];
-  imageKey: 'KTX_GUIDE' | 'SUBWAY_TRANSFER' | 'TAXI_CALL' | 'INTERCITY_BUS';
+  imageKey:
+    | 'KTX_GUIDE'
+    | 'SUBWAY_TRANSFER'
+    | 'TAXI_CALL'
+    | 'INTERCITY_BUS'
+    | 'ORDER_RESTAURANT'
+    | 'ORDER_WAITING'
+    | 'ORDER_DELIVERY'
+    | 'ORDER_KIOSK'
+    | 'SAFETY_EMERGENCY'
+    | 'SAFETY_LOST'
+    | 'SAFETY_HOSPITAL'
+    | 'SAFETY_HIKING';
   category: GuideCategoryId;
 };
 
@@ -80,8 +103,18 @@ const MOCK_GUIDE_VIDEOS: Record<GuideCategoryId, GuideVideo[]> = {
     { id: 'taxi-call', title: '택시\n호출하는 방법', tags: ['교통', '결제'], imageKey: 'TAXI_CALL', category: 'TRANSPORT' },
     { id: 'intercity-bus', title: '시외버스\n예매하기', tags: ['교통', '결제'], imageKey: 'INTERCITY_BUS', category: 'TRANSPORT' },
   ],
-  ORDER: [],
-  SAFETY: [],
+  ORDER: [
+    { id: 'order-restaurant', title: '한국 식당에서\n주문하는 방법', tags: ['주문', '식당'], imageKey: 'ORDER_RESTAURANT', category: 'ORDER' },
+    { id: 'order-waiting', title: '식당 웨이팅\n예약하는 방법', tags: ['주문', '예약'], imageKey: 'ORDER_WAITING', category: 'ORDER' },
+    { id: 'order-delivery', title: '배달음식\n주문하는 방법', tags: ['주문', '배달'], imageKey: 'ORDER_DELIVERY', category: 'ORDER' },
+    { id: 'order-kiosk', title: '키오스크로\n주문하는 방법', tags: ['주문', '결제'], imageKey: 'ORDER_KIOSK', category: 'ORDER' },
+  ],
+  SAFETY: [
+    { id: 'safety-emergency', title: '긴급상황\n도움 요청하는 방법', tags: ['안전', '긴급'], imageKey: 'SAFETY_EMERGENCY', category: 'SAFETY' },
+    { id: 'safety-lost', title: '여권 · 휴대폰\n잃어버렸을 때', tags: ['안전', '분실'], imageKey: 'SAFETY_LOST', category: 'SAFETY' },
+    { id: 'safety-hospital', title: '아플 때\n병원 가는 방법', tags: ['안전', '병원'], imageKey: 'SAFETY_HOSPITAL', category: 'SAFETY' },
+    { id: 'safety-hiking', title: '등산할 때\n알아둘 안전수칙', tags: ['안전', '등산'], imageKey: 'SAFETY_HIKING', category: 'SAFETY' },
+  ],
   LANGUAGE: [],
 };
 
@@ -99,7 +132,7 @@ export type EventListing = {
   location: string;
   dateRangeLabel: string;
   category: TravelStyleId;
-  imageUrl: string;
+  imageUrl: string | null;
 };
 
 // Matches the backend's ServiceRegionCode enum exactly (see GET
@@ -149,7 +182,9 @@ export type PlaceCard = {
   serviceRegionCode: ServiceRegionCode;
   serviceRegionName: string;
   addressSummary: string;
-  imageUrl: string;
+  // Backend contract: null means "no photo uploaded yet" — the frontend is
+  // expected to substitute its own default (see api-docs' imageUrl description).
+  imageUrl: string | null;
   festivalOccurrence: FestivalOccurrence | null;
   travelStyle: TravelStyleId;
   tags: string[];
@@ -181,10 +216,87 @@ type HomeEnvelope = {
   traceId: string;
 };
 
+const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
+  {
+    placeId: 9001,
+    title: '[전주] 이팝나무 축제',
+    serviceRegionCode: 'JEOLLA',
+    serviceRegionName: '전라',
+    addressSummary: '전북특별자치도 전주시 완산구 일대',
+    imageUrl: 'https://picsum.photos/seed/jeonju-ipap/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 1,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-04-25',
+      endDate: '2026-04-26',
+      status: 'UPCOMING',
+      dateRangeText: '4.25(토)~4.26(일)',
+    },
+    travelStyle: 'LOCAL_FESTIVAL',
+    tags: ['지역축제', '봄'],
+    shortDescription: '전주 한옥마을 인근 이팝나무 축제예요.',
+    saved: false,
+  },
+  {
+    placeId: 9002,
+    title: '[담양] 대나무 축제',
+    serviceRegionCode: 'JEOLLA',
+    serviceRegionName: '전라',
+    addressSummary: '전라남도 담양군 담양읍 죽녹원로 119',
+    imageUrl: 'https://picsum.photos/seed/damyang-bamboo/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 2,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-05-01',
+      endDate: '2026-05-05',
+      status: 'UPCOMING',
+      dateRangeText: '5.1(금)~5.5(화)',
+    },
+    travelStyle: 'NATURE',
+    tags: ['자연', '대나무'],
+    shortDescription: '담양 대나무숲을 즐겨보세요.',
+    saved: false,
+  },
+  {
+    placeId: 9003,
+    title: '국립현대미술관',
+    serviceRegionCode: 'SEOUL',
+    serviceRegionName: '서울',
+    addressSummary: '서울 종로구 삼청로 30',
+    imageUrl: 'https://picsum.photos/seed/mmca/800/1000',
+    festivalOccurrence: {
+      occurrenceId: 3,
+      eventYear: new Date().getFullYear(),
+      startDate: '2026-05-03',
+      endDate: '2026-06-15',
+      status: 'ONGOING',
+      dateRangeText: '5.3(일)~6.15(월)',
+    },
+    travelStyle: 'EXHIBITION_MUSEUM',
+    tags: ['전시', '미술관'],
+    shortDescription: '국립현대미술관 특별전을 감상해보세요.',
+    saved: false,
+  },
+];
+
 // GET /home — currentLocation/preferredLanguage aren't consumed here since
 // HomeScreen already sources those from onboarding-store/language-store; this
 // exists mainly to back the "POPULAR" featured-events tab with real data.
 export async function fetchHome(): Promise<HomeResponse> {
+  if (isDevMockSession()) {
+    const now = new Date();
+    return {
+      currentLocation: null,
+      preferredLanguage: 'KO',
+      monthlyRecommendation: {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        title: '이달의 인기 추천',
+        totalCount: DEV_MOCK_PLACE_CARDS.length,
+        items: DEV_MOCK_PLACE_CARDS,
+      },
+    };
+  }
   const response = await client.get<HomeEnvelope>('/home');
   return response.data.data;
 }
@@ -225,6 +337,28 @@ type MonthlyRecommendationsEnvelope = {
 export async function fetchMonthlyRecommendations(
   params: MonthlyRecommendationsParams,
 ): Promise<MonthlyRecommendationsResponse> {
+  if (isDevMockSession()) {
+    let items = DEV_MOCK_PLACE_CARDS;
+    if (params.serviceRegionCode) {
+      items = items.filter((card) => card.serviceRegionCode === params.serviceRegionCode);
+    }
+    if (params.travelStyles?.length) {
+      items = items.filter((card) => params.travelStyles!.includes(card.travelStyle));
+    }
+    if (params.sort === 'DEADLINE') {
+      items = [...items].sort((a, b) =>
+        (a.festivalOccurrence?.endDate ?? '').localeCompare(b.festivalOccurrence?.endDate ?? ''),
+      );
+    }
+    return {
+      year: params.year,
+      month: params.month,
+      items,
+      nextCursor: null,
+      hasMore: false,
+      totalCount: items.length,
+    };
+  }
   const response = await client.get<MonthlyRecommendationsEnvelope>('/monthly-recommendations', {
     params: {
       year: params.year,

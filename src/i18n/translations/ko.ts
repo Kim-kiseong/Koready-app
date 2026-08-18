@@ -47,8 +47,19 @@ export interface Translations {
   };
   guideList: {
     title: string;
-    description: string;
+    description: Record<GuideCategoryId, string>;
     categories: Record<GuideCategoryId, string>;
+  };
+  guideDetail: {
+    categoryBadge: Record<GuideCategoryId, string>;
+    startButton: string;
+    stepListTitle: string;
+    totalStepsPrefix: string;
+    totalStepsSuffix: string;
+    resumeStepPrefix: string;
+    resumeStepSuffix: string;
+    stepComingSoonTitle: string;
+    stepComingSoonBody: string;
   };
   languageModal: {
     title: string;
@@ -181,13 +192,34 @@ export const ko: Translations = {
   },
   guideList: {
     title: '한국 여행 가이드',
-    description: '교통 이용부터 결제, 안전, 언어까지 필요한 정보를 영상으로 확인해보세요.',
+    description: {
+      TRANSPORT: '교통 이용부터 결제, 안전, 언어까지 필요한 정보를 영상으로 확인해보세요.',
+      ORDER: '식당 주문부터 웨이팅, 배달, 키오스크까지 필요한 정보를 영상으로 확인해보세요.',
+      SAFETY: '긴급 상황, 분실, 병원, 등산까지 필요한 안전 정보를 영상으로 확인해보세요.',
+      LANGUAGE: '여행 중 자주 쓰는 한국어 표현을 상황별로 익혀보세요.',
+    },
     categories: {
       TRANSPORT: '교통',
       ORDER: '주문',
       SAFETY: '안전',
       LANGUAGE: '언어',
     },
+  },
+  guideDetail: {
+    categoryBadge: {
+      TRANSPORT: '교통 가이드',
+      ORDER: '주문 가이드',
+      SAFETY: '안전 가이드',
+      LANGUAGE: '언어 가이드',
+    },
+    startButton: '가이드 시작하기',
+    stepListTitle: '단계별 예매 방법',
+    totalStepsPrefix: '전체 ',
+    totalStepsSuffix: '단계',
+    resumeStepPrefix: 'Step ',
+    resumeStepSuffix: ' 보러가기',
+    stepComingSoonTitle: '준비 중이에요',
+    stepComingSoonBody: '이 단계는 아직 준비 중이에요. 곧 만나보실 수 있어요!',
   },
   languageModal: {
     title: '언어를 변경할까요?',

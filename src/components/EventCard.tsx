@@ -1,9 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { FeaturedEvent } from '@/api/home';
 import CustomText from '@/components/CustomText';
+import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
 export type EventCardProps = {
@@ -14,7 +15,11 @@ export type EventCardProps = {
 export default function EventCard({ event, onPress }: EventCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {event.imageUrl ? (
+        <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+      )}
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
         start={{ x: 0.5, y: 0.12 }}
@@ -37,6 +42,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 16,
     gap: 6,
+  },
+  imageFallback: {
+    backgroundColor: Palette.grey200,
   },
   title: {
     fontFamily: FontFamily.pretendard.bold,

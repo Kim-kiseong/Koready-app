@@ -9,7 +9,7 @@ import { FontFamily } from '@/constants/typography';
 type Props = { place: RelatedPlace; onPress: () => void };
 
 export default function NearbyPlaceCard({ place, onPress }: Props) {
-  return <Pressable style={styles.card} onPress={onPress}><Image source={{ uri: place.imageUrl }} style={styles.image} contentFit="cover" /><View style={styles.content}><CustomText numberOfLines={1} style={styles.title}>{place.title}</CustomText><CustomText style={styles.description}>{place.shortDescription}</CustomText></View></Pressable>;
+  return <Pressable style={styles.card} onPress={onPress}>{place.imageUrl ? <Image source={{ uri: place.imageUrl }} style={styles.image} contentFit="cover" /> : <View style={styles.image} />}<View style={styles.content}><CustomText numberOfLines={1} style={styles.title}>{place.title}</CustomText><CustomText style={styles.description}>{place.shortDescription}</CustomText></View></Pressable>;
 }
 
 const styles = StyleSheet.create({

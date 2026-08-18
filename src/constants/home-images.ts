@@ -5,4 +5,12 @@ export const HomeImages = {
   SUBWAY_TRANSFER: require('@/assets/images/guides/guide-subway-transfer.jpg'),
   TAXI_CALL: require('@/assets/images/guides/guide-taxi-call.jpg'),
   INTERCITY_BUS: require('@/assets/images/guides/guide-intercity-bus.jpg'),
+  ORDER_RESTAURANT: require('@/assets/images/guides/order-restaurant-hero.jpg'),
+  ORDER_WAITING: require('@/assets/images/guides/order-waiting-hero.jpg'),
+  ORDER_DELIVERY: require('@/assets/images/guides/order-delivery-hero.jpg'),
+  ORDER_KIOSK: require('@/assets/images/guides/order-kiosk-hero.jpg'),
+  SAFETY_EMERGENCY: require('@/assets/images/guides/safety-emergency-hero.jpg'),
+  SAFETY_LOST: require('@/assets/images/guides/safety-lost-hero.jpg'),
+  SAFETY_HOSPITAL: require('@/assets/images/guides/safety-hospital-hero.jpg'),
+  SAFETY_HIKING: require('@/assets/images/guides/safety-hiking-hero.jpg'),
 } as const;

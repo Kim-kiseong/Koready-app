@@ -13,7 +13,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { DEV_TEST_ACCESS_TOKEN, DEV_TEST_REFRESH_TOKEN } from '@/constants/env';
-import { resolveNextStepRoute } from '@/navigation/next-step-route';
+import { resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 // Dev-only bypass: lets onboarding be tested before social login keys exist.
@@ -68,14 +68,14 @@ export default function LoginScreen() {
         }
         const session = await googleLogin({ idToken, deviceId });
         setSession(session);
-        router.replace(resolveNextStepRoute(session.nextStep));
+        router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
         return;
       }
 
       const { idToken, authorizationCode } = await signInWithApple();
       const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
       setSession(session);
-      router.replace(resolveNextStepRoute(session.nextStep));
+      router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
     } catch (error) {
       // User backed out of the Google account chooser — not a failure worth alerting on.
       if (error instanceof GoogleSignInCancelledError) {
@@ -99,7 +99,10 @@ export default function LoginScreen() {
 
   const handleDevOnboardingBypass = () => {
     setSession(DEV_MOCK_SESSION);
-    router.replace(resolveNextStepRoute(DEV_MOCK_SESSION.nextStep));
+    // Skips straight past /terms — the mock session's fake token can't call
+    // the real terms API, and TermsScreen's own dev-mock fallback is for
+    // testing that screen specifically, not for this shortcut.
+    router.replace('/language');
   };
 
   const handleDevHomeShortcut = () => {

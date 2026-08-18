@@ -5,6 +5,7 @@ import { useLanguageStore } from '@/store/language-store';
 
 export const publicClient = axios.create({
   baseURL: API_V1_BASE_URL,
+  timeout: 15_000,
 });
 
 publicClient.interceptors.request.use((config) => {

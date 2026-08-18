@@ -29,7 +29,7 @@ export type PlaceDescription = {
 export type RelatedPlace = {
   id: string;
   title: string;
-  imageUrl: string;
+  imageUrl: string | null;
   shortDescription: string;
 };
 
@@ -1685,7 +1685,7 @@ type PlaceDetailApiImage = {
 type PlaceDetailApiRelatedPlace = {
   placeId: number;
   title: string;
-  imageUrl: string;
+  imageUrl: string | null;
   shortDescription: string;
 };
 

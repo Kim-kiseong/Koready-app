@@ -11,6 +11,7 @@ import CustomText from '@/components/CustomText';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
@@ -21,6 +22,12 @@ import { useOnboardingStore } from '@/store/onboarding-store';
 export default function CompleteScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  // The dev-bypass session's token isn't real — sending it to PUT
+  // /users/me/onboarding 401s, which trips client.ts's refresh-then-logout
+  // cascade. Mirrors TermsScreen's same dev-only bypass; since it never calls
+  // the real API, it doesn't need real currentLocationId/candidateSet ids either.
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const travelStyles = useOnboardingStore((state) => state.travelStyles);
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const candidateSetId = useOnboardingStore((state) => state.candidateSetId);
@@ -31,14 +38,15 @@ export default function CompleteScreen() {
     (state) => state.clearPreferencePlaceSelection,
   );
   const setNextStep = useAuthStore((state) => state.setNextStep);
-  const resetOnboarding = useOnboardingStore((state) => state.reset);
+  const clearCompletedFlowSelections = useOnboardingStore((state) => state.clearCompletedFlowSelections);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canComplete =
-    currentLocationId != null &&
-    candidateSetId != null &&
-    candidateSetVersion != null &&
-    selectedPreferencePlaceIds.length > 0;
+  const canComplete = isDevMockSession
+    ? selectedPreferencePlaceIds.length > 0
+    : currentLocationId != null &&
+      candidateSetId != null &&
+      candidateSetVersion != null &&
+      selectedPreferencePlaceIds.length > 0;
 
   // Maps each documented PUT /users/me/onboarding error code to the specific
   // recovery the spec calls for, rather than a single generic failure message.
@@ -57,7 +65,7 @@ export default function CompleteScreen() {
         const progress = await fetchOnboardingProgress();
         if (progress.completed) {
           setNextStep('COMPLETED');
-          resetOnboarding();
+          clearCompletedFlowSelections();
           router.replace('/home');
         } else {
           Alert.alert('오류', '이미 다른 선택으로 완료된 온보딩이에요.');
@@ -100,6 +108,15 @@ export default function CompleteScreen() {
       Alert.alert('알림', '위치와 여행지를 모두 선택해야 완료할 수 있어요.');
       return;
     }
+    if (isDevMockSession) {
+      setNextStep('COMPLETED');
+      clearCompletedFlowSelections();
+      router.replace('/home');
+      return;
+    }
+    // Non-dev-mock canComplete already guarantees these are non-null — narrows
+    // them for the real API call below (the ternary above loses that link).
+    if (currentLocationId == null || candidateSetId == null || candidateSetVersion == null) return;
     setIsSubmitting(true);
     try {
       const result = await completeOnboarding({
@@ -110,7 +127,7 @@ export default function CompleteScreen() {
         selectedPreferencePlaceIds,
       });
       setNextStep(result.nextStep);
-      resetOnboarding();
+      clearCompletedFlowSelections();
       router.replace('/home');
     } catch (error) {
       await handleCompletionError(error);
