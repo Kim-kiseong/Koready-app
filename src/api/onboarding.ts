@@ -171,7 +171,9 @@ export type CandidateSetStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type OnboardingCandidateItem = {
   placeId: number;
   title: string;
-  imageUrl: string;
+  // Backend contract: null means "no photo uploaded yet" — the frontend is
+  // expected to substitute its own default (see api-docs' imageUrl description).
+  imageUrl: string | null;
   serviceRegionCode: ServiceRegionCode;
   serviceRegionName: string;
   travelStyle: TravelStyleId;

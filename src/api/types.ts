@@ -153,7 +153,9 @@ export type SavedPlaceItem = {
   serviceRegionCode: string;
   serviceRegionName: string;
   addressSummary: string;
-  imageUrl: string;
+  // Backend contract: null means "no photo uploaded yet" — the frontend is
+  // expected to substitute its own default (see api-docs' imageUrl description).
+  imageUrl: string | null;
   festivalOccurrence: SavedPlaceFestivalOccurrence | null;
   travelStyle: string;
   tags: string[];
@@ -193,7 +195,9 @@ export type MessageThreadRequestContext = {
 export type MessageThreadPlace = {
   placeId: number;
   title: string;
-  imageUrl: string;
+  // Backend contract: null means "no photo uploaded yet" — the frontend is
+  // expected to substitute its own default (see api-docs' imageUrl description).
+  imageUrl: string | null;
   routeId?: string;
   address?: string | null;
 };

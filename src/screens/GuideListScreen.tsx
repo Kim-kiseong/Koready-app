@@ -25,9 +25,27 @@ export default function GuideListScreen() {
     fetchGuideVideos(category).then(setGuides);
   }, [category]);
 
+  const handleCategoryPress = (id: GuideCategoryId) => {
+    // LANGUAGE has no card grid of its own — it's a single 6-card phrase
+    // carousel, so tapping the tab jumps straight into that flow instead.
+    if (id === 'LANGUAGE') {
+      router.push('/guides/language');
+      return;
+    }
+    setCategory(id);
+  };
+
+  const handleGuidePress = (guide: GuideVideo) => {
+    if (guide.id === 'ktx-booking') {
+      router.push('/guides/ktx/index');
+      return;
+    }
+    router.push({ pathname: '/guides/[guideId]', params: { guideId: guide.id } });
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.guideList.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.guideList.title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.categoryRow}>
@@ -37,18 +55,18 @@ export default function GuideListScreen() {
               label={t.guideList.categories[id]}
               imageKey={id}
               selected={category === id}
-              onPress={() => setCategory(id)}
+              onPress={() => handleCategoryPress(id)}
             />
           ))}
         </View>
 
         <View style={styles.descriptionBox}>
-          <CustomText style={styles.descriptionText}>{t.guideList.description}</CustomText>
+          <CustomText style={styles.descriptionText}>{t.guideList.description[category]}</CustomText>
         </View>
 
         <View style={styles.grid}>
           {guides.map((guide) => (
-            <GuideVideoCard key={guide.id} guide={guide} />
+            <GuideVideoCard key={guide.id} guide={guide} onPress={() => handleGuidePress(guide)} />
           ))}
         </View>
       </ScrollView>

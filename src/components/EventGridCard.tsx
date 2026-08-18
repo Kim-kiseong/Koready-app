@@ -17,7 +17,11 @@ export default function EventGridCard({ event, categoryLabel, onPress }: EventGr
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.photoSection}>
-        <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        {event.imageUrl ? (
+          <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+        )}
         <View style={styles.badge}>
           <CustomText style={styles.badgeText}>{categoryLabel}</CustomText>
         </View>
@@ -51,6 +55,9 @@ const styles = StyleSheet.create({
   photoSection: {
     height: 110,
     padding: 10,
+  },
+  imageFallback: {
+    backgroundColor: Palette.grey200,
   },
   badge: {
     alignSelf: 'flex-start',

@@ -318,13 +318,9 @@ export default function MessageThreadScreen() {
     address: visibleThread.place.address ?? '',
     tags: [],
     isSaved: false,
-    images: [
-      {
-        source: { uri: visibleThread.place.imageUrl },
-        order: 1,
-        altText: visibleThread.place.title,
-      },
-    ],
+    images: visibleThread.place.imageUrl
+      ? [{ source: { uri: visibleThread.place.imageUrl }, order: 1, altText: visibleThread.place.title }]
+      : [],
     description: {
       impactTitle: visibleThread.place.title,
       impactSubtitle: '',
@@ -369,11 +365,15 @@ export default function MessageThreadScreen() {
             </View>
 
             <View style={styles.placeCard}>
-              <Image
-                source={resolvePlaceImageSource(displayPlace)}
-                style={styles.placeImage}
-                contentFit="cover"
-              />
+              {resolvePlaceImageSource(displayPlace) ? (
+                <Image
+                  source={resolvePlaceImageSource(displayPlace)}
+                  style={styles.placeImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.placeImage} />
+              )}
 
               <View style={styles.placeInfoRow}>
                 <View style={styles.placeInfo}>
@@ -540,8 +540,7 @@ function Avatar({
 }
 
 function resolvePlaceImageSource(place: PlaceDetail) {
-  const firstImage = place.images[0]?.source;
-  return firstImage ?? { uri: '' };
+  return place.images[0]?.source ?? null;
 }
 
 function formatMessageTime(value: string) {

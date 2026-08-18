@@ -16,6 +16,10 @@ export const Palette = {
   grey700: '#353D4A',
   grey900: '#1A1F26',
   primaryPale: '#9BE6C6',
+  tipBorder: '#D4F7E4',
+  warningBg: '#FFF7ED',
+  warningBorder: '#FFE8C8',
+  warningText: '#92400E',
   red300: '#FD4C4D',
   appleBlack: '#242625',
 } as const;

@@ -24,23 +24,16 @@ export default function GuideVideoCard({ guide, onPress }: GuideVideoCardProps) 
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.playBadge}>
+      <View style={styles.arrowBadge}>
         <SymbolView
-          name={{ ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' }}
-          size={14}
-          weight="regular"
+          name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}
+          size={16}
+          weight="semibold"
           tintColor="#ffffff"
         />
       </View>
 
       <CustomText style={styles.title}>{guide.title}</CustomText>
-      <View style={styles.tagRow}>
-        {guide.tags.map((tag) => (
-          <View key={tag} style={styles.tag}>
-            <CustomText style={styles.tagText}>{tag}</CustomText>
-          </View>
-        ))}
-      </View>
     </Pressable>
   );
 }
@@ -55,14 +48,14 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
   },
-  playBadge: {
+  arrowBadge: {
     position: 'absolute',
     top: 12,
     right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#000000',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -70,23 +63,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.bold,
     fontSize: 15,
     lineHeight: 21,
-    color: '#ffffff',
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  tag: {
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#ffffff',
-    backgroundColor: '#000000',
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-  },
-  tagText: {
-    fontSize: 12,
-    fontFamily: FontFamily.pretendard.medium,
     color: '#ffffff',
   },
 });

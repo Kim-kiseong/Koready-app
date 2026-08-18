@@ -302,7 +302,7 @@ export default function PicksScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title="나를 위한 추천 여행지" />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title="나를 위한 추천 여행지" rightIcon={null} />
 
       <View style={styles.content}>
         <View style={styles.scopeToggle}>
@@ -501,7 +501,11 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
     <View style={styles.cardStack}>
       <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
         <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
-          <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          {card.imageUrl ? (
+            <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
+          )}
         </Pressable>
 
         <View style={styles.cardInfo}>
@@ -759,6 +763,9 @@ const styles = StyleSheet.create({
   cardImageWrap: {
     flex: 1,
     width: '100%',
+  },
+  cardImageFallback: {
+    backgroundColor: Palette.grey200,
   },
   cardInfo: {
     flexDirection: 'row',

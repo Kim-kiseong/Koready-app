@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
   },
   chipLabelUnselected: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 14,
     color: Palette.grey600,
   },

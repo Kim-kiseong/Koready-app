@@ -29,7 +29,7 @@ export type FeaturedEvent = {
   id: string;
   title: string;
   dateRangeLabel: string;
-  imageUrl: string;
+  imageUrl: string | null;
 };
 
 export type GuideArticle = {
@@ -73,7 +73,19 @@ export type GuideVideo = {
   id: string;
   title: string;
   tags: [string, string];
-  imageKey: 'KTX_GUIDE' | 'SUBWAY_TRANSFER' | 'TAXI_CALL' | 'INTERCITY_BUS';
+  imageKey:
+    | 'KTX_GUIDE'
+    | 'SUBWAY_TRANSFER'
+    | 'TAXI_CALL'
+    | 'INTERCITY_BUS'
+    | 'ORDER_RESTAURANT'
+    | 'ORDER_WAITING'
+    | 'ORDER_DELIVERY'
+    | 'ORDER_KIOSK'
+    | 'SAFETY_EMERGENCY'
+    | 'SAFETY_LOST'
+    | 'SAFETY_HOSPITAL'
+    | 'SAFETY_HIKING';
   category: GuideCategoryId;
 };
 
@@ -84,8 +96,18 @@ const MOCK_GUIDE_VIDEOS: Record<GuideCategoryId, GuideVideo[]> = {
     { id: 'taxi-call', title: '택시\n호출하는 방법', tags: ['교통', '결제'], imageKey: 'TAXI_CALL', category: 'TRANSPORT' },
     { id: 'intercity-bus', title: '시외버스\n예매하기', tags: ['교통', '결제'], imageKey: 'INTERCITY_BUS', category: 'TRANSPORT' },
   ],
-  ORDER: [],
-  SAFETY: [],
+  ORDER: [
+    { id: 'order-restaurant', title: '한국 식당에서\n주문하는 방법', tags: ['주문', '식당'], imageKey: 'ORDER_RESTAURANT', category: 'ORDER' },
+    { id: 'order-waiting', title: '식당 웨이팅\n예약하는 방법', tags: ['주문', '예약'], imageKey: 'ORDER_WAITING', category: 'ORDER' },
+    { id: 'order-delivery', title: '배달음식\n주문하는 방법', tags: ['주문', '배달'], imageKey: 'ORDER_DELIVERY', category: 'ORDER' },
+    { id: 'order-kiosk', title: '키오스크로\n주문하는 방법', tags: ['주문', '결제'], imageKey: 'ORDER_KIOSK', category: 'ORDER' },
+  ],
+  SAFETY: [
+    { id: 'safety-emergency', title: '긴급상황\n도움 요청하는 방법', tags: ['안전', '긴급'], imageKey: 'SAFETY_EMERGENCY', category: 'SAFETY' },
+    { id: 'safety-lost', title: '여권 · 휴대폰\n잃어버렸을 때', tags: ['안전', '분실'], imageKey: 'SAFETY_LOST', category: 'SAFETY' },
+    { id: 'safety-hospital', title: '아플 때\n병원 가는 방법', tags: ['안전', '병원'], imageKey: 'SAFETY_HOSPITAL', category: 'SAFETY' },
+    { id: 'safety-hiking', title: '등산할 때\n알아둘 안전수칙', tags: ['안전', '등산'], imageKey: 'SAFETY_HIKING', category: 'SAFETY' },
+  ],
   LANGUAGE: [],
 };
 
@@ -103,7 +125,7 @@ export type EventListing = {
   location: string;
   dateRangeLabel: string;
   category: TravelStyleId;
-  imageUrl: string;
+  imageUrl: string | null;
 };
 
 // Matches the backend's ServiceRegionCode enum exactly (see GET
@@ -153,7 +175,9 @@ export type PlaceCard = {
   serviceRegionCode: ServiceRegionCode;
   serviceRegionName: string;
   addressSummary: string;
-  imageUrl: string;
+  // Backend contract: null means "no photo uploaded yet" — the frontend is
+  // expected to substitute its own default (see api-docs' imageUrl description).
+  imageUrl: string | null;
   festivalOccurrence: FestivalOccurrence | null;
   travelStyle: TravelStyleId;
   tags: string[];

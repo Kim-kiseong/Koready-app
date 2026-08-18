@@ -6,17 +6,11 @@ import {
 
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/env';
 
-export type SocialAuthResult = {
-  idToken?: string;
-  authorizationCode?: string;
-};
+import { GoogleSignInCancelledError, signInWithApple } from './socialAuth.shared';
+import type { SocialAuthResult } from './socialAuth.shared';
 
-export class GoogleSignInCancelledError extends Error {
-  constructor() {
-    super('Google sign-in was cancelled by the user.');
-    this.name = 'GoogleSignInCancelledError';
-  }
-}
+export type { SocialAuthResult };
+export { GoogleSignInCancelledError, signInWithApple };
 
 let googleConfigured = false;
 
@@ -52,12 +46,4 @@ export async function signOutOfGoogle(): Promise<void> {
   } catch {
     // ignore
   }
-}
-
-// TODO: replace with expo-apple-authentication once the app has a real bundle
-// identifier and Apple Developer "Sign In with Apple" capability enabled.
-export async function signInWithApple(): Promise<SocialAuthResult> {
-  throw new Error(
-    'Apple sign-in is not implemented yet — needs expo-apple-authentication and Apple Developer setup.',
-  );
 }

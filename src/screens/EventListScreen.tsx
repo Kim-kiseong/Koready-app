@@ -50,7 +50,7 @@ export default function EventListScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthRow}>
@@ -61,7 +61,11 @@ export default function EventListScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
           {featured.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard
+              key={event.id}
+              event={event}
+              onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
+            />
           ))}
         </ScrollView>
 
@@ -97,7 +101,12 @@ export default function EventListScreen() {
 
         <View style={styles.grid}>
           {events.map((event) => (
-            <EventGridCard key={event.id} event={event} categoryLabel={t.eventFilter.typeOptions[event.category]} />
+            <EventGridCard
+              key={event.id}
+              event={event}
+              categoryLabel={t.eventFilter.typeOptions[event.category]}
+              onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
+            />
           ))}
         </View>
       </ScrollView>

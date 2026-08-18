@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { OnboardingCandidateItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
+import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
 export type DestinationCardProps = {
@@ -15,7 +16,11 @@ export type DestinationCardProps = {
 export default function DestinationCard({ item, selected, onPress }: DestinationCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
+      )}
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
         start={{ x: 0.5, y: 0.12 }}
@@ -51,6 +56,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'flex-end',
     padding: 12,
+  },
+  imageFallback: {
+    backgroundColor: Palette.grey200,
   },
   checkBadge: {
     position: 'absolute',
