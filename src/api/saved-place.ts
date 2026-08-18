@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
-import type { PlaceDetail } from './place';
+import { DEFAULT_PLACE_DESCRIPTION, type PlaceDetail } from './place';
 import type { PicksCard } from './picks';
 import type {
   SavedPlaceFestivalOccurrence,
@@ -411,6 +411,17 @@ export function buildSavedPlaceFromPlaceDetail(
   const metadata = resolveDetailSavedPlaceMetadata(place);
   const imageUrl = getSavedPlaceImageUriFromDetail(place) || getAssetUri(HomeImages.JEONJU_IPAP_FESTIVAL);
   const numericPlaceId = place.numericId ?? Number(place.id);
+  const safeTags = Array.isArray(place.tags)
+    ? place.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+    : [];
+  const safeDescription = {
+    ...DEFAULT_PLACE_DESCRIPTION,
+    ...(place.description ?? {}),
+  };
+  const shortDescription =
+    safeDescription.impactSubtitle?.trim() ||
+    safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ||
+    null;
 
   return {
     placeId: Number.isFinite(numericPlaceId) ? numericPlaceId : 0,
@@ -421,10 +432,10 @@ export function buildSavedPlaceFromPlaceDetail(
     imageUrl,
     festivalOccurrence: metadata.festivalOccurrence,
     travelStyle: metadata.travelStyle,
-    tags: [...place.tags],
+    tags: safeTags,
     scheduleText: metadata.scheduleText ?? metadata.festivalOccurrence?.dateRangeText ?? null,
-    shortDescription: place.description.impactSubtitle ?? place.description.introParagraphs[0] ?? null,
-    overview: place.description.introParagraphs[0] ?? null,
+    shortDescription,
+    overview: safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ?? null,
     saved: true,
     savedAt: new Date().toISOString(),
     source,

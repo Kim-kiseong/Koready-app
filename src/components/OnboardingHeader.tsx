@@ -67,6 +67,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    position: 'relative',
+    zIndex: 20,
+    elevation: 20,
+    backgroundColor: Palette.white,
   },
   iconSlot: {
     width: 24,

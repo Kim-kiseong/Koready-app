@@ -1,4 +1,7 @@
+import { Asset } from 'expo-asset';
+
 import { client } from './client';
+import { API_BASE_URL } from '@/constants/env';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
 
 export type FeaturedEventCategory =
@@ -20,6 +23,10 @@ export type FeaturedEvent = {
   dateRangeLabel: string;
   imageUrl: string;
 };
+
+const DEFAULT_FEATURED_EVENT_IMAGE_URI = Asset.fromModule(
+  require('@/assets/images/destinations/default.jpg'),
+).uri;
 
 export type GuideArticle = {
   id: string;
@@ -240,7 +247,7 @@ function toFeaturedEvent(card: PlaceCard): FeaturedEvent {
     id: String(card.placeId),
     title: card.title,
     dateRangeLabel: card.festivalOccurrence?.dateRangeText ?? '',
-    imageUrl: card.imageUrl,
+    imageUrl: normalizeImageUrl(card.imageUrl, DEFAULT_FEATURED_EVENT_IMAGE_URI),
   };
 }
 
@@ -251,8 +258,33 @@ function toEventListing(card: PlaceCard): EventListing {
     location: card.serviceRegionName,
     dateRangeLabel: card.festivalOccurrence?.dateRangeText ?? '',
     category: card.travelStyle,
-    imageUrl: card.imageUrl,
+    imageUrl: normalizeImageUrl(card.imageUrl, DEFAULT_FEATURED_EVENT_IMAGE_URI),
   };
+}
+
+function normalizeImageUrl(rawUrl: string | null | undefined, fallbackUrl: string) {
+  if (!rawUrl) {
+    return fallbackUrl;
+  }
+
+  const trimmed = rawUrl.trim();
+  if (!trimmed) {
+    return fallbackUrl;
+  }
+
+  if (/^(https?:|file:|data:)/i.test(trimmed)) {
+    return encodeURI(trimmed);
+  }
+
+  if (trimmed.startsWith('//')) {
+    return encodeURI(`https:${trimmed}`);
+  }
+
+  if (trimmed.startsWith('/')) {
+    return encodeURI(`${API_BASE_URL}${trimmed}`);
+  }
+
+  return encodeURI(`${API_BASE_URL}/${trimmed}`);
 }
 
 // POPULAR reuses GET /home's monthlyRecommendation preview (the backend's own

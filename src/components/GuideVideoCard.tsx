@@ -7,6 +7,7 @@ import type { GuideVideo } from '@/api/home';
 import CustomText from '@/components/CustomText';
 import { HomeImages } from '@/constants/home-images';
 import { FontFamily } from '@/constants/typography';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 export type GuideVideoCardProps = {
   guide: GuideVideo;
@@ -35,9 +36,9 @@ export default function GuideVideoCard({ guide, onPress }: GuideVideoCardProps) 
 
       <CustomText style={styles.title}>{guide.title}</CustomText>
       <View style={styles.tagRow}>
-        {guide.tags.map((tag) => (
-          <View key={tag} style={styles.tag}>
-            <CustomText style={styles.tagText}>{tag}</CustomText>
+        {guide.tags.map((tag, index) => (
+          <View key={toStableListKey(tag, index)} style={styles.tag}>
+            <CustomText style={styles.tagText}>{toDisplayText(tag)}</CustomText>
           </View>
         ))}
       </View>

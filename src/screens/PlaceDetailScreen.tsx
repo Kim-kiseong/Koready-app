@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   fetchPlaceDetail,
+  DEFAULT_PLACE_DESCRIPTION,
   type PlaceDetail,
   type PlaceDetailTab,
 } from '@/api/place';
@@ -42,8 +43,6 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 export default function PlaceDetailScreen() {
-  const router = useRouter();
-
   const { placeId, tab } =
     useLocalSearchParams<{
       placeId: string;
@@ -51,6 +50,23 @@ export default function PlaceDetailScreen() {
     }>();
   const normalizedTab = Array.isArray(tab) ? tab[0] : tab;
 
+  return (
+    <PlaceDetailScreenContent
+      key={placeId ?? 'unknown'}
+      placeId={placeId}
+      normalizedTab={normalizedTab}
+    />
+  );
+}
+
+function PlaceDetailScreenContent({
+  placeId,
+  normalizedTab,
+}: {
+  placeId: string;
+  normalizedTab?: string;
+}) {
+  const router = useRouter();
   const t = useTranslation();
 
   const [place, setPlace] =
@@ -97,8 +113,6 @@ export default function PlaceDetailScreen() {
     false;
 
   useEffect(() => {
-    setOptimisticSavedState(null);
-
     if (!placeId) {
       return;
     }
@@ -117,10 +131,6 @@ export default function PlaceDetailScreen() {
       isMounted = false;
     };
   }, [placeId]);
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab, placeId]);
 
   /*
    * SecureStore 복원이 끝난 뒤에만
@@ -164,6 +174,8 @@ export default function PlaceDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const description = place.description ?? DEFAULT_PLACE_DESCRIPTION;
 
   const handleToggleSave = () => {
     if (!placeId) {
@@ -247,17 +259,12 @@ export default function PlaceDetailScreen() {
           'DESCRIPTION' && (
           <>
             <PlaceDescription
-              description={
-                place.description
-              }
+              description={description}
               images={place.images}
             />
 
             <EnjoyPoints
-              points={
-                place.description
-                  .enjoyPoints
-              }
+              points={description.enjoyPoints}
             />
 
             <View

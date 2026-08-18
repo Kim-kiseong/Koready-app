@@ -22,6 +22,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { formatCountryDisplay } from '@/utils/country';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 const SOCIAL_PLATFORM_ICON_URIS = {
   INSTAGRAM: Asset.fromModule(require('../../assets/images/social/instagram.svg')).uri,
@@ -342,9 +343,9 @@ export default function BuddyProfileModal({
                     </View>
 
                     <View style={styles.chipRow}>
-                      {languageChips.map((chipLabel) => (
-                        <View key={chipLabel} style={styles.languageChip}>
-                          <CustomText style={styles.languageChipText}>{chipLabel}</CustomText>
+                      {languageChips.map((chipLabel, index) => (
+                        <View key={toStableListKey(chipLabel, index)} style={styles.languageChip}>
+                          <CustomText style={styles.languageChipText}>{toDisplayText(chipLabel)}</CustomText>
                         </View>
                       ))}
                     </View>
@@ -366,9 +367,9 @@ export default function BuddyProfileModal({
                   <View style={styles.section}>
                     <CustomText style={styles.sectionTitle}>관심 여행 스타일</CustomText>
                     <View style={styles.travelChipWrap}>
-                      {travelStyleChips.map((chipLabel) => (
-                        <View key={chipLabel} style={styles.travelChip}>
-                          <CustomText style={styles.travelChipText}>{chipLabel}</CustomText>
+                      {travelStyleChips.map((chipLabel, index) => (
+                        <View key={toStableListKey(chipLabel, index)} style={styles.travelChip}>
+                          <CustomText style={styles.travelChipText}>{toDisplayText(chipLabel)}</CustomText>
                         </View>
                       ))}
                     </View>

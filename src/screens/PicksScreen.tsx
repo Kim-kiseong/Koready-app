@@ -39,6 +39,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { usePicksStore } from '@/store/picks-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 const SCOPES: { id: PicksScope; label: string }[] = [
   { id: 'NEARBY', label: '근교' },
@@ -547,9 +548,9 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
             </View>
 
             <View style={styles.tagRow}>
-              {card.tags.map((tag) => (
-                <View key={tag} style={styles.tagChip}>
-                  <CustomText style={styles.tagLabel}>{tag}</CustomText>
+              {card.tags.map((tag, index) => (
+                <View key={toStableListKey(tag, index)} style={styles.tagChip}>
+                  <CustomText style={styles.tagLabel}>{toDisplayText(tag)}</CustomText>
                 </View>
               ))}
             </View>

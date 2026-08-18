@@ -108,6 +108,7 @@ const EMPTY_FORM: BuddyProfileFormState = {
 };
 
 const MAX_SNS_LINKS = 2;
+const MAX_TRAVEL_STYLES = 4;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const ALLOWED_PROFILE_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -147,6 +148,7 @@ export default function ProfileEditScreen() {
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [snsEditorOpen, setSnsEditorOpen] = useState(false);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
+  const [isBypassingUnsavedChangesGuard, setIsBypassingUnsavedChangesGuard] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -253,8 +255,9 @@ export default function ProfileEditScreen() {
   const hasProfileImage = profileImageUri !== null;
 
   const canSave = isFormComplete(form) && !isUploadingProfileImage;
+  const shouldPreventRemove = hasUnsavedChanges && !isBypassingUnsavedChangesGuard;
 
-  usePreventRemove(hasUnsavedChanges, ({ data }) => {
+  usePreventRemove(shouldPreventRemove, ({ data }) => {
     pendingNavigationActionRef.current = data.action;
     setUnsavedChangesModalOpen(true);
   });
@@ -280,12 +283,15 @@ export default function ProfileEditScreen() {
     goBackOrRoot(router);
   };
 
-  const confirmLeaveScreen = () => {
+  const confirmLeaveScreen = async () => {
+    setIsBypassingUnsavedChangesGuard(true);
     setUnsavedChangesModalOpen(false);
     const pendingAction = pendingNavigationActionRef.current;
     pendingNavigationActionRef.current = null;
 
-    if (pendingAction && navigation.canGoBack()) {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    if (pendingAction) {
       navigation.dispatch(pendingAction);
       return;
     }
@@ -295,6 +301,7 @@ export default function ProfileEditScreen() {
 
   const cancelLeaveScreen = () => {
     pendingNavigationActionRef.current = null;
+    setIsBypassingUnsavedChangesGuard(false);
     setUnsavedChangesModalOpen(false);
   };
 
@@ -398,6 +405,21 @@ export default function ProfileEditScreen() {
   };
 
   const handleToggleStyle = (key: 'travelStyles' | 'buddyStyles', code: string) => {
+    if (key === 'travelStyles') {
+      const currentTravelStyles = form.travelStyles;
+      const exists = currentTravelStyles.includes(code);
+
+      if (exists && currentTravelStyles.length <= 1) {
+        Alert.alert('안내', '관심 여행 스타일은 최소 1개 이상 선택해야 해요.');
+        return;
+      }
+
+      if (!exists && currentTravelStyles.length >= MAX_TRAVEL_STYLES) {
+        Alert.alert('안내', '관심 여행 스타일은 최대 4개까지 선택할 수 있어요.');
+        return;
+      }
+    }
+
     setForm((prev) => {
       const current = prev[key];
       const exists = current.includes(code);
@@ -973,7 +995,8 @@ function isFormComplete(form: BuddyProfileFormState) {
     form.availableLanguages.length > 0 &&
     form.koreanLevel.trim().length > 0 &&
     form.bio.trim().length > 0 &&
-    form.travelStyles.length > 0
+    form.travelStyles.length >= 1 &&
+    form.travelStyles.length <= MAX_TRAVEL_STYLES
   );
 }
 
