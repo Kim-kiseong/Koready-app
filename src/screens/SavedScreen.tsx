@@ -21,6 +21,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 type SavedSortOrder = 'SAVED_AT' | 'DEADLINE';
 
@@ -266,8 +267,8 @@ function SavedPlaceCard({
         </View>
 
         <View style={styles.tagRow}>
-          {place.tags.slice(0, 3).map((tag) => (
-            <DetailTag key={tag} label={tag} />
+          {place.tags.slice(0, 3).map((tag, index) => (
+            <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(tag)} />
           ))}
         </View>
       </View>

@@ -4,7 +4,6 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import type { FeaturedEvent } from '@/api/home';
 import CustomText from '@/components/CustomText';
-import { HomeImages } from '@/constants/home-images';
 import { FontFamily } from '@/constants/typography';
 
 export type EventCardProps = {
@@ -15,7 +14,7 @@ export type EventCardProps = {
 export default function EventCard({ event, onPress }: EventCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={HomeImages[event.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
         start={{ x: 0.5, y: 0.12 }}

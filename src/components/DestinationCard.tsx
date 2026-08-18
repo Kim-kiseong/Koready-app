@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { OnboardingCandidateItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import { FontFamily } from '@/constants/typography';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 export type DestinationCardProps = {
   item: OnboardingCandidateItem;
@@ -32,9 +33,9 @@ export default function DestinationCard({ item, selected, onPress }: Destination
       <View style={styles.content}>
         <CustomText style={styles.title}>{item.title}</CustomText>
         <View style={styles.tagRow}>
-          {item.tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <CustomText style={styles.tagText}>{tag}</CustomText>
+          {item.tags.map((tag, index) => (
+            <View key={toStableListKey(tag, index)} style={styles.tag}>
+              <CustomText style={styles.tagText}>{toDisplayText(tag)}</CustomText>
             </View>
           ))}
         </View>

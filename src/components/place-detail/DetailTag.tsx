@@ -2,12 +2,12 @@ import { StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
-import { FontFamily } from '@/constants/typography';
+import { toDisplayText } from '@/utils/list-item';
 
-export default function DetailTag({ label }: { label: string }) {
+export default function DetailTag({ label }: { label: unknown }) {
   return (
     <View style={styles.tag}>
-      <CustomText style={styles.label}>{label}</CustomText>
+      <CustomText style={styles.label}>{toDisplayText(label)}</CustomText>
     </View>
   );
 }

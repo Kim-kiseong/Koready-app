@@ -6,6 +6,7 @@ import CustomText from '@/components/CustomText';
 import DetailTag from '@/components/place-detail/DetailTag';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 type PlaceInfoProps = {
   title: string;
@@ -35,7 +36,11 @@ export default function PlaceInfo({ title, address, tags, isSaved, onToggleSave 
         </View>
         <CustomText style={styles.address}>{address}</CustomText>
       </View>
-      <View style={styles.tagRow}>{tags.map((tag) => <DetailTag key={tag} label={tag} />)}</View>
+      <View style={styles.tagRow}>
+        {tags.map((tag, index) => (
+          <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(tag)} />
+        ))}
+      </View>
     </View>
   );
 }

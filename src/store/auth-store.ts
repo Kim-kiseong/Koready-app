@@ -2,14 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type {
-  AuthUser,
-  LanguageResponse,
-  MyUserResponse,
-  NextStep,
-  SignupStatus,
-  TokenResponse,
-} from '@/api/types';
+import type { AuthUser, LanguageResponse, NextStep, TokenResponse } from '@/api/types';
 
 import { secureStorage } from './secure-storage';
 import { useAddressStore } from './address-store';
@@ -23,16 +16,11 @@ type AuthState = {
   refreshTokenExpiresAt: string | null;
   user: AuthUser | null;
   nextStep: NextStep | null;
-  signupStatus: SignupStatus | null;
-  defaultLocationId: number | null;
-  onboardingCompleted: boolean;
   buddyProfileExists: boolean;
   unreadMessageCount: number;
-  termsNeedReAgreement: boolean;
   deviceId: string;
   hasHydrated: boolean;
   setSession: (session: TokenResponse) => void;
-  applyMyUser: (data: MyUserResponse) => void;
   applyLanguageChange: (data: LanguageResponse) => void;
   setBuddyProfileExists: (buddyProfileExists: boolean) => void;
   setNextStep: (nextStep: NextStep) => void;
@@ -48,12 +36,8 @@ export const useAuthStore = create<AuthState>()(
       refreshTokenExpiresAt: null,
       user: null,
       nextStep: null,
-      signupStatus: null,
-      defaultLocationId: null,
-      onboardingCompleted: false,
       buddyProfileExists: false,
       unreadMessageCount: 0,
-      termsNeedReAgreement: false,
       deviceId: Crypto.randomUUID(),
       hasHydrated: false,
       setSession: (session) =>
@@ -65,19 +49,6 @@ export const useAuthStore = create<AuthState>()(
           user: session.user,
           nextStep: session.nextStep,
         }),
-      applyMyUser: (data) => {
-        set({
-          user: data.user,
-          nextStep: data.nextStep,
-          signupStatus: data.signupStatus,
-          defaultLocationId: data.defaultLocationId,
-          onboardingCompleted: data.onboardingCompleted,
-          buddyProfileExists: data.buddyProfileExists,
-          unreadMessageCount: data.unreadMessageCount,
-          termsNeedReAgreement: data.termsNeedReAgreement,
-        });
-        useLanguageStore.getState().setLanguage(data.user.preferredLanguage);
-      },
       applyLanguageChange: (data) => {
         set((state) => ({
           nextStep: data.nextStep,
@@ -95,12 +66,8 @@ export const useAuthStore = create<AuthState>()(
           refreshTokenExpiresAt: null,
           user: null,
           nextStep: null,
-          signupStatus: null,
-          defaultLocationId: null,
-          onboardingCompleted: false,
           buddyProfileExists: false,
           unreadMessageCount: 0,
-          termsNeedReAgreement: false,
         });
         useOnboardingStore.getState().reset();
         useAddressStore.getState().reset();
@@ -116,12 +83,8 @@ export const useAuthStore = create<AuthState>()(
         refreshTokenExpiresAt: state.refreshTokenExpiresAt,
         user: state.user,
         nextStep: state.nextStep,
-        signupStatus: state.signupStatus,
-        defaultLocationId: state.defaultLocationId,
-        onboardingCompleted: state.onboardingCompleted,
         buddyProfileExists: state.buddyProfileExists,
         unreadMessageCount: state.unreadMessageCount,
-        termsNeedReAgreement: state.termsNeedReAgreement,
         deviceId: state.deviceId,
       }),
       onRehydrateStorage: () => () => {

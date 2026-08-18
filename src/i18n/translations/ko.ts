@@ -231,7 +231,6 @@ export const ko: Translations = {
     regionAll: '전체',
     regionOptions: {
       SEOUL: '서울',
-      INCHEON: '인천',
       GYEONGGI: '경기',
       GANGWON: '강원',
       CHUNGCHEONG: '충청',

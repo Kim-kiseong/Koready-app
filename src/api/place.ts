@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { Asset } from 'expo-asset';
 import type { ImageSource } from 'expo-image';
 
@@ -7,6 +8,8 @@ import type {
   PlaceListResponse,
   PlaceSortOrder,
 } from './types';
+
+import { client } from './client';
 
 export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATE';
 
@@ -43,6 +46,21 @@ export type PlaceDetail = {
   relatedPlaces: RelatedPlace[];
 };
 
+export const DEFAULT_PLACE_DESCRIPTION: PlaceDescription = {
+  impactTitle: '김천에서 만나는 가장 맛있는 한 줄 여행',
+  impactSubtitle: '김천 김밥축제는 김밥을 주제로 먹고, 만들고, 즐길 수 있는 지역축제예요.',
+  introParagraphs: [
+    '김밥은 한국에서 가장 익숙한 음식 중 하나지만, 평소에 먹던 김밥과는 조금 다른 김천만의 재미있는 김밥 문화를 만날 수 있어요.',
+  ],
+  enjoyPoints: [
+    '다양한 김밥 부스에서 김밥 맛보기',
+    '김밥 만들기 체험 참여하기',
+    '김밥 포토존에서 사진 찍기',
+    '지역 특산물과 먹거리 부스 구경하기',
+    '축제장 주변 로컬 명소 함께 둘러보기',
+  ],
+};
+
 const DEFAULT_PLACE_DETAIL: Omit<PlaceDetail, 'id' | 'title'> = {
   routeId: 'gimcheon-gimbap-festival',
   numericId: 1101,
@@ -55,20 +73,7 @@ const DEFAULT_PLACE_DETAIL: Omit<PlaceDetail, 'id' | 'title'> = {
     { source: { uri: 'https://picsum.photos/id/1040/1200/1200' }, order: 3, altText: '김밥 만들기 체험' },
     { source: { uri: 'https://picsum.photos/id/1068/1200/1200' }, order: 4, altText: '축제 현장' },
   ],
-  description: {
-    impactTitle: '김천에서 만나는 가장 맛있는 한 줄 여행',
-    impactSubtitle: '김천 김밥축제는 김밥을 주제로 먹고, 만들고, 즐길 수 있는 지역축제예요.',
-    introParagraphs: [
-      '김밥은 한국에서 가장 익숙한 음식 중 하나지만, 평소에 먹던 김밥과는 조금 다른 김천만의 재미있는 김밥 문화를 만날 수 있어요.',
-    ],
-    enjoyPoints: [
-      '다양한 김밥 부스에서 김밥 맛보기',
-      '김밥 만들기 체험 참여하기',
-      '김밥 포토존에서 사진 찍기',
-      '지역 특산물과 먹거리 부스 구경하기',
-      '축제장 주변 로컬 명소 함께 둘러보기',
-    ],
-  },
+  description: DEFAULT_PLACE_DESCRIPTION,
   relatedPlaces: [
     {
       id: 'jikkjisa',
@@ -224,29 +229,6 @@ function buildGenericPlaceDetailFromListItem(place: MockPlaceListItem): PlaceDet
         '사진 찍기 좋은 구도 살펴보기',
       ],
     },
-    relatedPlaces: [],
-  };
-}
-
-// TODO: replace with client.get<PlaceDetail>(`/places/${placeId}`).
-export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
-  const explicitDetail = MOCK_PLACE_DETAILS[placeId];
-  if (explicitDetail) {
-    return explicitDetail;
-  }
-
-  const listItem = getMockPlaceListItem(placeId);
-  if (listItem) {
-    return buildGenericPlaceDetailFromListItem(listItem);
-  }
-
-  return {
-    ...DEFAULT_PLACE_DETAIL,
-    id: placeId,
-    routeId: placeId,
-    numericId: Number.isFinite(Number(placeId)) ? Number(placeId) : undefined,
-    title: '추천 장소',
-    address: '상세 정보를 준비 중이에요.',
     relatedPlaces: [],
   };
 }
@@ -1692,4 +1674,103 @@ function buildMockPlaceList(params: FetchPlacesParams): PlaceListResponse {
 
 export async function fetchPlaces(params: FetchPlacesParams): Promise<PlaceListResponse> {
   return buildMockPlaceList(params);
+}
+
+type PlaceDetailApiImage = {
+  imageUrl: string;
+  order: number;
+  altText: string;
+};
+
+type PlaceDetailApiRelatedPlace = {
+  placeId: number;
+  title: string;
+  imageUrl: string;
+  shortDescription: string;
+};
+
+type PlaceDetailApiResponse = {
+  placeId: number;
+  title: string;
+  address: string;
+  tags: string[];
+  isSaved: boolean;
+  images: PlaceDetailApiImage[];
+  description: PlaceDescription | null;
+  relatedPlaces: PlaceDetailApiRelatedPlace[];
+};
+
+type PlaceDetailEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: PlaceDetailApiResponse;
+  traceId: string;
+};
+
+function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
+  return {
+    id: String(response.placeId),
+    routeId: String(response.placeId),
+    numericId: response.placeId,
+    title: response.title,
+    address: response.address,
+    tags: response.tags,
+    isSaved: response.isSaved,
+    images: [...response.images]
+      .sort((a, b) => a.order - b.order)
+      .map((image) => ({
+        source: { uri: image.imageUrl },
+        order: image.order,
+        altText: image.altText,
+      })),
+    description: response.description ?? DEFAULT_PLACE_DESCRIPTION,
+    relatedPlaces: response.relatedPlaces.map((related) => ({
+      id: String(related.placeId),
+      title: related.title,
+      imageUrl: related.imageUrl,
+      shortDescription: related.shortDescription,
+    })),
+  };
+}
+
+function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
+  const explicitDetail = MOCK_PLACE_DETAILS[placeId];
+  if (explicitDetail) {
+    return explicitDetail;
+  }
+
+  const listItem = getMockPlaceListItem(placeId);
+  if (listItem) {
+    return buildGenericPlaceDetailFromListItem(listItem);
+  }
+
+  return {
+    ...DEFAULT_PLACE_DETAIL,
+    id: placeId,
+    routeId: placeId,
+    numericId: Number.isFinite(Number(placeId)) ? Number(placeId) : undefined,
+    title: '추천 장소',
+    address: '상세 정보를 준비 중이에요.',
+    relatedPlaces: [],
+  };
+}
+
+// GET /places/{placeId} — real place ids (from GET /home, GET /monthly-recommendations,
+// GET /places) are numeric. Demo ids like 'jeonju-ipap-festival' used by the mock fixtures
+// elsewhere in the app (dev-mock session, MateTab sample data, ...) aren't real backend
+// rows, so those — and any id the backend 404s on — fall back to the local mock below
+// instead of surfacing an error.
+export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
+  const numericId = Number(placeId);
+  if (Number.isFinite(numericId) && numericId > 0) {
+    try {
+      const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
+      return mapPlaceDetailResponse(response.data.data);
+    } catch (error) {
+      if (!isAxiosError(error)) throw error;
+    }
+  }
+
+  return buildFallbackPlaceDetail(placeId);
 }
