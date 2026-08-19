@@ -3,6 +3,7 @@ import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 
 // The dev-bypass session's token isn't real — sending it to GET /home or GET
 // /monthly-recommendations 401s, which trips client.ts's refresh-then-logout
@@ -285,21 +286,69 @@ const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
   },
 ];
 
+// English mirror of DEV_MOCK_PLACE_CARDS — only used by the dev-bypass session
+// (no real backend involved), so the local preview matches what the real
+// Accept-Language-driven backend response would look like in English.
+const DEV_MOCK_PLACE_CARDS_EN: PlaceCard[] = [
+  {
+    ...DEV_MOCK_PLACE_CARDS[0],
+    title: '[Jeonju] Fringe Tree Festival',
+    serviceRegionName: 'Jeolla',
+    addressSummary: 'Near Jeonju Hanok Village, Wansan-gu, Jeonju, Jeollabuk-do',
+    festivalOccurrence: {
+      ...DEV_MOCK_PLACE_CARDS[0].festivalOccurrence!,
+      dateRangeText: 'Apr 25 (Sat) – Apr 26 (Sun)',
+    },
+    tags: ['Local Festival', 'Spring'],
+    shortDescription: 'A fringe tree festival near Jeonju Hanok Village.',
+  },
+  {
+    ...DEV_MOCK_PLACE_CARDS[1],
+    title: '[Damyang] Bamboo Festival',
+    serviceRegionName: 'Jeolla',
+    addressSummary: '119 Jungnokwon-ro, Damyang-eup, Damyang-gun, Jeollanam-do',
+    festivalOccurrence: {
+      ...DEV_MOCK_PLACE_CARDS[1].festivalOccurrence!,
+      dateRangeText: 'May 1 (Fri) – May 5 (Tue)',
+    },
+    tags: ['Nature', 'Bamboo'],
+    shortDescription: 'Enjoy the bamboo forest in Damyang.',
+  },
+  {
+    ...DEV_MOCK_PLACE_CARDS[2],
+    title: 'National Museum of Modern and Contemporary Art',
+    serviceRegionName: 'Seoul',
+    addressSummary: '30 Samcheong-ro, Jongno-gu, Seoul',
+    festivalOccurrence: {
+      ...DEV_MOCK_PLACE_CARDS[2].festivalOccurrence!,
+      dateRangeText: 'May 3 (Sun) – Jun 15 (Mon)',
+    },
+    tags: ['Exhibition', 'Museum'],
+    shortDescription: 'Take in the special exhibition at MMCA.',
+  },
+];
+
+function devMockPlaceCards(): PlaceCard[] {
+  return useLanguageStore.getState().language === 'EN' ? DEV_MOCK_PLACE_CARDS_EN : DEV_MOCK_PLACE_CARDS;
+}
+
 // GET /home — currentLocation/preferredLanguage aren't consumed here since
 // HomeScreen already sources those from onboarding-store/language-store; this
 // exists mainly to back the "POPULAR" featured-events tab with real data.
 export async function fetchHome(): Promise<HomeResponse> {
   if (isDevMockSession()) {
     const now = new Date();
+    const language = useLanguageStore.getState().language;
+    const items = devMockPlaceCards();
     return {
       currentLocation: null,
-      preferredLanguage: 'KO',
+      preferredLanguage: language,
       monthlyRecommendation: {
         year: now.getFullYear(),
         month: now.getMonth() + 1,
-        title: '이달의 인기 추천',
-        totalCount: DEV_MOCK_PLACE_CARDS.length,
-        items: DEV_MOCK_PLACE_CARDS,
+        title: language === 'EN' ? "This Month's Popular Picks" : '이달의 인기 추천',
+        totalCount: items.length,
+        items,
       },
     };
   }
@@ -344,7 +393,7 @@ export async function fetchMonthlyRecommendations(
   params: MonthlyRecommendationsParams,
 ): Promise<MonthlyRecommendationsResponse> {
   if (isDevMockSession()) {
-    let items = DEV_MOCK_PLACE_CARDS;
+    let items = devMockPlaceCards();
     if (params.serviceRegionCode) {
       items = items.filter((card) => card.serviceRegionCode === params.serviceRegionCode);
     }
