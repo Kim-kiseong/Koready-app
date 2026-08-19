@@ -268,45 +268,47 @@ function PlaceDetailScreenContent({
               points={description.enjoyPoints}
             />
 
-            <View
-              style={
-                styles.nearbySection
-              }
-            >
-              <CustomText
+            {place.relatedPlaces.length > 0 && (
+              <View
                 style={
-                  styles.sectionTitle
+                  styles.nearbySection
                 }
               >
-                {
-                  t.placeDetail
-                    .nearbyTitle
-                }
-              </CustomText>
+                <CustomText
+                  style={
+                    styles.sectionTitle
+                  }
+                >
+                  {
+                    t.placeDetail
+                      .nearbyTitle
+                  }
+                </CustomText>
 
-              {place.relatedPlaces.map(
-                (relatedPlace) => (
-                  <NearbyPlaceCard
-                    key={
-                      relatedPlace.id
-                    }
-                    place={
-                      relatedPlace
-                    }
-                    onPress={() =>
-                      router.push({
-                        pathname:
-                          '/places/[placeId]',
-                        params: {
-                          placeId:
-                            relatedPlace.id,
-                        },
-                      })
-                    }
-                  />
-                ),
-              )}
-            </View>
+                {place.relatedPlaces.map(
+                  (relatedPlace) => (
+                    <NearbyPlaceCard
+                      key={
+                        relatedPlace.id
+                      }
+                      place={
+                        relatedPlace
+                      }
+                      onPress={() =>
+                        router.push({
+                          pathname:
+                            '/places/[placeId]',
+                          params: {
+                            placeId:
+                              relatedPlace.id,
+                          },
+                        })
+                      }
+                    />
+                  ),
+                )}
+              </View>
+            )}
           </>
         )}
 

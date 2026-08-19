@@ -407,6 +407,28 @@ function getMockPlaceListItem(placeId: string) {
   ].find((place) => String(place.placeId) === placeId);
 }
 
+const RELATED_PLACES_COUNT = 3;
+
+// Nearby places for the "Places to visit nearby" section — pulled from other
+// mock places in the same region so it's at least regionally relevant,
+// instead of the empty list this used to return (which just hid the section
+// entirely for every mock place outside the six named Gimcheon fixtures).
+function buildRelatedPlaces(place: MockPlaceListItem): RelatedPlace[] {
+  const regionPlaces = MOCK_PLACES_BY_REGION[place.serviceRegionCode] ?? [];
+  const fallbackDescription = isEnglish()
+    ? `A place worth visiting in ${place.serviceRegionName}.`
+    : `${place.serviceRegionName}에서 함께 둘러보기 좋은 곳이에요.`;
+  return regionPlaces
+    .filter((candidate) => candidate.placeId !== place.placeId)
+    .slice(0, RELATED_PLACES_COUNT)
+    .map((candidate) => ({
+      id: String(candidate.placeId),
+      title: candidate.title,
+      imageUrl: candidate.imageUrl,
+      shortDescription: candidate.shortDescription ?? candidate.overview ?? fallbackDescription,
+    }));
+}
+
 function buildGenericPlaceDetailFromListItem(place: MockPlaceListItem): PlaceDetail {
   return {
     id: String(place.placeId),
@@ -449,7 +471,7 @@ function buildGenericPlaceDetailFromListItem(place: MockPlaceListItem): PlaceDet
             '사진 찍기 좋은 구도 살펴보기',
           ],
         },
-    relatedPlaces: [],
+    relatedPlaces: buildRelatedPlaces(place),
   };
 }
 
