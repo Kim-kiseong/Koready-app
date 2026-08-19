@@ -94,7 +94,9 @@ function SideTab({
   return (
     <Pressable style={styles.sideTab} onPress={() => onPress(tab)}>
       <SymbolView name={tab.icon} size={18} weight={isActive ? 'semibold' : 'regular'} tintColor={color} />
-      <CustomText style={[styles.sideLabel, { color, fontFamily }]}>{tab.label}</CustomText>
+      <CustomText style={[styles.sideLabel, { color, fontFamily }]} numberOfLines={1}>
+        {tab.label}
+      </CustomText>
     </Pressable>
   );
 }
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   sideTab: {
-    width: 32,
+    minWidth: 32,
     alignItems: 'center',
     gap: 2,
   },
