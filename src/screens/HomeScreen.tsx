@@ -76,6 +76,7 @@ export default function HomeScreen() {
   const [guides, setGuides] = useState<GuideArticle[]>([]);
   const [guidePage, setGuidePage] = useState(0);
   const [pendingLanguage, setPendingLanguage] = useState<LanguageCode | null>(null);
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
   useEffect(() => {
     fetchFeaturedEvents(category).then(setEvents);
@@ -240,8 +241,14 @@ export default function HomeScreen() {
           visible
           currentLanguage={language}
           targetLanguage={pendingLanguage}
+          loading={isChangingLanguage}
           onCancel={() => setPendingLanguage(null)}
           onConfirm={async () => {
+            // Guards against duplicate PATCH /users/me/language calls if the
+            // user taps "변경하기" again before the first one resolves — the
+            // button had no loading/disabled state, so on a slow connection
+            // repeated taps looked like the toggle just wasn't responding.
+            if (isChangingLanguage) return;
             if (isDevMockSession) {
               applyLanguageChange({
                 language: pendingLanguage,
@@ -251,13 +258,15 @@ export default function HomeScreen() {
               setPendingLanguage(null);
               return;
             }
+            setIsChangingLanguage(true);
             try {
               const result = await updateMyLanguage(pendingLanguage);
               applyLanguageChange(result);
+              setPendingLanguage(null);
             } catch (error) {
               Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
             } finally {
-              setPendingLanguage(null);
+              setIsChangingLanguage(false);
             }
           }}
         />

@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LanguageCode } from '@/api/types';
@@ -12,6 +12,7 @@ export type LanguageSwitchModalProps = {
   visible: boolean;
   currentLanguage: LanguageCode;
   targetLanguage: LanguageCode;
+  loading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -20,6 +21,7 @@ export default function LanguageSwitchModal({
   visible,
   currentLanguage,
   targetLanguage,
+  loading = false,
   onCancel,
   onConfirm,
 }: LanguageSwitchModalProps) {
@@ -30,7 +32,7 @@ export default function LanguageSwitchModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.overlay} onPress={onCancel}>
+      <Pressable style={styles.overlay} onPress={loading ? undefined : onCancel}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
@@ -59,11 +61,18 @@ export default function LanguageSwitchModal({
           </View>
 
           <SafeAreaView edges={['bottom']} style={styles.footer}>
-            <Pressable style={styles.cancelButton} onPress={onCancel}>
+            <Pressable
+              style={[styles.cancelButton, loading && styles.buttonDisabled]}
+              onPress={onCancel}
+              disabled={loading}>
               <CustomText style={styles.cancelButtonText}>{t.languageModal.cancel}</CustomText>
             </Pressable>
-            <Pressable style={styles.confirmButton} onPress={onConfirm}>
-              <CustomText style={styles.confirmButtonText}>{t.languageModal.confirm}</CustomText>
+            <Pressable style={styles.confirmButton} onPress={onConfirm} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <CustomText style={styles.confirmButtonText}>{t.languageModal.confirm}</CustomText>
+              )}
             </Pressable>
           </SafeAreaView>
         </Pressable>
@@ -168,6 +177,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   cancelButtonText: {
     fontFamily: FontFamily.pretendard.medium,
