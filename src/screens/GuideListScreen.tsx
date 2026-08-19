@@ -49,7 +49,7 @@ export default function GuideListScreen() {
 
   const handleGuidePress = (guide: GuideVideo) => {
     if (guide.id === 'ktx-booking') {
-      router.push('/guides/ktx/index');
+      router.push('/guides/ktx');
       return;
     }
     router.push({ pathname: '/guides/[guideId]', params: { guideId: guide.id } });
