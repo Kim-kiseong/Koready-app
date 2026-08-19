@@ -1,5 +1,6 @@
 import { client } from './client';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
+import type { LanguageCode } from '@/api/types';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -52,12 +53,24 @@ const MOCK_GUIDES: GuideArticle[] = [
   },
 ];
 
+const MOCK_GUIDES_EN: GuideArticle[] = [
+  {
+    id: 'ktx-easy-booking',
+    badge: 'Transportation Guide',
+    title: 'How to Book KTX Tickets',
+    description:
+      'From booking and choosing your seat to payment and\nticket confirmation—all in one guide.',
+    tags: ['KTX', 'Transportation'],
+    imageKey: 'KTX_GUIDE',
+  },
+];
+
 // No backend endpoint for this exists yet (checked against the staging Swagger
 // spec: only GET /home and GET /monthly-recommendations are implemented, and
 // neither returns article-style guide content). Stays mock until the backend
 // adds one — this isn't a simple client.get(...) swap.
-export async function fetchTravelGuides(): Promise<GuideArticle[]> {
-  return MOCK_GUIDES;
+export async function fetchTravelGuides(language: LanguageCode): Promise<GuideArticle[]> {
+  return language === 'EN' ? MOCK_GUIDES_EN : MOCK_GUIDES;
 }
 
 export type GuideCategoryId = 'TRANSPORT' | 'ORDER' | 'SAFETY' | 'LANGUAGE';

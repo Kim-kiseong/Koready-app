@@ -132,6 +132,13 @@ export interface Translations {
     submitError: string;
     linkOpenError: string;
   };
+  nav: {
+    home: string;
+    map: string;
+    picks: string;
+    saved: string;
+    my: string;
+  };
 }
 
 export const ko: Translations = {
@@ -314,5 +321,12 @@ export const ko: Translations = {
     loadError: '약관 정보를 불러오지 못했어요.',
     submitError: '약관 동의에 실패했어요.',
     linkOpenError: '페이지를 열지 못했어요.',
+  },
+  nav: {
+    home: '홈',
+    map: '지도',
+    picks: '추천',
+    saved: '저장',
+    my: '마이',
   },
 };

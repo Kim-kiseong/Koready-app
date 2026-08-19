@@ -32,6 +32,21 @@ import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
+const EN_MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 // Trims a full road-name address down to the "구 + 도로명" form shown in the
 // header pill — this is presentational only, there's no location-edit screen yet.
 function formatShortAddress(address: string): string {
@@ -67,8 +82,8 @@ export default function HomeScreen() {
   }, [category]);
 
   useEffect(() => {
-    fetchTravelGuides().then(setGuides);
-  }, []);
+    fetchTravelGuides(language).then(setGuides);
+  }, [language]);
 
   const month = useMemo(() => new Date().getMonth() + 1, []);
   const locationLabel = location ? formatShortAddress(location.displayAddress) : t.home.locationPlaceholder;
@@ -142,16 +157,27 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View>
-              <View style={styles.sectionTitleRow}>
-                <CustomText style={styles.sectionTitleAccent}>{t.home.featuredTitlePrefix}</CustomText>
-                <CustomText style={styles.sectionTitleLine1}>{t.home.featuredTitleConnector}</CustomText>
+            {language === 'EN' ? (
+              <View>
+                <CustomText style={styles.sectionTitleLine1}>Don&apos;t miss these!</CustomText>
+                <CustomText style={styles.sectionTitle}>
+                  {'In Korea this '}
+                  <CustomText style={styles.sectionTitleAccentLarge}>{EN_MONTH_NAMES[month - 1]}</CustomText>
+                  {'?'}
+                </CustomText>
               </View>
-              <CustomText style={styles.sectionTitle}>
-                {month}
-                {t.home.featuredTitleSuffix}
-              </CustomText>
-            </View>
+            ) : (
+              <View>
+                <View style={styles.sectionTitleRow}>
+                  <CustomText style={styles.sectionTitleAccent}>{t.home.featuredTitlePrefix}</CustomText>
+                  <CustomText style={styles.sectionTitleLine1}>{t.home.featuredTitleConnector}</CustomText>
+                </View>
+                <CustomText style={styles.sectionTitle}>
+                  {month}
+                  {t.home.featuredTitleSuffix}
+                </CustomText>
+              </View>
+            )}
             <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/events')} />
           </View>
 
@@ -359,6 +385,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 18,
     color: Palette.text,
+  },
+  sectionTitleAccentLarge: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    color: Palette.primary,
   },
   seeAllRow: {
     flexDirection: 'row',
