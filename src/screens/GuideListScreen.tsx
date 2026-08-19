@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchGuideVideos, GUIDE_CATEGORY_IDS } from '@/api/home';
@@ -15,9 +15,21 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 
+const GRID_COLUMNS = 2;
+const GRID_GAP = 13;
+const SCREEN_PADDING = 16;
+// See EventListScreen for why: windowWidth - fixed padding is only an
+// estimate of the grid's real content width — on web a scrollbar shrinks it
+// by a few more pixels than that accounts for, which is enough to push a
+// hardcoded-width 2-column card grid down to a single column every time.
+const WEB_SCROLLBAR_ALLOWANCE = Platform.OS === 'web' ? 20 : 0;
+
 export default function GuideListScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const { width: windowWidth } = useWindowDimensions();
+  const guideCardWidth =
+    (windowWidth - SCREEN_PADDING * 2 - WEB_SCROLLBAR_ALLOWANCE - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
   const [category, setCategory] = useState<GuideCategoryId>('TRANSPORT');
   const [guides, setGuides] = useState<GuideVideo[]>([]);
 
@@ -66,7 +78,12 @@ export default function GuideListScreen() {
 
         <View style={styles.grid}>
           {guides.map((guide) => (
-            <GuideVideoCard key={guide.id} guide={guide} onPress={() => handleGuidePress(guide)} />
+            <GuideVideoCard
+              key={guide.id}
+              guide={guide}
+              width={guideCardWidth}
+              onPress={() => handleGuidePress(guide)}
+            />
           ))}
         </View>
       </ScrollView>
