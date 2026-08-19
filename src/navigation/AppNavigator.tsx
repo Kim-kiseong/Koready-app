@@ -1,6 +1,17 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 
+import { preloadRegionMapAssetsSequentially } from '@/utils/map-assets';
+
 export default function AppNavigator() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void preloadRegionMapAssetsSequentially();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />

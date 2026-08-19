@@ -5,11 +5,22 @@ import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 export default function EnjoyPoints({ points }: { points: string[] }) {
   const t = useTranslation();
   if (points.length === 0) return null;
-  return <View style={styles.container}><CustomText style={styles.title}>{t.placeDetail.enjoyTitle}</CustomText>{points.map((point) => <View key={point} style={styles.item}><Image source={require('@/assets/images/check.svg')} style={styles.checkIcon} contentFit="contain" /><CustomText style={styles.text}>{point}</CustomText></View>)}</View>;
+  return (
+    <View style={styles.container}>
+      <CustomText style={styles.title}>{t.placeDetail.enjoyTitle}</CustomText>
+      {points.map((point, index) => (
+        <View key={toStableListKey(point, index)} style={styles.item}>
+          <Image source={require('@/assets/images/check.svg')} style={styles.checkIcon} contentFit="contain" />
+          <CustomText style={styles.text}>{toDisplayText(point)}</CustomText>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

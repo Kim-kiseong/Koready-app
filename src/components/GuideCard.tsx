@@ -8,6 +8,7 @@ import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { HomeImages } from '@/constants/home-images';
 import { FontFamily } from '@/constants/typography';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 export type GuideCardProps = {
   guide: GuideArticle;
@@ -38,9 +39,9 @@ export default function GuideCard({ guide, width, onPress }: GuideCardProps) {
 
       <View style={styles.footer}>
         <View style={styles.tagRow}>
-          {guide.tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <CustomText style={styles.tagText}>{tag}</CustomText>
+          {guide.tags.map((tag, index) => (
+            <View key={toStableListKey(tag, index)} style={styles.tag}>
+              <CustomText style={styles.tagText}>{toDisplayText(tag)}</CustomText>
             </View>
           ))}
         </View>

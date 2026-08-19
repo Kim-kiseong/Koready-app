@@ -21,6 +21,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 type SavedSortOrder = 'SAVED_AT' | 'DEADLINE';
 
@@ -120,6 +121,9 @@ export default function SavedScreen() {
 
   const currentSortLabel =
     SORT_OPTIONS.find((option) => option.value === sortOrder)?.label ?? '담은순';
+  const sortChevronName = isSortSheetVisible
+    ? ({ ios: 'chevron.up', android: 'arrow_drop_up', web: 'arrow_drop_up' } as const)
+    : ({ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' } as const);
 
   const handleToggleSave = (place: SavedPlaceItem) => {
     removeSavedPlace(place.placeId);
@@ -139,15 +143,12 @@ export default function SavedScreen() {
       <View style={styles.header}>
         <CustomText style={styles.headerTitle}>저장</CustomText>
 
-        <Pressable style={styles.sortButton} onPress={() => setIsSortSheetVisible(true)}>
-          <CustomText style={styles.sortButtonText}>{currentSortLabel}</CustomText>
-          <SymbolView
-            name={{ ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' }}
-            size={20}
-            weight="regular"
-            tintColor={Palette.grey600}
-          />
-        </Pressable>
+        <View style={styles.sortControl}>
+          <Pressable style={styles.sortButton} onPress={() => setIsSortSheetVisible(true)}>
+            <CustomText style={styles.sortButtonText}>{currentSortLabel}</CustomText>
+            <SymbolView name={sortChevronName} size={12} weight="regular" tintColor={Palette.grey500} />
+          </Pressable>
+        </View>
       </View>
 
       {isLoading && savedPlaces.length === 0 ? (
@@ -168,6 +169,7 @@ export default function SavedScreen() {
           keyExtractor={(item) => String(item.placeId)}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => setIsSortSheetVisible(false)}
           renderItem={({ item }) => (
             <SavedPlaceCard
               place={item}
@@ -267,8 +269,8 @@ function SavedPlaceCard({
         </View>
 
         <View style={styles.tagRow}>
-          {place.tags.slice(0, 3).map((tag) => (
-            <DetailTag key={tag} label={tag} />
+          {place.tags.slice(0, 3).map((tag, index) => (
+            <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(tag)} />
           ))}
         </View>
       </View>
@@ -356,6 +358,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     gap: 18,
+    overflow: 'visible',
   },
   headerTitle: {
     alignSelf: 'center',
@@ -364,8 +367,14 @@ const styles = StyleSheet.create({
     lineHeight: 25.2,
     color: Palette.text,
   },
-  sortButton: {
+  sortControl: {
     alignSelf: 'flex-end',
+    position: 'relative',
+    overflow: 'visible',
+    zIndex: 20,
+    elevation: 20,
+  },
+  sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
@@ -384,6 +393,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey600,
+  },
+  sortMenu: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    width: 76,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Palette.grey200,
+    backgroundColor: Palette.white,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 5, height: 5 },
+    elevation: 100,
+    zIndex: 100,
+  },
+  sortMenuItem: {
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  sortMenuItemTop: {
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  sortMenuItemBottom: {
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  sortMenuText: {
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    fontSize: 13,
+    lineHeight: 18.2,
+    color: Palette.grey600,
+  },
+  sortMenuTextSelected: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    lineHeight: 18.2,
+    color: Palette.grey700,
   },
   listContent: {
     paddingTop: 8,

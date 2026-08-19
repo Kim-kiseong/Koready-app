@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { formatCountryDisplay } from '@/utils/country';
+import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 type MateTabProps = {
   placeId: string;
@@ -422,13 +423,13 @@ function MateCard({
             <CustomText style={styles.country}>{countryLabel}</CustomText>
           </View>
 
-          <View style={styles.chipRow}>
-            {languageChips.map((chipLabel) => (
-              <View key={chipLabel} style={styles.chip}>
-                <CustomText style={styles.chipText}>{chipLabel}</CustomText>
-              </View>
-            ))}
-          </View>
+            <View style={styles.chipRow}>
+              {languageChips.map((chipLabel, index) => (
+                <View key={toStableListKey(chipLabel, index)} style={styles.chip}>
+                  <CustomText style={styles.chipText}>{toDisplayText(chipLabel)}</CustomText>
+                </View>
+              ))}
+            </View>
 
           <CustomText style={styles.bio}>{mate.bio}</CustomText>
         </View>
