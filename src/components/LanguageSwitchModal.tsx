@@ -1,5 +1,15 @@
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LanguageCode } from '@/api/types';
@@ -17,6 +27,8 @@ export type LanguageSwitchModalProps = {
   onConfirm: () => void;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export default function LanguageSwitchModal({
   visible,
   currentLanguage,
@@ -26,14 +38,46 @@ export default function LanguageSwitchModal({
   onConfirm,
 }: LanguageSwitchModalProps) {
   const t = useTranslation();
+  const { height: windowHeight } = useWindowDimensions();
+  // Modal's own animationType="slide" translates the whole tree it renders —
+  // backdrop included — so the dim overlay used to slide up from the bottom
+  // together with the sheet instead of just appearing. Driving the two
+  // separately (backdrop opacity, sheet translateY) with animationType="none"
+  // gives the backdrop a plain fade while the sheet still slides in.
+  const [backdropOpacity] = useState(() => new Animated.Value(0));
+  const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
+
+  useEffect(() => {
+    if (!visible) return;
+    backdropOpacity.setValue(0);
+    sheetTranslateY.setValue(windowHeight);
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: 0,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, windowHeight, backdropOpacity, sheetTranslateY]);
 
   const languageLabel = (code: LanguageCode) =>
     code === 'KO' ? t.home.languageKo : t.home.languageEn;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.overlay} onPress={loading ? undefined : onCancel}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
+      <View style={styles.overlay}>
+        <AnimatedPressable
+          style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdropOpacity }]}
+          onPress={loading ? undefined : onCancel}
+        />
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetTranslateY }] }]}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
           </View>
@@ -75,8 +119,8 @@ export default function LanguageSwitchModal({
               )}
             </Pressable>
           </SafeAreaView>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -84,8 +128,10 @@ export default function LanguageSwitchModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     backgroundColor: '#ffffff',
