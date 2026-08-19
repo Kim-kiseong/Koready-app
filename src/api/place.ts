@@ -3,6 +3,7 @@ import { Asset } from 'expo-asset';
 import type { ImageSource } from 'expo-image';
 
 import { HomeImages } from '@/constants/home-images';
+import { useLanguageStore } from '@/store/language-store';
 import type {
   PlaceListItem,
   PlaceListResponse,
@@ -10,6 +11,10 @@ import type {
 } from './types';
 
 import { client } from './client';
+
+function isEnglish() {
+  return useLanguageStore.getState().language === 'EN';
+}
 
 export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATE';
 
@@ -116,6 +121,19 @@ const JEONJU_IPAP_FESTIVAL_DETAIL: PlaceDetail = {
     { source: HomeImages.JEONJU_IPAP_FESTIVAL, order: 1, altText: '전주 이팝나무 축제' },
     ...DEFAULT_PLACE_DETAIL.images.slice(1),
   ],
+  description: {
+    impactTitle: '전주 한옥마을 옆, 하얗게 물드는 봄',
+    impactSubtitle: '전주 이팝나무 축제는 흐드러진 이팝나무 꽃길을 따라 걷는 봄철 지역축제예요.',
+    introParagraphs: [
+      '한옥마을 인근 거리를 새하얀 이팝나무 꽃이 뒤덮는 시기에 맞춰 열리는 축제로, 짧은 봄에만 만날 수 있는 풍경이에요.',
+    ],
+    enjoyPoints: [
+      '이팝나무 꽃길 산책하기',
+      '한옥마을과 함께 둘러보기',
+      '야간 조명 아래 사진 찍기',
+      '주변 먹거리 노점 구경하기',
+    ],
+  },
 };
 
 const DAMYANG_BAMBOO_FESTIVAL_DETAIL: PlaceDetail = {
@@ -129,6 +147,19 @@ const DAMYANG_BAMBOO_FESTIVAL_DETAIL: PlaceDetail = {
     { source: HomeImages.DAMYANG_BAMBOO_FESTIVAL, order: 1, altText: '담양 대나무 축제' },
     ...DEFAULT_PLACE_DETAIL.images.slice(1),
   ],
+  description: {
+    impactTitle: '죽녹원 대숲이 들려주는 초록빛 여름',
+    impactSubtitle: '담양 대나무 축제는 울창한 대숲길을 걸으며 즐기는 여름철 지역축제예요.',
+    introParagraphs: [
+      '죽녹원을 중심으로 대나무 숲길 산책, 공예 체험, 야시장 등 다양한 프로그램이 함께 열려요.',
+    ],
+    enjoyPoints: [
+      '죽녹원 대숲길 산책하기',
+      '대나무 공예 체험 참여하기',
+      '대숲 사이 포토존에서 사진 찍기',
+      '야시장 먹거리 구경하기',
+    ],
+  },
 };
 
 const JIKKJISA_DETAIL: PlaceDetail = {
@@ -143,6 +174,18 @@ const JIKKJISA_DETAIL: PlaceDetail = {
     { source: { uri: 'https://picsum.photos/id/1036/300/300' }, order: 1, altText: '직지사' },
     ...DEFAULT_PLACE_DETAIL.images.slice(1),
   ],
+  description: {
+    impactTitle: '천년 고찰에서 느끼는 고요한 산책',
+    impactSubtitle: '직지사는 김천을 대표하는 사찰로, 조용한 산책과 전통적인 분위기를 함께 느낄 수 있어요.',
+    introParagraphs: [
+      '울창한 숲길을 따라 걸으며 전통 사찰 건축과 고즈넉한 분위기를 즐길 수 있는 곳이에요.',
+    ],
+    enjoyPoints: [
+      '사찰 경내 산책하기',
+      '전통 건축과 불상 감상하기',
+      '숲길 따라 사진 찍기',
+    ],
+  },
 };
 
 const SAMYUNG_PARK_DETAIL: PlaceDetail = {
@@ -157,6 +200,18 @@ const SAMYUNG_PARK_DETAIL: PlaceDetail = {
     { source: { uri: 'https://picsum.photos/id/1041/300/300' }, order: 1, altText: '사명대사공원' },
     ...DEFAULT_PLACE_DETAIL.images.slice(1),
   ],
+  description: {
+    impactTitle: '넓은 잔디와 산책로가 있는 쉼터',
+    impactSubtitle: '사명대사공원은 넓은 공원과 산책로가 있어 가볍게 쉬어 가기 좋은 장소예요.',
+    introParagraphs: [
+      '탁 트인 공원과 정비된 산책로가 있어 여행 중 잠시 쉬어가거나 사진을 남기기 좋아요.',
+    ],
+    enjoyPoints: [
+      '공원 산책로 걷기',
+      '잔디밭에서 휴식하기',
+      '사진 찍기 좋은 포인트 둘러보기',
+    ],
+  },
 };
 
 const GIMCHEON_MUSEUM_DETAIL: PlaceDetail = {
@@ -171,9 +226,21 @@ const GIMCHEON_MUSEUM_DETAIL: PlaceDetail = {
     { source: { uri: 'https://picsum.photos/id/1057/300/300' }, order: 1, altText: '김천시립박물관' },
     ...DEFAULT_PLACE_DETAIL.images.slice(1),
   ],
+  description: {
+    impactTitle: '김천의 역사와 문화를 한자리에서',
+    impactSubtitle: '김천시립박물관은 김천의 역사와 지역 문화를 알아볼 수 있는 공간이에요.',
+    introParagraphs: [
+      '지역 유물과 전시를 통해 김천의 옛 모습과 문화를 가볍게 둘러볼 수 있는 곳이에요.',
+    ],
+    enjoyPoints: [
+      '상설 전시 관람하기',
+      '지역 유물 살펴보기',
+      '로컬 여행 코스에 함께 넣기',
+    ],
+  },
 };
 
-const MOCK_PLACE_DETAILS: Record<string, PlaceDetail> = {
+const MOCK_PLACE_DETAILS_KO: Record<string, PlaceDetail> = {
   '1101': GIMCHEON_GIMBAP_FESTIVAL_DETAIL,
   'gimcheon-gimbap-festival': GIMCHEON_GIMBAP_FESTIVAL_DETAIL,
   '1102': JEONJU_IPAP_FESTIVAL_DETAIL,
@@ -187,6 +254,146 @@ const MOCK_PLACE_DETAILS: Record<string, PlaceDetail> = {
   '1106': GIMCHEON_MUSEUM_DETAIL,
   'gimcheon-museum': GIMCHEON_MUSEUM_DETAIL,
 };
+
+// English mirrors of the fixtures above — only reached when the real
+// /places/{id} call fails (these ids don't exist on the backend), so this is
+// what an EN-language user sees for the same demo fixtures MOCK_PLACE_DETAILS_KO
+// serves. relatedPlaces is left untranslated (Gimcheon-only mock content that
+// doesn't actually apply to most of these places) — same known gap as KO.
+const GIMCHEON_GIMBAP_FESTIVAL_DETAIL_EN: PlaceDetail = {
+  ...GIMCHEON_GIMBAP_FESTIVAL_DETAIL,
+  title: 'Gimcheon Gimbap Festival',
+  address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+  tags: ['Local Festival', 'Food', 'Seasonal Pick'],
+  description: {
+    impactTitle: "Gimcheon's tastiest bite-sized trip",
+    impactSubtitle: 'The Gimcheon Gimbap Festival lets you eat, make, and enjoy everything gimbap.',
+    introParagraphs: [
+      "Gimbap is one of the most familiar foods in Korea, but here you can meet a playful, Gimcheon-only gimbap culture that's a bit different from what you're used to.",
+    ],
+    enjoyPoints: [
+      'Sample gimbap at the food booths',
+      'Join a gimbap-making experience',
+      'Take photos at the gimbap photo zone',
+      'Browse local specialty food stalls',
+      'Explore nearby local spots around the festival grounds',
+    ],
+  },
+};
+
+const JEONJU_IPAP_FESTIVAL_DETAIL_EN: PlaceDetail = {
+  ...JEONJU_IPAP_FESTIVAL_DETAIL,
+  title: '[Jeonju] Fringe Tree Festival',
+  address: 'Wansan-gu, Jeonju-si, Jeollabuk-do',
+  description: {
+    impactTitle: 'Spring turns white beside Jeonju Hanok Village',
+    impactSubtitle: 'The Fringe Tree Festival is a spring event centered on streets in full bloom with fringe tree flowers.',
+    introParagraphs: [
+      'Held when the streets near Hanok Village are covered in white fringe tree blossoms — a sight you can only catch during this short spring window.',
+    ],
+    enjoyPoints: [
+      'Walk the fringe tree blossom path',
+      'Pair it with a visit to Hanok Village',
+      'Take photos under the night lighting',
+      'Browse nearby food stalls',
+    ],
+  },
+};
+
+const DAMYANG_BAMBOO_FESTIVAL_DETAIL_EN: PlaceDetail = {
+  ...DAMYANG_BAMBOO_FESTIVAL_DETAIL,
+  title: '[Damyang] Bamboo Festival',
+  address: '119 Jungnokwon-ro, Damyang-eup, Damyang-gun, Jeollanam-do',
+  description: {
+    impactTitle: 'A green summer inside the Juknokwon bamboo forest',
+    impactSubtitle: 'The Damyang Bamboo Festival is a summer event enjoyed by walking through a lush bamboo forest trail.',
+    introParagraphs: [
+      'Centered on Juknokwon, the festival features bamboo forest walks, craft experiences, a night market, and more.',
+    ],
+    enjoyPoints: [
+      'Walk the Juknokwon bamboo trail',
+      'Try a bamboo craft experience',
+      'Take photos at the bamboo photo zone',
+      'Browse the night market food stalls',
+    ],
+  },
+};
+
+const JIKKJISA_DETAIL_EN: PlaceDetail = {
+  ...JIKKJISA_DETAIL,
+  title: 'Jikjisa Temple',
+  address: '95 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+  tags: ['Temple', 'History', 'Walk'],
+  description: {
+    impactTitle: 'A quiet walk through a thousand-year-old temple',
+    impactSubtitle: "Jikjisa is Gimcheon's signature temple, where you can enjoy a quiet walk alongside its traditional atmosphere.",
+    introParagraphs: [
+      'Walk along wooded trails and take in traditional temple architecture and a serene atmosphere.',
+    ],
+    enjoyPoints: [
+      'Stroll the temple grounds',
+      'Admire the traditional architecture and statues',
+      'Take photos along the forest trail',
+    ],
+  },
+};
+
+const SAMYUNG_PARK_DETAIL_EN: PlaceDetail = {
+  ...SAMYUNG_PARK_DETAIL,
+  title: 'Samyeongdaesa Park',
+  address: '31-1 Unsu-ri, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+  tags: ['Park', 'Walk', 'Photos'],
+  description: {
+    impactTitle: 'A wide lawn and trail to rest and unwind',
+    impactSubtitle: 'Samyeongdaesa Park has a spacious park and walking trail, great for a light break.',
+    introParagraphs: [
+      'An open park with well-kept walking trails — a good spot to rest during your trip or take a few photos.',
+    ],
+    enjoyPoints: [
+      'Walk the park trail',
+      'Rest on the lawn',
+      'Look for good photo spots',
+    ],
+  },
+};
+
+const GIMCHEON_MUSEUM_DETAIL_EN: PlaceDetail = {
+  ...GIMCHEON_MUSEUM_DETAIL,
+  title: 'Gimcheon Municipal Museum',
+  address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+  tags: ['Museum', 'History', 'Culture'],
+  description: {
+    impactTitle: "Gimcheon's history and culture in one place",
+    impactSubtitle: "The Gimcheon Municipal Museum lets you learn about Gimcheon's history and local culture.",
+    introParagraphs: [
+      "Local artifacts and exhibits offer a light look into Gimcheon's past and culture.",
+    ],
+    enjoyPoints: [
+      'View the permanent exhibition',
+      'Browse local artifacts',
+      'Add it to a local travel route',
+    ],
+  },
+};
+
+const MOCK_PLACE_DETAILS_EN: Record<string, PlaceDetail> = {
+  '1101': GIMCHEON_GIMBAP_FESTIVAL_DETAIL_EN,
+  'gimcheon-gimbap-festival': GIMCHEON_GIMBAP_FESTIVAL_DETAIL_EN,
+  '1102': JEONJU_IPAP_FESTIVAL_DETAIL_EN,
+  'jeonju-ipap-festival': JEONJU_IPAP_FESTIVAL_DETAIL_EN,
+  '1103': DAMYANG_BAMBOO_FESTIVAL_DETAIL_EN,
+  'damyang-bamboo-festival': DAMYANG_BAMBOO_FESTIVAL_DETAIL_EN,
+  '1104': JIKKJISA_DETAIL_EN,
+  jikkjisa: JIKKJISA_DETAIL_EN,
+  '1105': SAMYUNG_PARK_DETAIL_EN,
+  'samyung-park': SAMYUNG_PARK_DETAIL_EN,
+  '1106': GIMCHEON_MUSEUM_DETAIL_EN,
+  'gimcheon-museum': GIMCHEON_MUSEUM_DETAIL_EN,
+};
+
+function getMockPlaceDetailsMap(): Record<string, PlaceDetail> {
+  return isEnglish() ? MOCK_PLACE_DETAILS_EN : MOCK_PLACE_DETAILS_KO;
+}
 
 function getMockPlaceListItem(placeId: string) {
   return [
@@ -217,18 +424,31 @@ function buildGenericPlaceDetailFromListItem(place: MockPlaceListItem): PlaceDet
       },
       ...DEFAULT_PLACE_DETAIL.images.slice(1),
     ],
-    description: {
-      impactTitle: `${place.title}에서 만나는 ${place.serviceRegionName}의 매력`,
-      impactSubtitle: '현재는 화면 확인용 mock 데이터로 연결되어 있어요.',
-      introParagraphs: [
-        `${place.title}은(는) ${place.serviceRegionName} 여행 흐름을 살펴보기 좋은 대표 장소예요.`,
-      ],
-      enjoyPoints: [
-        '대표 포인트 둘러보기',
-        '주변 동선과 지도 위치 확인하기',
-        '사진 찍기 좋은 구도 살펴보기',
-      ],
-    },
+    description: isEnglish()
+      ? {
+          impactTitle: `${place.title} — a highlight of ${place.serviceRegionName}`,
+          impactSubtitle: "This place isn't in our English catalog yet, so here's a placeholder overview.",
+          introParagraphs: [
+            `${place.title} is a good stop for getting a feel for ${place.serviceRegionName}.`,
+          ],
+          enjoyPoints: [
+            'Check out the highlights',
+            'See the surrounding area and map location',
+            'Look for a good photo spot',
+          ],
+        }
+      : {
+          impactTitle: `${place.title}에서 만나는 ${place.serviceRegionName}의 매력`,
+          impactSubtitle: '현재는 화면 확인용 mock 데이터로 연결되어 있어요.',
+          introParagraphs: [
+            `${place.title}은(는) ${place.serviceRegionName} 여행 흐름을 살펴보기 좋은 대표 장소예요.`,
+          ],
+          enjoyPoints: [
+            '대표 포인트 둘러보기',
+            '주변 동선과 지도 위치 확인하기',
+            '사진 찍기 좋은 구도 살펴보기',
+          ],
+        },
     relatedPlaces: [],
   };
 }
@@ -1735,7 +1955,7 @@ function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
 }
 
 function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
-  const explicitDetail = MOCK_PLACE_DETAILS[placeId];
+  const explicitDetail = getMockPlaceDetailsMap()[placeId];
   if (explicitDetail) {
     return explicitDetail;
   }
@@ -1745,13 +1965,23 @@ function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
     return buildGenericPlaceDetailFromListItem(listItem);
   }
 
+  const english = isEnglish();
   return {
     ...DEFAULT_PLACE_DETAIL,
     id: placeId,
     routeId: placeId,
     numericId: Number.isFinite(Number(placeId)) ? Number(placeId) : undefined,
-    title: '추천 장소',
-    address: '상세 정보를 준비 중이에요.',
+    title: english ? 'Recommended place' : '추천 장소',
+    address: english ? 'Details are on the way.' : '상세 정보를 준비 중이에요.',
+    tags: english ? ['Local Festival', 'Food', 'Seasonal Pick'] : DEFAULT_PLACE_DETAIL.tags,
+    description: {
+      impactTitle: english ? 'Details are on the way' : '상세 정보를 준비하고 있어요',
+      impactSubtitle: english
+        ? "We're still putting together the full details for this place."
+        : '이 장소의 자세한 정보를 아직 준비하고 있어요.',
+      introParagraphs: [],
+      enjoyPoints: [],
+    },
     relatedPlaces: [],
   };
 }

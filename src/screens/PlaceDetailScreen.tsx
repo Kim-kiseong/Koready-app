@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   fetchPlaceDetail,
-  DEFAULT_PLACE_DESCRIPTION,
   type PlaceDetail,
   type PlaceDetailTab,
 } from '@/api/place';
@@ -40,6 +39,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 export default function PlaceDetailScreen() {
@@ -68,6 +68,7 @@ function PlaceDetailScreenContent({
 }) {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
 
   const [place, setPlace] =
     useState<PlaceDetail | null>(null);
@@ -130,7 +131,7 @@ function PlaceDetailScreenContent({
     return () => {
       isMounted = false;
     };
-  }, [placeId]);
+  }, [placeId, language]);
 
   /*
    * SecureStore 복원이 끝난 뒤에만
@@ -175,7 +176,7 @@ function PlaceDetailScreenContent({
     );
   }
 
-  const description = place.description ?? DEFAULT_PLACE_DESCRIPTION;
+  const description = place.description;
 
   const handleToggleSave = () => {
     if (!placeId) {

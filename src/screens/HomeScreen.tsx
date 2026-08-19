@@ -79,7 +79,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchFeaturedEvents(category).then(setEvents);
-  }, [category]);
+  }, [category, language]);
 
   useEffect(() => {
     fetchTravelGuides(language).then(setGuides);
