@@ -86,6 +86,10 @@ export default function HomeScreen() {
     fetchTravelGuides(language).then(setGuides);
   }, [language]);
 
+  useEffect(() => {
+    console.log('[lang-toggle] pendingLanguage state changed to', pendingLanguage);
+  }, [pendingLanguage]);
+
   const month = useMemo(() => new Date().getMonth() + 1, []);
   const locationLabel = location ? formatShortAddress(location.displayAddress) : t.home.locationPlaceholder;
   // Figma's guide card spans the full content width (screen width minus the
@@ -118,7 +122,10 @@ export default function HomeScreen() {
             <Pressable
               style={styles.languageSegment}
               hitSlop={10}
-              onPress={() => language !== 'KO' && setPendingLanguage('KO')}>
+              onPress={() => {
+                console.log('[lang-toggle] KO pressed, current language =', language);
+                language !== 'KO' && setPendingLanguage('KO');
+              }}>
               {language === 'KO' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
@@ -129,7 +136,10 @@ export default function HomeScreen() {
             <Pressable
               style={styles.languageSegment}
               hitSlop={10}
-              onPress={() => language !== 'EN' && setPendingLanguage('EN')}>
+              onPress={() => {
+                console.log('[lang-toggle] EN pressed, current language =', language);
+                language !== 'EN' && setPendingLanguage('EN');
+              }}>
               {language === 'EN' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
