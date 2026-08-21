@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchSavedPlaces, unsavePlace } from '@/api/saved-place';
-import { getMockPlaceTitleById } from '@/api/place';
 import type { LanguageCode, SavedPlaceItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
@@ -413,11 +412,13 @@ export default function SavedScreen() {
     [hasAuthHydrated, replaceSavedPlaces, savedStoreHydrated],
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadSavedPlaces(null, false);
-    }, [language, loadSavedPlaces]),
-  );
+  useEffect(() => {
+    if (!hasAuthHydrated || !savedStoreHydrated) {
+      return;
+    }
+
+    void loadSavedPlaces(null, false);
+  }, [language, hasAuthHydrated, loadSavedPlaces, savedStoreHydrated]);
 
   const savedPlaces = useMemo(() => {
     const items = Object.values(savedPlacesByPlaceId).filter((item) => item.saved !== false);
@@ -671,26 +672,11 @@ function SortSheet({
 }
 
 function formatSavedPlaceTitle(place: SavedPlaceItem, language: LanguageCode) {
-  const rawTitle = getMockPlaceTitleById(place.placeId) ?? place.title;
-  const exactLocalizedTitle = TITLE_TRANSLATIONS[language][rawTitle];
-  if (exactLocalizedTitle) {
-    return exactLocalizedTitle;
-  }
-
-  const canonicalKoTitle = normalizeTitle(rawTitle, 'KO');
-
   if (language === 'EN') {
-    const translated =
-      SAVED_PLACE_TITLES_EN_BY_ID[place.placeId] ??
-      TITLE_TRANSLATIONS.EN[canonicalKoTitle] ??
-      translateKoreanTitleToEnglish(canonicalKoTitle);
-    return normalizeTitle(translated, 'EN');
+    return normalizeTitle(translateKoreanTitleToEnglish(place.title), 'EN');
   }
 
-  return normalizeTitle(
-    TITLE_TRANSLATIONS.KO[canonicalKoTitle] ?? translateEnglishTitleToKorean(canonicalKoTitle),
-    'KO',
-  );
+  return normalizeTitle(translateEnglishTitleToKorean(place.title), 'KO');
 }
 
 function formatSavedPlaceSubtitle(place: SavedPlaceItem, language: LanguageCode) {
@@ -726,14 +712,14 @@ function formatSavedTag(value: string, language: LanguageCode) {
 }
 
 function translateKoreanTitleToEnglish(title: string) {
-  return applyPhraseMap(title, TITLE_PHRASE_MAP.EN)
+  return applyPhraseMap(translateLeadingTitlePrefix(title, 'EN'), TITLE_PHRASE_MAP.EN)
     .replace(/^\[([^\]]+)\]/, (_match, region: string) => `[${translateRegionName(region)}]`)
     .replace(/사명대사/g, 'Samyeongdaesa')
     .replace(/직지사/g, 'Jikjisa');
 }
 
 function translateEnglishTitleToKorean(title: string) {
-  return applyPhraseMap(title, TITLE_PHRASE_MAP.KO)
+  return applyPhraseMap(translateLeadingTitlePrefix(title, 'KO'), TITLE_PHRASE_MAP.KO)
     .replace(/^\[([^\]]+)\]/, (_match, region: string) => `[${translateRegionNameToKorean(region)}]`)
     .replace(/Samyeongdaesa/g, '사명대사')
     .replace(/Jikjisa/g, '직지사');
@@ -751,6 +737,91 @@ function applyPhraseMap(title: string, replacements: Array<[RegExp, string]>) {
   return [...replacements]
     .sort((left, right) => right[0].source.length - left[0].source.length)
     .reduce((nextTitle, [pattern, replacement]) => nextTitle.replace(pattern, replacement), title);
+}
+
+const EN_TO_KO_TITLE_PREFIXES: Array<[string, string]> = [
+  ['Daegwallyeong', '대관령'],
+  ['Gimcheon', '김천'],
+  ['Gyeonggi', '경기'],
+  ['Gangwon', '강원'],
+  ['Chungcheong', '충청'],
+  ['Gyeongsang', '경상'],
+  ['Jeolla', '전라'],
+  ['Seoul', '서울'],
+  ['Jeju', '제주'],
+  ['Jeonju', '전주'],
+  ['Damyang', '담양'],
+  ['Gwangju', '광주'],
+  ['Suncheon', '순천'],
+  ['Gwangyang', '광양'],
+  ['Boseong', '보성'],
+  ['Gangneung', '강릉'],
+  ['Sokcho', '속초'],
+  ['Chuncheon', '춘천'],
+  ['Wonju', '원주'],
+  ['Yeongwol', '영월'],
+  ['Gyeongju', '경주'],
+  ['Busan', '부산'],
+  ['Daegu', '대구'],
+  ['Ulsan', '울산'],
+  ['Andong', '안동'],
+  ['Tongyeong', '통영'],
+  ['Yeongyang', '영양'],
+  ['Hadong', '하동'],
+  ['Hamyang', '함양'],
+  ['Sangju', '상주'],
+  ['Namyangju', '남양주'],
+  ['Namwon', '남원'],
+  ['Muju', '무주'],
+  ['Yeonggwang', '영광'],
+  ['Yeongdong', '영동'],
+  ['Okcheon', '옥천'],
+  ['Cheonan', '천안'],
+  ['Chungju', '충주'],
+  ['Boryeong', '보령'],
+  ['Nonsan', '논산'],
+  ['Gwangmyeong', '광명'],
+  ['Paju', '파주'],
+  ['Suwon', '수원'],
+  ['Yangpyeong', '양평'],
+  ['Mokpo', '목포'],
+];
+
+const KO_TO_EN_TITLE_PREFIXES: Array<[string, string]> = EN_TO_KO_TITLE_PREFIXES.map(([english, korean]) => [
+  korean,
+  english,
+]);
+
+function translateLeadingTitlePrefix(title: string, language: LanguageCode) {
+  const prefixes = language === 'EN' ? KO_TO_EN_TITLE_PREFIXES : EN_TO_KO_TITLE_PREFIXES;
+
+  for (const [source, replacement] of prefixes) {
+    if (
+      title === source ||
+      title.startsWith(`${source} `) ||
+      title.startsWith(`${source}(`) ||
+      title.startsWith(`${source}[`) ||
+      title.startsWith(`${source}-`)
+    ) {
+      return `${replacement}${title.slice(source.length)}`;
+    }
+  }
+
+  return title;
+}
+
+function preserveParentheticalSegments(sourceTitle: string, translatedTitle: string) {
+  const sourceSegments = sourceTitle.match(/\([^()]*\)/g);
+  if (!sourceSegments?.length) {
+    return translatedTitle;
+  }
+
+  let segmentIndex = 0;
+  return translatedTitle.replace(/\([^()]*\)/g, (translatedSegment) => {
+    const sourceSegment = sourceSegments[segmentIndex];
+    segmentIndex += 1;
+    return sourceSegment ?? translatedSegment;
+  });
 }
 
 function translateRegionName(value: string) {
@@ -1072,7 +1143,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   travelStyle: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.medium,
     fontWeight: '500',
     fontSize: 13,
     lineHeight: 18.2,

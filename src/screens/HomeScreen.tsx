@@ -32,6 +32,21 @@ import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
+const EN_MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 // Trims a full road-name address down to the "구 + 도로명" form shown in the
 // header pill — this is presentational only, there's no location-edit screen yet.
 function formatShortAddress(address: string): string {
@@ -61,14 +76,15 @@ export default function HomeScreen() {
   const [guides, setGuides] = useState<GuideArticle[]>([]);
   const [guidePage, setGuidePage] = useState(0);
   const [pendingLanguage, setPendingLanguage] = useState<LanguageCode | null>(null);
+  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
   useEffect(() => {
     fetchFeaturedEvents(category).then(setEvents);
-  }, [category]);
+  }, [category, language]);
 
   useEffect(() => {
-    fetchTravelGuides().then(setGuides);
-  }, []);
+    fetchTravelGuides(language).then(setGuides);
+  }, [language]);
 
   const month = useMemo(() => new Date().getMonth() + 1, []);
   const locationLabel = location ? formatShortAddress(location.displayAddress) : t.home.locationPlaceholder;
@@ -102,7 +118,9 @@ export default function HomeScreen() {
             <Pressable
               style={styles.languageSegment}
               hitSlop={10}
-              onPress={() => language !== 'KO' && setPendingLanguage('KO')}>
+              onPress={() => {
+                language !== 'KO' && setPendingLanguage('KO');
+              }}>
               {language === 'KO' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
@@ -113,7 +131,9 @@ export default function HomeScreen() {
             <Pressable
               style={styles.languageSegment}
               hitSlop={10}
-              onPress={() => language !== 'EN' && setPendingLanguage('EN')}>
+              onPress={() => {
+                language !== 'EN' && setPendingLanguage('EN');
+              }}>
               {language === 'EN' && (
                 <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
               )}
@@ -142,16 +162,27 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <View>
-              <View style={styles.sectionTitleRow}>
-                <CustomText style={styles.sectionTitleAccent}>{t.home.featuredTitlePrefix}</CustomText>
-                <CustomText style={styles.sectionTitleLine1}>{t.home.featuredTitleConnector}</CustomText>
+            {language === 'EN' ? (
+              <View>
+                <CustomText style={styles.sectionTitleLine1}>Don&apos;t miss these!</CustomText>
+                <CustomText style={styles.sectionTitle}>
+                  {'In Korea this '}
+                  <CustomText style={styles.sectionTitleAccentLarge}>{EN_MONTH_NAMES[month - 1]}</CustomText>
+                  {'?'}
+                </CustomText>
               </View>
-              <CustomText style={styles.sectionTitle}>
-                {month}
-                {t.home.featuredTitleSuffix}
-              </CustomText>
-            </View>
+            ) : (
+              <View>
+                <View style={styles.sectionTitleRow}>
+                  <CustomText style={styles.sectionTitleAccent}>{t.home.featuredTitlePrefix}</CustomText>
+                  <CustomText style={styles.sectionTitleLine1}>{t.home.featuredTitleConnector}</CustomText>
+                </View>
+                <CustomText style={styles.sectionTitle}>
+                  {month}
+                  {t.home.featuredTitleSuffix}
+                </CustomText>
+              </View>
+            )}
             <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/events')} />
           </View>
 
@@ -214,8 +245,14 @@ export default function HomeScreen() {
           visible
           currentLanguage={language}
           targetLanguage={pendingLanguage}
+          loading={isChangingLanguage}
           onCancel={() => setPendingLanguage(null)}
           onConfirm={async () => {
+            // Guards against duplicate PATCH /users/me/language calls if the
+            // user taps "변경하기" again before the first one resolves — the
+            // button had no loading/disabled state, so on a slow connection
+            // repeated taps looked like the toggle just wasn't responding.
+            if (isChangingLanguage) return;
             if (isDevMockSession) {
               applyLanguageChange({
                 language: pendingLanguage,
@@ -225,13 +262,15 @@ export default function HomeScreen() {
               setPendingLanguage(null);
               return;
             }
+            setIsChangingLanguage(true);
             try {
               const result = await updateMyLanguage(pendingLanguage);
               applyLanguageChange(result);
+              setPendingLanguage(null);
             } catch (error) {
               Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
             } finally {
-              setPendingLanguage(null);
+              setIsChangingLanguage(false);
             }
           }}
         />
@@ -359,6 +398,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 18,
     color: Palette.text,
+  },
+  sectionTitleAccentLarge: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    color: Palette.primary,
   },
   seeAllRow: {
     flexDirection: 'row',

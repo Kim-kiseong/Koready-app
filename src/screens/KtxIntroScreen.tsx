@@ -64,7 +64,7 @@ export default function KtxIntroScreen() {
       </ScrollView>
 
       <SafeAreaView edges={['bottom']} style={styles.buttonBar}>
-        <Pressable style={styles.startButton} onPress={() => router.push('/guides/ktx/steps/index')}>
+        <Pressable style={styles.startButton} onPress={() => router.push('/guides/ktx/steps')}>
           <CustomText style={styles.startButtonText}>{t.guideDetail.startButton}</CustomText>
           <SymbolView
             name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}

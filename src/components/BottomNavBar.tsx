@@ -37,7 +37,7 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
     },
     {
       id: 'my',
-      label: t.nav.profile,
+      label: t.nav.my,
       href: '/my',
       icon: { ios: 'person', android: 'person', web: 'person' },
     },
@@ -68,9 +68,7 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
 
         <Pressable style={styles.centerButton} onPress={() => handlePress(centerTab)}>
           <SymbolView name={centerTab.icon} size={18} weight="regular" tintColor="#ffffff" />
-          <CustomText numberOfLines={1} ellipsizeMode="tail" style={styles.centerLabel}>
-            {centerTab.label}
-          </CustomText>
+          <CustomText style={styles.centerLabel}>{centerTab.label}</CustomText>
         </Pressable>
 
         {rightTabs.map((tab) => (
@@ -96,7 +94,7 @@ function SideTab({
   return (
     <Pressable style={styles.sideTab} onPress={() => onPress(tab)}>
       <SymbolView name={tab.icon} size={18} weight={isActive ? 'semibold' : 'regular'} tintColor={color} />
-      <CustomText numberOfLines={1} ellipsizeMode="tail" style={[styles.sideLabel, { color, fontFamily }]}>
+      <CustomText style={[styles.sideLabel, { color, fontFamily }]} numberOfLines={1}>
         {tab.label}
       </CustomText>
     </Pressable>
@@ -111,38 +109,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: Palette.grey200,
     backgroundColor: '#ffffff',
   },
   sideTab: {
-    width: 44,
+    minWidth: 32,
     alignItems: 'center',
-    gap: 3,
+    gap: 2,
   },
   sideLabel: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 11,
-    lineHeight: 15.4,
-    textAlign: 'center',
+    fontSize: 12,
   },
   centerButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    marginTop: -26,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginTop: -24,
     backgroundColor: Palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
   },
   centerLabel: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 11,
-    lineHeight: 15.4,
+    fontSize: 12,
     color: '#ffffff',
-    textAlign: 'center',
   },
 });

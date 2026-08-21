@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
-import { DEFAULT_PLACE_DESCRIPTION, type PlaceDetail } from './place';
+import { DEFAULT_PLACE_DESCRIPTION, getMockPlaceTitleById, type PlaceDetail } from './place';
 import type { PicksCard } from './picks';
 import type {
   SavedPlaceFestivalOccurrence,
@@ -245,6 +245,13 @@ function cloneSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
   };
 }
 
+function localizeSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
+  return {
+    ...cloneSavedPlaceItem(place),
+    title: getMockPlaceTitleById(place.placeId) ?? place.title,
+  };
+}
+
 function sortSavedPlaces(places: SavedPlaceItem[]): SavedPlaceItem[] {
   return [...places].sort((left, right) => {
     const leftTime = Date.parse(left.savedAt);
@@ -295,7 +302,7 @@ function paginateSavedPlaces(
   const nextCursor = hasMore && items.length > 0 ? createMockSavedPlaceCursor(items[items.length - 1]) : null;
 
   return {
-    items: items.map(cloneSavedPlaceItem),
+    items: items.map(localizeSavedPlaceItem),
     nextCursor,
     hasMore,
   };
