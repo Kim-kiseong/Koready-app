@@ -132,6 +132,25 @@ export interface Translations {
     submitError: string;
     linkOpenError: string;
   };
+  nav: {
+    home: string;
+    map: string;
+    picks: string;
+    saved: string;
+    my: string;
+  };
+  picks: {
+    headerTitle: string;
+    scopeNearby: string;
+    scopeNationwide: string;
+    loadingText: string;
+    errorText: string;
+    emptyText: string;
+    retry: string;
+    detailButton: string;
+    guideTapText: string;
+    guideSwipeText: string;
+  };
 }
 
 export const ko: Translations = {
@@ -314,5 +333,24 @@ export const ko: Translations = {
     loadError: '약관 정보를 불러오지 못했어요.',
     submitError: '약관 동의에 실패했어요.',
     linkOpenError: '페이지를 열지 못했어요.',
+  },
+  nav: {
+    home: '홈',
+    map: '지도',
+    picks: '추천',
+    saved: '저장',
+    my: '마이',
+  },
+  picks: {
+    headerTitle: '나를 위한 추천 여행지',
+    scopeNearby: '근교',
+    scopeNationwide: '전국',
+    loadingText: '추천 여행지를 불러오는 중이에요.',
+    errorText: '추천 여행지를 불러오지 못했어요.',
+    emptyText: '추천할 만한 여행지가 없어요.',
+    retry: '다시 시도',
+    detailButton: '여행 코스 확인하기',
+    guideTapText: '이미지를 터치하여\n여행 정보를 확인하세요',
+    guideSwipeText: '카드를 옆으로 밀어\n다른 여행지를 구경해보세요',
   },
 };

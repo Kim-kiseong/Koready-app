@@ -10,12 +10,13 @@ import { FontFamily } from '@/constants/typography';
 export type EventGridCardProps = {
   event: EventListing;
   categoryLabel: string;
+  width: number;
   onPress?: () => void;
 };
 
-export default function EventGridCard({ event, categoryLabel, onPress }: EventGridCardProps) {
+export default function EventGridCard({ event, categoryLabel, width, onPress }: EventGridCardProps) {
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable style={[styles.card, { width }]} onPress={onPress}>
       <View style={styles.photoSection}>
         {event.imageUrl ? (
           <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -46,7 +47,6 @@ export default function EventGridCard({ event, categoryLabel, onPress }: EventGr
 
 const styles = StyleSheet.create({
   card: {
-    width: 165,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Palette.grey200,

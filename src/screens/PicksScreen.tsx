@@ -34,17 +34,14 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { usePicksStore } from '@/store/picks-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
-
-const SCOPES: { id: PicksScope; label: string }[] = [
-  { id: 'NEARBY', label: '근교' },
-  { id: 'NATIONWIDE', label: '전국' },
-];
 
 const CARD_HEIGHT = 485;
 const FLIP_DURATION = 400;
@@ -111,12 +108,67 @@ const DEV_FALLBACK_CARDS: Record<PicksScope, PicksCard[]> = {
   ],
 };
 
+// English mirror of DEV_FALLBACK_CARDS — dev-only, so this is what an
+// EN-language user sees when the mock session is active (see comment above).
+const DEV_FALLBACK_CARDS_EN: Record<PicksScope, PicksCard[]> = {
+  NATIONWIDE: [
+    {
+      placeId: 1,
+      title: 'Gyeongju Heritage Walk',
+      locationText: 'Gyeongju, Gyeongsangbuk-do',
+      imageUrl: 'https://picsum.photos/seed/gyeongju/800/1000',
+      saved: false,
+      tags: ['Station', 'Cafe Street', 'Photo Spot'],
+      shortDescription:
+        "Leave Seoul behind and explore Gyeongju's living museum of history and charming local streets.",
+      serviceRegionCode: 'GYEONGSANG',
+      travelStyle: 'CULTURE_EXPERIENCE',
+    },
+    {
+      placeId: 2,
+      title: 'Jeonju Hanok Village Walk',
+      locationText: 'Jeonju, Jeollabuk-do',
+      imageUrl: 'https://picsum.photos/seed/jeonju/800/1000',
+      saved: false,
+      tags: ['Hanok', 'Traditional Market', 'Street Food'],
+      shortDescription: 'Walk the hanok-lined alleys and enjoy traditional crafts and street food along the way.',
+      serviceRegionCode: 'JEOLLA',
+      travelStyle: 'TRADITIONAL_MARKET',
+    },
+  ],
+  NEARBY: [
+    {
+      placeId: 101,
+      title: 'Seongbukcheon Cafe Street Stroll',
+      locationText: 'Seongbuk-gu, Seoul',
+      imageUrl: 'https://picsum.photos/seed/seongbuk/800/1000',
+      saved: false,
+      tags: ['Cafe Street', 'Walking', 'Photo Spot'],
+      shortDescription: 'Walk along Seongbukcheon, not far from campus, and check out its unique cafes.',
+      serviceRegionCode: 'SEOUL',
+      travelStyle: 'LOCAL_FOOD',
+    },
+    {
+      placeId: 102,
+      title: 'Gyeongchun Line Forest Trail',
+      locationText: 'Nowon-gu, Seoul',
+      imageUrl: 'https://picsum.photos/seed/gyeongchun/800/1000',
+      saved: false,
+      tags: ['Nature', 'Picnic', 'Cycling'],
+      shortDescription: 'Take a light walk or bike ride along this forest trail built on an old rail line.',
+      serviceRegionCode: 'SEOUL',
+      travelStyle: 'NATURE',
+    },
+  ],
+};
+
 function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
+  const cards = useLanguageStore.getState().language === 'EN' ? DEV_FALLBACK_CARDS_EN[scope] : DEV_FALLBACK_CARDS[scope];
   return {
     deckId: 'dev-mock-deck',
     scope,
     originLocation: null,
-    cards: DEV_FALLBACK_CARDS[scope],
+    cards,
     nextCursor: null,
     hasMore: false,
     remainingThreshold: FALLBACK_PREFETCH_THRESHOLD,
@@ -125,6 +177,12 @@ function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
 
 export default function PicksScreen() {
   const router = useRouter();
+  const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const SCOPES: { id: PicksScope; label: string }[] = [
+    { id: 'NEARBY', label: t.picks.scopeNearby },
+    { id: 'NATIONWIDE', label: t.picks.scopeNationwide },
+  ];
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
   const hasSeenGuideHydrated = usePicksStore((state) => state.hasHydrated);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
@@ -223,6 +281,15 @@ export default function PicksScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated]);
 
+  useEffect(() => {
+    // Re-fetch the deck when the language toggle changes mid-session so the
+    // dev-mock cards (and, for a real session, the Accept-Language-driven
+    // backend response) switch language without needing a full remount.
+    if (!hasHydrated || !onboardingHasHydrated || !savedPlaceHydrated) return;
+    loadDeck(scope);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
+
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
   useEffect(() => {
@@ -303,7 +370,7 @@ export default function PicksScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title="나를 위한 추천 여행지" rightIcon={null} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.picks.headerTitle} rightIcon={null} />
 
       <View style={styles.content}>
         <View style={styles.scopeToggle}>
@@ -326,24 +393,24 @@ export default function PicksScreen() {
         {isLoading && (
           <View style={styles.state}>
             <ActivityIndicator color={Palette.primary} />
-            <CustomText style={styles.stateText}>추천 여행지를 불러오는 중이에요.</CustomText>
+            <CustomText style={styles.stateText}>{t.picks.loadingText}</CustomText>
           </View>
         )}
 
         {!isLoading && hasError && (
           <View style={styles.state}>
-            <CustomText style={styles.stateText}>추천 여행지를 불러오지 못했어요.</CustomText>
+            <CustomText style={styles.stateText}>{t.picks.errorText}</CustomText>
             <Pressable style={styles.retryButton} onPress={retryLoad}>
-              <CustomText style={styles.retryText}>다시 시도</CustomText>
+              <CustomText style={styles.retryText}>{t.picks.retry}</CustomText>
             </Pressable>
           </View>
         )}
 
         {!isLoading && !hasError && !card && (
           <View style={styles.state}>
-            <CustomText style={styles.stateText}>추천할 만한 여행지가 없어요.</CustomText>
+            <CustomText style={styles.stateText}>{t.picks.emptyText}</CustomText>
             <Pressable style={styles.retryButton} onPress={retryLoad}>
-              <CustomText style={styles.retryText}>다시 시도</CustomText>
+              <CustomText style={styles.retryText}>{t.picks.retry}</CustomText>
             </Pressable>
           </View>
         )}
@@ -467,6 +534,7 @@ type PicksFlipCardProps = {
 };
 
 function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlipCardProps) {
+  const t = useTranslation();
   const flip = useSharedValue(0);
 
   const toggleFlip = () => {
@@ -563,7 +631,7 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
           </View>
 
           <Pressable style={styles.detailButton} onPress={onViewDetail}>
-            <CustomText style={styles.detailButtonText}>여행 코스 확인하기</CustomText>
+            <CustomText style={styles.detailButtonText}>{t.picks.detailButton}</CustomText>
           </Pressable>
         </Pressable>
       </Animated.View>
@@ -572,12 +640,11 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
 }
 
 function PicksGuideOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const t = useTranslation();
   return (
     <Pressable style={styles.guideOverlay} onPress={onDismiss}>
       <View style={styles.guideBlock}>
-        <CustomText style={styles.guideText}>
-          이미지를 터치하여{'\n'}여행 정보를 확인하세요
-        </CustomText>
+        <CustomText style={styles.guideText}>{t.picks.guideTapText}</CustomText>
         <SymbolView
           name={{ ios: 'hand.tap.fill', android: 'touch_app', web: 'touch_app' }}
           size={40}
@@ -599,9 +666,7 @@ function PicksGuideOverlay({ onDismiss }: { onDismiss: () => void }) {
           weight="regular"
           tintColor="#ffffff"
         />
-        <CustomText style={styles.guideText}>
-          카드를 옆으로 밀어{'\n'}다른 여행지를 구경해보세요
-        </CustomText>
+        <CustomText style={styles.guideText}>{t.picks.guideSwipeText}</CustomText>
       </View>
 
       <Pressable style={styles.guideClose} onPress={onDismiss} hitSlop={8}>

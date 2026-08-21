@@ -10,12 +10,13 @@ import { FontFamily } from '@/constants/typography';
 
 export type GuideVideoCardProps = {
   guide: GuideVideo;
+  width: number;
   onPress?: () => void;
 };
 
-export default function GuideVideoCard({ guide, onPress }: GuideVideoCardProps) {
+export default function GuideVideoCard({ guide, width, onPress }: GuideVideoCardProps) {
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable style={[styles.card, { width }]} onPress={onPress}>
       <Image source={HomeImages[guide.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
@@ -40,7 +41,6 @@ export default function GuideVideoCard({ guide, onPress }: GuideVideoCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    width: 165,
     height: 204,
     borderRadius: 16,
     overflow: 'hidden',
