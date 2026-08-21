@@ -78,6 +78,17 @@ export const en: DeepPartial<Translations> = {
     cancel: 'Cancel',
     apply: 'Apply',
   },
+  saved: {
+    title: 'Saved',
+    loading: 'Loading your saved places.',
+    emptyTitle: 'No saved places yet.',
+    emptyDescription: 'Tap the heart to save places you like.',
+    sortTitle: 'Sort',
+    sortOptions: {
+      savedAt: 'Recently Saved',
+      deadline: 'Ending Soon',
+    },
+  },
   placeDetail: {
     loading: 'Loading details.',
     tabs: {

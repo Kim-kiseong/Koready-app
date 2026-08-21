@@ -1,1 +1,1 @@
-export { default } from '@/screens/MessageThreadScreen';
+export { default } from '@/screens/message-threads/MessageThreadScreen';

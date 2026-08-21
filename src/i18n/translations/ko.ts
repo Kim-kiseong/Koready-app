@@ -45,6 +45,13 @@ export interface Translations {
     languageEn: string;
     categories: Record<FeaturedEventCategory, string>;
   };
+  nav: {
+    home: string;
+    map: string;
+    picks: string;
+    saved: string;
+    my: string;
+  };
   guideList: {
     title: string;
     description: Record<GuideCategoryId, string>;
@@ -108,6 +115,17 @@ export interface Translations {
     cancel: string;
     apply: string;
   };
+  saved: {
+    title: string;
+    loading: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    sortTitle: string;
+    sortOptions: {
+      savedAt: string;
+      deadline: string;
+    };
+  };
   placeDetail: {
     loading: string;
     tabs: {
@@ -131,13 +149,6 @@ export interface Translations {
     loadError: string;
     submitError: string;
     linkOpenError: string;
-  };
-  nav: {
-    home: string;
-    map: string;
-    picks: string;
-    saved: string;
-    my: string;
   };
   picks: {
     headerTitle: string;
@@ -208,6 +219,13 @@ export const ko: Translations = {
       EXHIBITION_MUSEUM: '전시/미술관',
       NATURE: '자연 명소',
     },
+  },
+  nav: {
+    home: '홈',
+    map: '지도',
+    picks: '추천',
+    saved: '저장',
+    my: '마이',
   },
   guideList: {
     title: '한국 여행 가이드',
@@ -310,6 +328,17 @@ export const ko: Translations = {
     cancel: '취소',
     apply: '적용하기',
   },
+  saved: {
+    title: '저장',
+    loading: '저장한 여행지를 불러오는 중이에요.',
+    emptyTitle: '저장한 장소가 없어요.',
+    emptyDescription: '마음에 드는 여행지의 하트를 눌러 저장해보세요.',
+    sortTitle: '정렬',
+    sortOptions: {
+      savedAt: '담은순',
+      deadline: '마감순',
+    },
+  },
   placeDetail: {
     loading: '정보를 불러오는 중이에요.',
     tabs: {
@@ -333,13 +362,6 @@ export const ko: Translations = {
     loadError: '약관 정보를 불러오지 못했어요.',
     submitError: '약관 동의에 실패했어요.',
     linkOpenError: '페이지를 열지 못했어요.',
-  },
-  nav: {
-    home: '홈',
-    map: '지도',
-    picks: '추천',
-    saved: '저장',
-    my: '마이',
   },
   picks: {
     headerTitle: '나를 위한 추천 여행지',
