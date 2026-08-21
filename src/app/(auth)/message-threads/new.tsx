@@ -1,1 +1,1 @@
-export { default } from '@/screens/MessageComposeScreen';
+export { default } from '@/screens/message-threads/MessageComposeScreen';

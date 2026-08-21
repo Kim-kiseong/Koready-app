@@ -1657,6 +1657,24 @@ const MOCK_PLACES_BY_REGION: Record<string, MockPlaceListItem[]> = {
   JEJU: MOCK_JEJU_PLACES,
 };
 
+const MOCK_PLACE_TITLE_BY_ID: Record<string, string> = Object.fromEntries(
+  Object.values(MOCK_PLACES_BY_REGION)
+    .flat()
+    .map((place) => [String(place.placeId), place.title]),
+);
+
+const MOCK_PLACE_DETAIL_TITLE_BY_ID: Record<string, string> = Object.fromEntries(
+  Object.values(MOCK_PLACE_DETAILS).map((place) => [
+    String(place.numericId ?? Number(place.id)),
+    place.title,
+  ]),
+);
+
+export function getMockPlaceTitleById(placeId: string | number) {
+  const key = String(placeId);
+  return MOCK_PLACE_DETAIL_TITLE_BY_ID[key] ?? MOCK_PLACE_TITLE_BY_ID[key] ?? null;
+}
+
 function buildMockPlaceList(params: FetchPlacesParams): PlaceListResponse {
   const size = params.size && params.size > 0 ? params.size : DEFAULT_PLACE_LIST_SIZE;
   const travelStyles = params.travelStyles ?? [];

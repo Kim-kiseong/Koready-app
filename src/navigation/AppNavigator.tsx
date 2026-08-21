@@ -28,9 +28,9 @@ export default function AppNavigator() {
       <Stack.Screen name="address" />
       <Stack.Screen name="address-search" />
       <Stack.Screen name="address-edit" />
-      <Stack.Screen name="map" />
+      <Stack.Screen name="(map)/map" />
       <Stack.Screen name="picks" />
-      <Stack.Screen name="saved" />
+      <Stack.Screen name="(save)/saved" />
       <Stack.Screen name="my" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="settings-language" />

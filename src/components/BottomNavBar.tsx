@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export type NavTab = 'home' | 'map' | 'picks' | 'saved' | 'my';
 
@@ -21,32 +22,33 @@ type TabConfig = {
   icon: SymbolViewProps['name'];
 };
 
-const SIDE_TABS: TabConfig[] = [
-  { id: 'home', label: '홈', href: '/home', icon: { ios: 'house', android: 'home', web: 'home' } },
-  { id: 'map', label: '지도', href: '/map', icon: { ios: 'map', android: 'map', web: 'map' } },
-  {
-    id: 'saved',
-    label: '저장',
-    href: '/saved',
-    icon: { ios: 'heart', android: 'favorite', web: 'favorite' },
-  },
-  {
-    id: 'my',
-    label: '마이',
-    href: '/my',
-    icon: { ios: 'person', android: 'person', web: 'person' },
-  },
-];
-
-const CENTER_TAB: TabConfig = {
-  id: 'picks',
-  label: '추천',
-  href: '/picks',
-  icon: { ios: 'safari', android: 'explore', web: 'explore' },
-};
-
 export default function BottomNavBar({ active }: BottomNavBarProps) {
   const router = useRouter();
+  const t = useTranslation();
+
+  const sideTabs: TabConfig[] = [
+    { id: 'home', label: t.nav.home, href: '/home', icon: { ios: 'house', android: 'home', web: 'home' } },
+    { id: 'map', label: t.nav.map, href: '/map', icon: { ios: 'map', android: 'map', web: 'map' } },
+    {
+      id: 'saved',
+      label: t.nav.saved,
+      href: '/saved',
+      icon: { ios: 'heart', android: 'favorite', web: 'favorite' },
+    },
+    {
+      id: 'my',
+      label: t.nav.profile,
+      href: '/my',
+      icon: { ios: 'person', android: 'person', web: 'person' },
+    },
+  ];
+
+  const centerTab: TabConfig = {
+    id: 'picks',
+    label: t.nav.picks,
+    href: '/picks',
+    icon: { ios: 'safari', android: 'explore', web: 'explore' },
+  };
 
   const handlePress = (tab: TabConfig) => {
     if (tab.id === active) return;
@@ -54,8 +56,8 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
   };
 
   // Side tabs render in two groups so the center FAB can sit between them.
-  const leftTabs = SIDE_TABS.slice(0, 2);
-  const rightTabs = SIDE_TABS.slice(2);
+  const leftTabs = sideTabs.slice(0, 2);
+  const rightTabs = sideTabs.slice(2);
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -64,9 +66,11 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
           <SideTab key={tab.id} tab={tab} isActive={tab.id === active} onPress={handlePress} />
         ))}
 
-        <Pressable style={styles.centerButton} onPress={() => handlePress(CENTER_TAB)}>
-          <SymbolView name={CENTER_TAB.icon} size={18} weight="regular" tintColor="#ffffff" />
-          <CustomText style={styles.centerLabel}>{CENTER_TAB.label}</CustomText>
+        <Pressable style={styles.centerButton} onPress={() => handlePress(centerTab)}>
+          <SymbolView name={centerTab.icon} size={18} weight="regular" tintColor="#ffffff" />
+          <CustomText numberOfLines={1} ellipsizeMode="tail" style={styles.centerLabel}>
+            {centerTab.label}
+          </CustomText>
         </Pressable>
 
         {rightTabs.map((tab) => (
@@ -92,7 +96,9 @@ function SideTab({
   return (
     <Pressable style={styles.sideTab} onPress={() => onPress(tab)}>
       <SymbolView name={tab.icon} size={18} weight={isActive ? 'semibold' : 'regular'} tintColor={color} />
-      <CustomText style={[styles.sideLabel, { color, fontFamily }]}>{tab.label}</CustomText>
+      <CustomText numberOfLines={1} ellipsizeMode="tail" style={[styles.sideLabel, { color, fontFamily }]}>
+        {tab.label}
+      </CustomText>
     </Pressable>
   );
 }
@@ -105,34 +111,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: Palette.grey200,
     backgroundColor: '#ffffff',
   },
   sideTab: {
-    width: 32,
+    width: 44,
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
   },
   sideLabel: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 15.4,
+    textAlign: 'center',
   },
   centerButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginTop: -24,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    marginTop: -26,
     backgroundColor: Palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
   },
   centerLabel: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 15.4,
     color: '#ffffff',
+    textAlign: 'center',
   },
 });
