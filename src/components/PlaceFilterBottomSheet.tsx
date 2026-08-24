@@ -252,7 +252,9 @@ export default function PlaceFilterBottomSheet({
               <View style={styles.section}>
                 <CustomText style={styles.sectionLabel}>{isEnglish ? 'Date' : '날짜'}</CustomText>
                 <View style={styles.chipWrap}>
-                  {DATE_OPTIONS.filter((option) => option.value !== 'NEXT_MONTH').map((option) => (
+                  {DATE_OPTIONS
+                    .filter((option) => (isEnglish ? option.value !== 'NEXT_MONTH' : true))
+                    .map((option) => (
                     <FilterChip
                       key={option.value}
                       label={isEnglish ? option.labelEn : option.labelKo}
@@ -262,12 +264,14 @@ export default function PlaceFilterBottomSheet({
                   ))}
                 </View>
                 <View style={styles.dateActionRow}>
-                  <FilterChip
-                    key="NEXT_MONTH"
-                    label={isEnglish ? 'Next Month' : '다음 달'}
-                    selected={!hasCustomDateRange && draftFilter.datePreset === 'NEXT_MONTH'}
-                    onPress={() => handleDatePresetSelect('NEXT_MONTH')}
-                  />
+                  {isEnglish ? (
+                    <FilterChip
+                      key="NEXT_MONTH"
+                      label="Next Month"
+                      selected={!hasCustomDateRange && draftFilter.datePreset === 'NEXT_MONTH'}
+                      onPress={() => handleDatePresetSelect('NEXT_MONTH')}
+                    />
+                  ) : null}
                   <Pressable
                     style={[
                       styles.dateSelectButton,
