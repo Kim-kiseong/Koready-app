@@ -20,7 +20,9 @@ import PlaceFilterBottomSheet from '@/components/PlaceFilterBottomSheet';
 import PlaceGridCard from '@/components/PlaceGridCard';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 import {
   DEFAULT_PLACE_FILTER_SELECTION,
   resolvePlaceDateQuery,
@@ -152,6 +154,8 @@ const SORT_OPTIONS: { value: PlaceSortOrder; label: string }[] = [
 export default function JeollaScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const t = useTranslation();
+  const isEnglish = useLanguageStore((state) => state.language) === 'EN';
   const loadVersionRef = useRef(0);
 
   const [sortOrder, setSortOrder] = useState<PlaceSortOrder>('RECOMMENDED');
@@ -170,7 +174,9 @@ export default function JeollaScreen() {
   const mapScale = mapWidth / MAP_BASE_WIDTH;
   const mapHeight = MAP_BASE_HEIGHT * mapScale;
   const cardWidth = Math.floor((width - 40 - 12) / 2);
-  const currentSortLabel = SORT_OPTIONS.find((option) => option.value === sortOrder)?.label ?? '추천순';
+  const regionLabel = t.map.regionLabels.jeolla;
+  const currentSortLabel =
+    sortOrder === 'RECOMMENDED' ? t.map.sortRecommended : t.map.sortDeadline;
   const sortChevronName = isSortMenuOpen
     ? ({ ios: 'chevron.up', android: 'arrow_drop_up', web: 'arrow_drop_up' } as const)
     : ({ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' } as const);
@@ -257,7 +263,7 @@ export default function JeollaScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router, '/map')}
-        title="전라도"
+        title={regionLabel}
         rightIcon={<View style={styles.headerSpacer} />}
       />
 
@@ -298,25 +304,27 @@ export default function JeollaScreen() {
           <BottomSheetView style={styles.sheetHeader}>
             <View style={styles.toolbarRow}>
               <View style={styles.countRow}>
-                <CustomText style={styles.countLabel}>전체</CustomText>
+                {t.map.countPrefix ? <CustomText style={styles.countLabel}>{t.map.countPrefix}</CustomText> : null}
                 <CustomText style={styles.countValue}>{places.length}</CustomText>
-                <CustomText style={styles.countLabel}>개</CustomText>
+                <CustomText style={styles.countLabel}>{t.map.countSuffix}</CustomText>
               </View>
 
               <View style={styles.toolsRow}>
                 <View style={styles.sortControl}>
                   <Pressable
-                    style={styles.sortButton}
+                    style={[styles.sortButton, isEnglish && styles.sortButtonEnglish]}
                     onPress={() => setIsSortMenuOpen((current) => !current)}
                   >
-                    <CustomText style={styles.sortButtonText}>{currentSortLabel}</CustomText>
+                    <CustomText numberOfLines={1} style={styles.sortButtonText}>{currentSortLabel}</CustomText>
                     <SymbolView name={sortChevronName} size={12} weight="regular" tintColor={Palette.grey500} />
                   </Pressable>
 
                   {isSortMenuOpen ? (
-                    <View style={styles.sortMenu}>
+                    <View style={[styles.sortMenu, isEnglish && styles.sortMenuEnglish]}>
                       {SORT_OPTIONS.map((option, index) => {
                         const selected = option.value === sortOrder;
+                        const label =
+                          option.value === 'RECOMMENDED' ? t.map.sortRecommended : t.map.sortDeadline;
                         return (
                           <Pressable
                             key={option.value}
@@ -328,9 +336,9 @@ export default function JeollaScreen() {
                               setSortOrder(option.value);
                               setIsSortMenuOpen(false);
                             }}
-                          >
-                            <CustomText style={selected ? styles.sortMenuTextSelected : styles.sortMenuText}>
-                              {option.label}
+                            >
+                            <CustomText numberOfLines={1} style={selected ? styles.sortMenuTextSelected : styles.sortMenuText}>
+                              {label}
                             </CustomText>
                           </Pressable>
                         );
@@ -377,14 +385,14 @@ export default function JeollaScreen() {
               isLoading ? (
                 <View style={styles.loadingState}>
                   <ActivityIndicator color={Palette.primary} />
-                  <CustomText style={styles.loadingText}>전라도 장소를 불러오는 중이에요.</CustomText>
+                  <CustomText style={styles.loadingText}>
+                    {t.map.loading.replace('{region}', regionLabel)}
+                  </CustomText>
                 </View>
               ) : (
                 <View style={styles.emptyState}>
-                  <CustomText style={styles.emptyTitle}>조건에 맞는 장소가 없어요.</CustomText>
-                  <CustomText style={styles.emptyDescription}>
-                    다른 날짜나 관광 유형을 선택해보세요.
-                  </CustomText>
+                  <CustomText style={styles.emptyTitle}>{t.map.emptyTitle}</CustomText>
+                  <CustomText style={styles.emptyDescription}>{t.map.emptyDescription}</CustomText>
                 </View>
               )
             }
@@ -497,8 +505,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 60,
     elevation: 60,
-    width: 76,
     overflow: 'visible',
+    alignSelf: 'flex-start',
   },
   sortButton: {
     height: 30,
@@ -510,18 +518,23 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  sortButtonEnglish: {
+    width: 124,
   },
   sortButtonText: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.grey500,
   },
   sortMenu: {
     position: 'absolute',
     top: 36,
     right: 0,
-    width: 76,
+    minWidth: 76,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Palette.grey200,
@@ -532,6 +545,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 5, height: 5 },
     elevation: 100,
     zIndex: 100,
+  },
+  sortMenuEnglish: {
+    minWidth: 104,
   },
   sortMenuItem: {
     paddingHorizontal: 12,
