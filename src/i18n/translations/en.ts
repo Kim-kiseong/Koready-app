@@ -278,6 +278,37 @@ export const en: DeepPartial<Translations> = {
     cancel: 'Cancel',
     apply: 'Apply',
   },
+  guideList: {
+    title: 'Korea Travel Guide',
+    description: {
+      TRANSPORT: 'Watch videos on everything you need for getting around, payments, safety, and language.',
+      ORDER: 'Watch videos on everything you need for ordering at restaurants, waitlists, delivery, and kiosks.',
+      SAFETY: 'Watch videos on essential safety info for emergencies, lost items, hospitals, and hiking.',
+      LANGUAGE: 'Learn Korean phrases you’ll actually use while traveling, organized by situation.',
+    },
+    categories: {
+      TRANSPORT: 'Transport',
+      ORDER: 'Order',
+      SAFETY: 'Safety',
+      LANGUAGE: 'Language',
+    },
+  },
+  guideDetail: {
+    categoryBadge: {
+      TRANSPORT: 'Transport Guide',
+      ORDER: 'Order Guide',
+      SAFETY: 'Safety Guide',
+      LANGUAGE: 'Language Guide',
+    },
+    startButton: 'Start Guide',
+    stepListTitle: 'Step-by-Step Instructions',
+    totalStepsPrefix: 'Total ',
+    totalStepsSuffix: ' steps',
+    resumeStepPrefix: 'Resume Step ',
+    resumeStepSuffix: '',
+    stepComingSoonTitle: 'Coming Soon',
+    stepComingSoonBody: "This step isn't ready yet. Check back soon!",
+  },
   saved: {
     title: 'Saved',
     loading: 'Loading your saved places.',
