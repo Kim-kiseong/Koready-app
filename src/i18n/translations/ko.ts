@@ -45,6 +45,18 @@ export interface Translations {
     languageEn: string;
     categories: Record<FeaturedEventCategory, string>;
   };
+  map: {
+    title: string;
+    instruction: string;
+    regionLabels: Record<'seoul' | 'gyeonggi' | 'gangwon' | 'chungcheong' | 'jeolla' | 'gyeongsang' | 'jeju', string>;
+    countPrefix: string;
+    countSuffix: string;
+    sortRecommended: string;
+    sortDeadline: string;
+    loading: string;
+    emptyTitle: string;
+    emptyDescription: string;
+  };
   nav: {
     home: string;
     map: string;
@@ -429,6 +441,26 @@ export const ko: Translations = {
       EXHIBITION_MUSEUM: '전시/미술관',
       NATURE: '자연 명소',
     },
+  },
+  map: {
+    title: '대한민국 지도',
+    instruction: '원하는 지역을 선택해 추천 여행지를 둘러보세요.',
+    regionLabels: {
+      seoul: '서울',
+      gyeonggi: '경기',
+      gangwon: '강원',
+      chungcheong: '충청',
+      jeolla: '전라',
+      gyeongsang: '경상',
+      jeju: '제주',
+    },
+    countPrefix: '전체',
+    countSuffix: '개',
+    sortRecommended: '추천순',
+    sortDeadline: '마감순',
+    loading: '{region} 장소를 불러오는 중이에요.',
+    emptyTitle: '조건에 맞는 장소가 없어요.',
+    emptyDescription: '다른 날짜나 관광 유형을 선택해보세요.',
   },
   nav: {
     home: '홈',

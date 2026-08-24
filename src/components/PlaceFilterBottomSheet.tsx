@@ -17,6 +17,7 @@ import type { TravelStyleId } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useLanguageStore } from '@/store/language-store';
 import {
   DEFAULT_PLACE_FILTER_SELECTION,
   formatPlaceFilterDateButtonLabel,
@@ -53,24 +54,26 @@ type MonthCell = {
   inCurrentMonth: boolean;
 };
 
-const DATE_OPTIONS: { value: PlaceDateFilterPreset; label: string }[] = [
-  { value: 'ALL', label: '전체' },
-  { value: 'THIS_WEEK', label: '이번 주' },
-  { value: 'THIS_MONTH', label: '이번 달' },
-  { value: 'NEXT_MONTH', label: '다음 달' },
+type LanguageCode = 'KO' | 'EN';
+
+const DATE_OPTIONS: { value: PlaceDateFilterPreset; labelKo: string; labelEn: string }[] = [
+  { value: 'ALL', labelKo: '전체', labelEn: 'All' },
+  { value: 'THIS_WEEK', labelKo: '이번 주', labelEn: 'This Week' },
+  { value: 'THIS_MONTH', labelKo: '이번 달', labelEn: 'This Month' },
+  { value: 'NEXT_MONTH', labelKo: '다음 달', labelEn: 'Next Month' },
 ];
 
-const TRAVEL_STYLE_OPTIONS: { value: TravelStyleId; label: string }[] = [
-  { value: 'LOCAL_FOOD', label: '로컬맛집' },
-  { value: 'LOCAL_FESTIVAL', label: '지역축제' },
-  { value: 'TRADITIONAL_MARKET', label: '전통시장' },
-  { value: 'CULTURE_EXPERIENCE', label: '문화체험' },
-  { value: 'NATURE', label: '자연명소' },
-  { value: 'EXHIBITION_MUSEUM', label: '전시/미술관' },
-  { value: 'DRAMA_LOCATION', label: '드라마 촬영지' },
+const TRAVEL_STYLE_OPTIONS: { value: TravelStyleId; labelKo: string; labelEn: string }[] = [
+  { value: 'LOCAL_FOOD', labelKo: '로컬맛집', labelEn: 'Local Food' },
+  { value: 'LOCAL_FESTIVAL', labelKo: '지역축제', labelEn: 'Local Festivals' },
+  { value: 'TRADITIONAL_MARKET', labelKo: '전통시장', labelEn: 'Traditional Markets' },
+  { value: 'CULTURE_EXPERIENCE', labelKo: '문화체험', labelEn: 'Cultural Experiences' },
+  { value: 'NATURE', labelKo: '자연명소', labelEn: 'Nature' },
+  { value: 'EXHIBITION_MUSEUM', labelKo: '전시/미술관', labelEn: 'Exhibitions & Museums' },
+  { value: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'K-Drama Locations' },
 ];
 
-const WEEKDAY_LABELS = [
+const WEEKDAY_LABELS_KO = [
   { label: '일', color: '#FD4C4D' },
   { label: '월', color: Palette.grey600 },
   { label: '화', color: Palette.grey600 },
@@ -78,6 +81,16 @@ const WEEKDAY_LABELS = [
   { label: '목', color: Palette.grey600 },
   { label: '금', color: Palette.grey600 },
   { label: '토', color: '#3B82F6' },
+] as const;
+
+const WEEKDAY_LABELS_EN = [
+  { label: 'Sun', color: '#FD4C4D' },
+  { label: 'Mon', color: Palette.grey600 },
+  { label: 'Tue', color: Palette.grey600 },
+  { label: 'Wed', color: Palette.grey600 },
+  { label: 'Thu', color: Palette.grey600 },
+  { label: 'Fri', color: Palette.grey600 },
+  { label: 'Sat', color: '#3B82F6' },
 ] as const;
 
 const EMPTY_DATE_RANGE: DateRangeSelection = { start: null, end: null };
@@ -153,6 +166,8 @@ export default function PlaceFilterBottomSheet({
   onClose,
 }: PlaceFilterBottomSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
+  const language = useLanguageStore((state) => state.language);
+  const isEnglish = language === 'EN';
   const [draftFilter, setDraftFilter] = useState<PlaceFilterSelection>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
@@ -222,10 +237,10 @@ export default function PlaceFilterBottomSheet({
             <View style={styles.filterHeaderRow}>
               <View style={styles.filterHeaderSpacer} />
               <View pointerEvents="none" style={styles.filterHeaderTitleWrap}>
-                <CustomText style={styles.filterHeaderTitle}>필터</CustomText>
+                <CustomText style={styles.filterHeaderTitle}>{isEnglish ? 'Filters' : '필터'}</CustomText>
               </View>
               <Pressable hitSlop={8} onPress={resetFilterDraft}>
-                <CustomText style={styles.resetText}>초기화</CustomText>
+                <CustomText style={styles.resetText}>{isEnglish ? 'Reset' : '초기화'}</CustomText>
               </Pressable>
             </View>
 
@@ -235,47 +250,54 @@ export default function PlaceFilterBottomSheet({
               bounces={false}
             >
               <View style={styles.section}>
-                <CustomText style={styles.sectionLabel}>날짜</CustomText>
+                <CustomText style={styles.sectionLabel}>{isEnglish ? 'Date' : '날짜'}</CustomText>
                 <View style={styles.chipWrap}>
-                  {DATE_OPTIONS.map((option) => (
+                  {DATE_OPTIONS.filter((option) => option.value !== 'NEXT_MONTH').map((option) => (
                     <FilterChip
                       key={option.value}
-                      label={option.label}
+                      label={isEnglish ? option.labelEn : option.labelKo}
                       selected={!hasCustomDateRange && draftFilter.datePreset === option.value}
                       onPress={() => handleDatePresetSelect(option.value)}
                     />
                   ))}
                 </View>
-
-                <Pressable
-                  style={[
-                    styles.dateSelectButton,
-                    hasCustomDateRange ? styles.dateSelectButtonSelected : null,
-                  ]}
-                  onPress={() => setIsDateSheetOpen((current) => !current)}
-                >
-                  <CalendarIcon
-                    color={hasCustomDateRange ? Palette.white : Palette.grey500}
+                <View style={styles.dateActionRow}>
+                  <FilterChip
+                    key="NEXT_MONTH"
+                    label={isEnglish ? 'Next Month' : '다음 달'}
+                    selected={!hasCustomDateRange && draftFilter.datePreset === 'NEXT_MONTH'}
+                    onPress={() => handleDatePresetSelect('NEXT_MONTH')}
                   />
-                  <CustomText
-                    numberOfLines={1}
+                  <Pressable
                     style={[
-                      styles.dateSelectText,
-                      hasCustomDateRange ? styles.dateSelectTextSelected : null,
+                      styles.dateSelectButton,
+                      hasCustomDateRange ? styles.dateSelectButtonSelected : null,
                     ]}
+                    onPress={() => setIsDateSheetOpen((current) => !current)}
                   >
-                    {formatPlaceFilterDateButtonLabel(draftFilter)}
-                  </CustomText>
-                </Pressable>
+                    <CalendarIcon
+                      color={hasCustomDateRange ? Palette.white : Palette.grey500}
+                    />
+                    <CustomText
+                      numberOfLines={1}
+                      style={[
+                        styles.dateSelectText,
+                        hasCustomDateRange ? styles.dateSelectTextSelected : null,
+                      ]}
+                    >
+                      {formatPlaceFilterDateButtonLabel(draftFilter, isEnglish ? 'EN' : 'KO')}
+                    </CustomText>
+                  </Pressable>
+                </View>
               </View>
 
               <View style={styles.section}>
-                <CustomText style={styles.sectionLabel}>관광 유형</CustomText>
+                <CustomText style={styles.sectionLabel}>{isEnglish ? 'Travel Type' : '관광 유형'}</CustomText>
                 <View style={styles.chipWrap}>
                   {TRAVEL_STYLE_OPTIONS.map((option) => (
                     <FilterChip
                       key={option.value}
-                      label={option.label}
+                      label={isEnglish ? option.labelEn : option.labelKo}
                       selected={draftFilter.travelStyles.includes(option.value)}
                       onPress={() => toggleTravelStyle(option.value)}
                     />
@@ -286,10 +308,10 @@ export default function PlaceFilterBottomSheet({
 
             <SafeAreaView edges={['bottom']} style={styles.filterFooter}>
               <Pressable style={styles.cancelButton} onPress={handleClose}>
-                <CustomText style={styles.cancelButtonText}>취소</CustomText>
+                <CustomText style={styles.cancelButtonText}>{isEnglish ? 'Cancel' : '취소'}</CustomText>
               </Pressable>
               <Pressable style={styles.applyButton} onPress={handleApply}>
-                <CustomText style={styles.applyButtonText}>적용하기</CustomText>
+                <CustomText style={styles.applyButtonText}>{isEnglish ? 'Apply Filters' : '적용하기'}</CustomText>
               </Pressable>
             </SafeAreaView>
           </Pressable>
@@ -300,6 +322,7 @@ export default function PlaceFilterBottomSheet({
           value={toDateRangeSelection(draftFilter.dateRange)}
           onApply={handleDateRangeApply}
           onClose={() => setIsDateSheetOpen(false)}
+          language={language}
         />
       </Modal>
     </>
@@ -311,16 +334,19 @@ function DateRangeBottomSheet({
   value,
   onApply,
   onClose,
+  language,
 }: {
   visible: boolean;
   value: DateRangeSelection;
   onApply: (value: DateRangeSelection) => void;
   onClose: () => void;
+  language: LanguageCode;
 }) {
   const { height: windowHeight } = useWindowDimensions();
   const [draft, setDraft] = useState<DateRangeSelection>(value);
   const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
   const today = useMemo(() => getTodayDateOnly(), []);
+  const isEnglish = language === 'EN';
 
   useEffect(() => {
     const listenerId = sheetTranslateY.addListener(() => {});
@@ -448,9 +474,9 @@ function DateRangeBottomSheet({
             </View>
 
             <View style={styles.dateHeaderRow}>
-              <CustomText style={styles.dateHeaderTitle}>날짜 선택</CustomText>
+              <CustomText style={styles.dateHeaderTitle}>{isEnglish ? 'Select Dates' : '날짜 선택'}</CustomText>
               <Pressable hitSlop={8} onPress={resetDraft}>
-                <CustomText style={styles.resetText}>초기화</CustomText>
+                <CustomText style={styles.resetText}>{isEnglish ? 'Reset' : '초기화'}</CustomText>
               </Pressable>
             </View>
 
@@ -468,6 +494,7 @@ function DateRangeBottomSheet({
                   selection={draft}
                   today={today}
                   onDayPress={handleDayPress}
+                  language={language}
                 />
               ))}
             </ScrollView>
@@ -475,10 +502,10 @@ function DateRangeBottomSheet({
 
           <View style={styles.dateFooter}>
             <Pressable style={styles.cancelButton} onPress={requestClose}>
-              <CustomText style={styles.cancelButtonText}>취소</CustomText>
+              <CustomText style={styles.cancelButtonText}>{isEnglish ? 'Cancel' : '취소'}</CustomText>
             </Pressable>
             <Pressable style={styles.applyButton} onPress={handleApply}>
-              <CustomText style={styles.applyButtonText}>적용하기</CustomText>
+              <CustomText style={styles.applyButtonText}>{isEnglish ? 'Done' : '적용하기'}</CustomText>
             </Pressable>
           </View>
         </Animated.View>
@@ -492,20 +519,24 @@ function CalendarMonth({
   selection,
   today,
   onDayPress,
+  language,
 }: {
   month: YearMonth;
   selection: DateRangeSelection;
   today: DateOnly;
   onDayPress: (date: DateOnly) => void;
+  language: LanguageCode;
 }) {
   const monthRows = useMemo(() => buildMonthRows(month), [month]);
+  const isEnglish = language === 'EN';
+  const weekdayLabels = isEnglish ? WEEKDAY_LABELS_EN : WEEKDAY_LABELS_KO;
 
   return (
     <View style={styles.monthBlock}>
-      <CustomText style={styles.monthLabel}>{formatMonthLabel(month)}</CustomText>
+      <CustomText style={styles.monthLabel}>{formatMonthLabel(month, language)}</CustomText>
 
       <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((weekday) => (
+        {weekdayLabels.map((weekday) => (
           <View key={weekday.label} style={styles.weekdayCell}>
             <CustomText style={[styles.weekdayLabel, { color: weekday.color }]}>{weekday.label}</CustomText>
           </View>
@@ -674,7 +705,14 @@ function shiftMonth(month: YearMonth, offset: number): YearMonth {
   };
 }
 
-function formatMonthLabel(month: YearMonth) {
+function formatMonthLabel(month: YearMonth, language: LanguageCode) {
+  if (language === 'EN') {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(month.year, month.monthIndex, 1));
+  }
+
   return `${month.year}년 ${month.monthIndex + 1}월`;
 }
 
@@ -825,6 +863,11 @@ const styles = StyleSheet.create({
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+  },
+  dateActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   chip: {
