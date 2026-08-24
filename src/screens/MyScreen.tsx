@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
@@ -15,33 +14,25 @@ import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
+import { buildLanguageDisplayLabels } from '@/utils/language-display';
+import { resolveProfileImageSource } from '@/utils/profile-image';
 
 type BuddyProfileState = {
   exists: boolean;
   profile: BuddyProfile | null;
 };
 
-const LANGUAGE_LABELS: Record<string, string> = {
-  KO: '한국어',
-  EN: '영어',
-  JP: '일본어',
-  CN: '중국어',
-};
-
-const KOREAN_LEVEL_LABELS: Record<string, string> = {
-  BEGINNER: '초급',
-  ELEMENTARY: '초급',
-  INTERMEDIATE: '중급',
-  ADVANCED: '고급',
-  FLUENT: '유창',
-  NATIVE: '원어민 수준',
-};
-
 export default function MyScreen() {
   const router = useRouter();
+  const t = useTranslation();
+  const copy = t.my;
+  const language = useLanguageStore((state) => state.language);
   const unreadMessageCount = useAuthStore((state) => state.unreadMessageCount);
+  const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [profileState, setProfileState] = useState<BuddyProfileState | null>(null);
   const [countryOptions, setCountryOptions] = useState<ProfileOptionItem[]>([]);
@@ -68,13 +59,14 @@ export default function MyScreen() {
         if (!cancelled) {
           setCountryOptions(options.countries);
           setProfileState(data);
+          if (data.profile?.profileImageUrl) {
+            useAuthStore.getState().setUserProfileImageUrl(data.profile.profileImageUrl);
+          }
           setProfileLoadError(null);
         }
       } catch (error) {
         if (!cancelled) {
-          setProfileLoadError(
-            error instanceof Error ? error.message : '프로필을 불러오지 못했어요.',
-          );
+          setProfileLoadError(error instanceof Error ? error.message : copy.error.description);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -84,7 +76,7 @@ export default function MyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [hasHydrated]);
+  }, [hasHydrated, copy.error.description]);
 
   const syncUnreadMessageCount = useCallback(() => {
     if (!hasHydrated) {
@@ -127,7 +119,7 @@ export default function MyScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
-        <CustomText style={styles.headerTitle}>마이페이지</CustomText>
+        <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
         <Pressable style={styles.headerIconButton} onPress={handleOpenSettings} hitSlop={10}>
           <SymbolView
             name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
@@ -148,27 +140,38 @@ export default function MyScreen() {
           </View>
         ) : profileLoadError ? (
           <ErrorState
-            message="프로필 정보를 불러오지 못했어요."
-            description={profileLoadError}
+            message={copy.error.title}
+            description={profileLoadError ?? copy.error.description}
             onPressRetry={loadProfile ?? undefined}
+            retryLabel={copy.error.retry}
           />
         ) : hasProfile ? (
           <View style={styles.profileContent}>
             <View style={styles.profileCard}>
               <View style={styles.profileTopRow}>
-                <ProfileAvatar profile={profile} />
+                <ProfileAvatar profile={profile} fallbackProfileImageUrl={authProfileImageUrl} />
 
                 <View style={styles.profileMeta}>
                   <View style={styles.nameRow}>
                     <CustomText style={styles.nickname}>{profile.nickname}</CustomText>
-                  <CustomText style={styles.nationality}>
+                    <CustomText style={styles.nationality}>
                       {' '}
-                      · {formatNationality(profile.nationality, countryOptions)}
+                      · {formatNationality(
+                        profile.nationalityCode ?? profile.nationality,
+                        countryOptions,
+                        language,
+                      )}
                     </CustomText>
                   </View>
 
                   <CustomText style={styles.languageLine}>
-                    {formatLanguageLine(profile.availableLanguages, profile.koreanLevel)}
+                    {formatLanguageLine(
+                      profile.availableLanguages,
+                      profile.koreanLevel,
+                      copy.languageFallback,
+                      copy.languageLabels,
+                      copy.koreanLevelLabels,
+                    )}
                   </CustomText>
                 </View>
 
@@ -185,46 +188,56 @@ export default function MyScreen() {
                           ? styles.publicBadgeTextPublic
                           : styles.publicBadgeTextPrivate,
                       ]}>
-                      {profile.profilePublic ? '프로필 공개 중' : '프로필 비공개'}
+                      {profile.profilePublic ? copy.profileBadgePublic : copy.profileBadgePrivate}
                     </CustomText>
                   </View>
                 </View>
               </View>
 
               <Pressable style={styles.editButton} onPress={handleOpenProfileSetup}>
-                <CustomText style={styles.editButtonText}>프로필 수정</CustomText>
+                <CustomText style={styles.editButtonText}>{copy.editProfile}</CustomText>
               </Pressable>
             </View>
 
             <View style={styles.shortcutRow}>
               <ShortcutCard
-                title="쪽지함"
+                title={copy.shortcuts.messages}
                 icon={<MessageIcon hasBadge={unreadMessageCount > 0} />}
                 onPress={() => router.push('/message-threads' as never)}
               />
 
               <ShortcutCard
-                title="출발지 관리"
+                title={copy.shortcuts.addresses}
                 icon={<MapPinIcon />}
                 onPress={() => router.push('/address')}
               />
             </View>
           </View>
         ) : (
-          <EmptyState onPress={handleOpenProfileSetup} />
-        )}
-      </ScrollView>
+          <EmptyState onPress={handleOpenProfileSetup} copy={t.my.emptyProfileSetup} />
+      )}
+    </ScrollView>
 
       <BottomNavBar active="my" />
     </SafeAreaView>
   );
 }
 
-function ProfileAvatar({ profile }: { profile: BuddyProfile }) {
-  if (profile.profileImageUrl) {
+function ProfileAvatar({
+  profile,
+  fallbackProfileImageUrl,
+}: {
+  profile: BuddyProfile;
+  fallbackProfileImageUrl: string | null;
+}) {
+  const imageSource = resolveProfileImageSource(
+    profile.profileImageUrl?.trim() || fallbackProfileImageUrl,
+  );
+
+  if (imageSource) {
     return (
       <Image
-        source={{ uri: profile.profileImageUrl }}
+        source={imageSource}
         style={styles.avatarImage}
         contentFit="cover"
       />
@@ -293,18 +306,42 @@ function MapPinIcon() {
   );
 }
 
-function formatNationality(nationality: string, options: ProfileOptionItem[]) {
-  return formatCountryDisplay(nationality, options);
+function formatNationality(
+  nationality: string,
+  options: ProfileOptionItem[],
+  language: 'KO' | 'EN',
+) {
+  return formatCountryDisplay(nationality, options, language);
 }
 
-function formatLanguageLine(languages: string[], koreanLevel: string) {
-  const mappedLanguages = languages.map((language) => LANGUAGE_LABELS[language] ?? language);
-  const levelLabel = KOREAN_LEVEL_LABELS[koreanLevel] ?? koreanLevel;
-  const languageText = mappedLanguages.length > 0 ? mappedLanguages.join(' · ') : '언어 정보 없음';
-  return levelLabel ? `${languageText} (${levelLabel})` : languageText;
+function formatLanguageLine(
+  languages: string[],
+  koreanLevel: string,
+  fallbackText: string,
+  languageLabels: Record<string, string>,
+  koreanLevelLabels: Record<string, string>,
+) {
+  const mappedLanguages = buildLanguageDisplayLabels(
+    languages,
+    koreanLevel,
+    (code) => languageLabels[code] ?? code,
+    (level) => koreanLevelLabels[level] ?? level,
+    fallbackText,
+  );
+  return mappedLanguages.join(' · ');
 }
 
-function EmptyState({ onPress }: { onPress: () => void }) {
+function EmptyState({
+  onPress,
+  copy,
+}: {
+  onPress: () => void;
+  copy: {
+    title: string;
+    description: string;
+    button: string;
+  };
+}) {
   return (
     <View style={styles.emptyState}>
       <Image
@@ -313,13 +350,11 @@ function EmptyState({ onPress }: { onPress: () => void }) {
         contentFit="contain"
       />
 
-      <CustomText style={styles.emptyTitle}>여행 메이트를 찾기 위한{'\n'}준비가 필요해요</CustomText>
-      <CustomText style={styles.emptyDescription}>
-        프로필을 완성하고 취향이 맞는 친구들을 만나보세요.
-      </CustomText>
+      <CustomText style={styles.emptyTitle}>{copy.title}</CustomText>
+      <CustomText style={styles.emptyDescription}>{copy.description}</CustomText>
 
       <Pressable style={styles.emptyButton} onPress={onPress}>
-        <CustomText style={styles.emptyButtonText}>프로필 설정하기</CustomText>
+        <CustomText style={styles.emptyButtonText}>{copy.button}</CustomText>
       </Pressable>
     </View>
   );
@@ -329,10 +364,12 @@ function ErrorState({
   message,
   description,
   onPressRetry,
+  retryLabel,
 }: {
   message: string;
   description: string;
   onPressRetry: (() => void) | undefined;
+  retryLabel: string;
 }) {
   return (
     <View style={styles.errorState}>
@@ -341,7 +378,7 @@ function ErrorState({
 
       {onPressRetry ? (
         <Pressable style={styles.errorButton} onPress={onPressRetry}>
-          <CustomText style={styles.errorButtonText}>다시 시도</CustomText>
+          <CustomText style={styles.errorButtonText}>{retryLabel}</CustomText>
         </Pressable>
       ) : null}
     </View>
@@ -406,6 +443,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 16,
+    position: 'relative',
   },
   avatarImage: {
     width: 50,
@@ -428,6 +466,7 @@ const styles = StyleSheet.create({
   },
   profileMeta: {
     flex: 1,
+    minWidth: 0,
     paddingTop: 2,
     gap: 8,
   },
@@ -453,8 +492,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey500,
+    flexShrink: 1,
   },
   badgeWrap: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
     alignItems: 'flex-end',
   },
   publicBadge: {
@@ -531,9 +574,8 @@ const styles = StyleSheet.create({
     minHeight: 560,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 0,
     paddingVertical: 24,
-    gap: 16,
   },
   emptyIllustration: {
     width: 133,
@@ -542,6 +584,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyTitle: {
+    alignSelf: 'stretch',
     textAlign: 'center',
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 18,
@@ -550,6 +593,7 @@ const styles = StyleSheet.create({
   },
   emptyDescription: {
     marginTop:8,
+    alignSelf: 'stretch',
     textAlign: 'center',
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,

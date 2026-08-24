@@ -1,4 +1,4 @@
-import type { ProfileOptionItem } from '@/api/types';
+import type { LanguageCode, ProfileOptionItem } from '@/api/types';
 
 const COUNTRY_CODE_BY_VALUE: Record<string, string> = {
   fr: 'FR',
@@ -41,6 +41,16 @@ const COUNTRY_LABEL_BY_CODE: Record<string, string> = {
   GB: 'United Kingdom',
 };
 
+const COUNTRY_LABEL_BY_CODE_KO: Record<string, string> = {
+  FR: '프랑스',
+  KR: '한국',
+  JP: '일본',
+  US: '미국',
+  CN: '중국',
+  TW: '대만',
+  GB: '영국',
+};
+
 export function resolveCountryOption(value: string, options?: ProfileOptionItem[]) {
   const normalizedValue = value.trim();
   return (
@@ -72,15 +82,21 @@ export function normalizeCountryCode(value: string) {
   return '';
 }
 
-export function getCountryDisplayName(value: string, options?: ProfileOptionItem[]) {
+export function getCountryDisplayName(
+  value: string,
+  options?: ProfileOptionItem[],
+  language: LanguageCode = 'EN',
+) {
   const option = resolveCountryOption(value, options);
   if (option) {
-    return option.labelEn;
+    return language === 'EN' ? option.labelEn : option.labelKo;
   }
 
   const normalizedCode = normalizeCountryCode(value);
-  if (normalizedCode && COUNTRY_LABEL_BY_CODE[normalizedCode]) {
-    return COUNTRY_LABEL_BY_CODE[normalizedCode];
+  if (normalizedCode) {
+    return language === 'EN'
+      ? COUNTRY_LABEL_BY_CODE[normalizedCode] ?? value.trim()
+      : COUNTRY_LABEL_BY_CODE_KO[normalizedCode] ?? value.trim();
   }
 
   return value.trim();
@@ -96,8 +112,12 @@ export function getCountryFlag(value: string, options?: ProfileOptionItem[]) {
   return String.fromCodePoint(...code.split('').map((char) => 127397 + char.charCodeAt(0)));
 }
 
-export function formatCountryDisplay(value: string, options?: ProfileOptionItem[]) {
-  const displayName = getCountryDisplayName(value, options);
+export function formatCountryDisplay(
+  value: string,
+  options?: ProfileOptionItem[],
+  language: LanguageCode = 'EN',
+) {
+  const displayName = getCountryDisplayName(value, options, language);
   const flag = getCountryFlag(value, options);
   return flag ? `${displayName} ${flag}` : displayName;
 }

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchMockRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
+import { fetchMockRouteDetail, type BuddyRoute, type DayTripStatus, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Component13,
@@ -28,15 +28,8 @@ import {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { goBackOrRoot } from '@/navigation/safe-back';
-
-const MODE_LABEL: Record<TransportMode, string> = {
-  WALK: '도보',
-  SUBWAY: '지하철',
-  BUS: '축제 셔틀버스',
-  TRAIN: '기차',
-  KTX: 'KTX',
-  SHUTTLE: '축제 셔틀버스',
-};
+import { useLanguageStore } from '@/store/language-store';
+import { formatTransportModeLabel } from '@/utils/transport-labels';
 
 const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number }>; width: number; height: number }> = {
   WALK: { Icon: Component13, width: 40, height: 40 },
@@ -56,25 +49,33 @@ const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; bor
   SHUTTLE: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
-const DAY_TRIP_TEXT = {
-  DAY_TRIP_AVAILABLE: '가능',
-  DAY_TRIP_HARD: '어려움',
-  DAY_TRIP_UNAVAILABLE: '불가',
-} as const;
+const DAY_TRIP_TEXT: Record<DayTripStatus, string> = {
+  DAY_TRIP_AVAILABLE: '당일치기 가능',
+  DAY_TRIP_UNAVAILABLE: '숙박 권장',
+};
 
 const HANDLE_OVERLAP = 180;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
 export default function RouteDetailScreen() {
   const router = useRouter();
-  const { routeId, placeName, placeAddress } = useLocalSearchParams<{ routeId: string; placeName?: string; placeAddress?: string }>();
+  const { routeId, placeName, placeAddress } = useLocalSearchParams<{
+    routeId: string;
+    placeName?: string;
+    placeAddress?: string;
+  }>();
   const [route, setRoute] = useState<BuddyRoute | null>(null);
+  const language = useLanguageStore((state) => state.language);
   const handleKtxCtaPress = useCallback(() => {
     Alert.alert('준비 중', 'KTX 예매 안내는 추후 연결될 예정입니다.');
   }, []);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const dayTripLabel =
+    route?.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
+      ? DAY_TRIP_TEXT.DAY_TRIP_AVAILABLE
+      : DAY_TRIP_TEXT.DAY_TRIP_UNAVAILABLE;
 
   useEffect(() => {
     if (!routeId || typeof placeName !== 'string' || typeof placeAddress !== 'string') return;
@@ -88,7 +89,7 @@ export default function RouteDetailScreen() {
     return () => {
       active = false;
     };
-  }, [routeId, placeName, placeAddress]);
+  }, [language, routeId, placeName, placeAddress]);
 
   const snapPoints = useMemo(() => {
     if (!mapAreaHeight) return ['50%', '100%'];
@@ -150,7 +151,7 @@ export default function RouteDetailScreen() {
             <View style={styles.summaryBox}>
               <SummaryItem label="교통수단" value={route.summary.recommendedTransportText} />
               <SummaryItem label="예상 시간" value={route.summary.estimatedOneWayTimeText} />
-              <SummaryItem label="당일치기" value={DAY_TRIP_TEXT[route.summary.dayTripStatus]} highlight />
+              <SummaryItem label="여행 판단" value={dayTripLabel} highlight />
             </View>
 
             {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} /> : null}
@@ -164,6 +165,7 @@ export default function RouteDetailScreen() {
                     segment={segment}
                     tip={tip}
                     onCtaPress={handleKtxCtaPress}
+                    language={language}
                   />
                 );
               })}
@@ -253,13 +255,21 @@ function SegmentTipContent({ tip }: { tip: RouteTip }) {
   );
 }
 
-function SegmentCardBody({ segment, onCtaPress }: { segment: RouteSegment; onCtaPress: () => void }) {
+function SegmentCardBody({
+  segment,
+  onCtaPress,
+  language,
+}: {
+  segment: RouteSegment;
+  onCtaPress: () => void;
+  language: 'KO' | 'EN';
+}) {
   return (
     <>
       <CustomText style={styles.segmentTitle}>{segment.startName} → {segment.endName}</CustomText>
       <View style={styles.segmentMetaRow}>
         <RouteMetaIcon type={segment.mode} />
-        <CustomText style={styles.segmentMeta}>{MODE_LABEL[segment.mode]}</CustomText>
+        <CustomText style={styles.segmentMeta}>{formatTransportModeLabel(segment.mode, language)}</CustomText>
         <RouteMetaClock />
         <CustomText style={styles.segmentMeta}>약 {segment.durationMinutes}분</CustomText>
       </View>
@@ -293,10 +303,12 @@ function TimelineItem({
   segment,
   tip,
   onCtaPress,
+  language,
 }: {
   segment: RouteSegment;
   tip?: RouteTip;
   onCtaPress: () => void;
+  language: 'KO' | 'EN';
 }) {
   const Icon = SEGMENT_ICON[segment.mode].Icon;
 
@@ -312,7 +324,7 @@ function TimelineItem({
       <View style={styles.timelineContent}>
         {tip ? <SegmentTipContent tip={tip} /> : null}
         <View style={styles.segmentCard}>
-          <SegmentCardBody segment={segment} onCtaPress={onCtaPress} />
+          <SegmentCardBody segment={segment} onCtaPress={onCtaPress} language={language} />
         </View>
       </View>
     </View>
@@ -422,13 +434,9 @@ const styles = StyleSheet.create({
   timeline: { marginTop: 18, paddingHorizontal: 16 },
   timelineAttached: { marginTop: 0 },
 
-  // 타임라인 한 항목의 바깥 wrapper. paddingBottom이 "카드-카드 사이 간격"을
-  // wrapper 자기 자신의 박스 안으로 포함시켜서, 절대위치 선이 그 간격까지 덮게 함.
   timelineItem: { position: 'relative', paddingBottom: ITEM_GAP },
   timelineItemLast: { paddingBottom: 0 },
 
-  // 레일: wrapper 전체(top:0~bottom:0, 간격 포함)를 절대위치로 채움 →
-  // stretch 계산과 무관하게 항상 정확한 높이를 가짐
   timelineRail: {
     position: 'absolute',
     top: 0,
@@ -437,7 +445,7 @@ const styles = StyleSheet.create({
     width: 42,
     alignItems: 'center',
   },
-  // 선도 레일 내부에서 top:0~bottom:0으로 꽉 채움 (마커 뒤로 자연스럽게 가려짐)
+
   railLine: {
     position: 'absolute',
     top: 0,
@@ -448,8 +456,6 @@ const styles = StyleSheet.create({
   },
   segmentMarker: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, borderWidth: 1 },
 
-  // 콘텐츠(팁+카드): 레일이 절대위치라 in-flow 폭을 차지하지 않으므로,
-  // 레일 폭(42) + 기존 간격(10) = 52 만큼 marginLeft로 직접 비켜줌
   timelineContent: { marginLeft: 52 },
 
   segmentCard: {

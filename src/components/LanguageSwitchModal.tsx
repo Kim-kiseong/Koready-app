@@ -48,6 +48,16 @@ export default function LanguageSwitchModal({
   const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
 
   useEffect(() => {
+    const backdropListenerId = backdropOpacity.addListener(() => {});
+    const sheetListenerId = sheetTranslateY.addListener(() => {});
+
+    return () => {
+      backdropOpacity.removeListener(backdropListenerId);
+      sheetTranslateY.removeListener(sheetListenerId);
+    };
+  }, [backdropOpacity, sheetTranslateY]);
+
+  useEffect(() => {
     if (!visible) return;
     backdropOpacity.setValue(0);
     sheetTranslateY.setValue(windowHeight);

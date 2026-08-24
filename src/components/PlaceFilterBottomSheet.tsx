@@ -322,6 +322,14 @@ function DateRangeBottomSheet({
   const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
   const today = useMemo(() => getTodayDateOnly(), []);
 
+  useEffect(() => {
+    const listenerId = sheetTranslateY.addListener(() => {});
+
+    return () => {
+      sheetTranslateY.removeListener(listenerId);
+    };
+  }, [sheetTranslateY]);
+
   const monthStart = useMemo<YearMonth>(() => {
     const now = new Date();
     return { year: now.getFullYear(), monthIndex: now.getMonth() };

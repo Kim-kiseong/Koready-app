@@ -23,6 +23,7 @@ type AuthState = {
   setSession: (session: TokenResponse) => void;
   applyLanguageChange: (data: LanguageResponse) => void;
   setBuddyProfileExists: (buddyProfileExists: boolean) => void;
+  setUserProfileImageUrl: (profileImageUrl: string | null) => void;
   setNextStep: (nextStep: NextStep) => void;
   clearSession: () => void;
 };
@@ -57,6 +58,10 @@ export const useAuthStore = create<AuthState>()(
         useLanguageStore.getState().setLanguage(data.language);
       },
       setBuddyProfileExists: (buddyProfileExists) => set({ buddyProfileExists }),
+      setUserProfileImageUrl: (profileImageUrl) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, profileImageUrl } : state.user,
+        })),
       setNextStep: (nextStep) => set({ nextStep }),
       clearSession: () => {
         set({

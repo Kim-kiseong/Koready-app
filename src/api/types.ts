@@ -54,9 +54,8 @@ export type ProfileOptionsEnvelope = {
 };
 
 export type ProfileImageUploadUrlRequest = {
-  fileName?: string | null;
-  mimeType?: string | null;
-  fileSize?: number | null;
+  contentType: 'image/jpeg' | 'image/png' | 'image/webp';
+  size: number;
 };
 
 export type ProfileImageUploadUrlResponse = {
@@ -102,6 +101,11 @@ export type BuddyProfileSocialLink = {
 
 export type PlaceMateSocialLink = BuddyProfileSocialLink;
 
+export type BuddyProfileSocialLinkRequest = {
+  type: string;
+  value: string;
+};
+
 export type PlaceMate = {
   profileId: number;
   profileImageUrl: string | null;
@@ -136,7 +140,7 @@ export type PlaceMatesEnvelope = {
   traceId: string;
 };
 
-export type SavedPlaceSource = 'PICKS' | 'PLACE_DETAIL' | 'SAVED';
+export type SavedPlaceSource = 'HOME_MONTHLY' | 'RECOMMENDATION_CARD' | 'PLACE_DETAIL' | 'MAP';
 
 export type SavedPlaceFestivalOccurrence = {
   occurrenceId: number;
@@ -333,6 +337,7 @@ export type BuddyProfile = {
   profileImageUrl: string | null;
   nickname: string;
   nationality: string;
+  nationalityCode?: string;
   availableLanguages: string[];
   koreanLevel: string;
   travelStyles: string[];
@@ -350,13 +355,13 @@ export type BuddyProfile = {
 export type BuddyProfileUpdateRequest = {
   profileImageUrl: string | null;
   nickname: string;
-  nationality: string;
+  nationalityCode: string;
   availableLanguages: string[];
   koreanLevel: string;
   bio: string;
   travelStyles: string[];
   buddyStyles: string[];
-  socialLinks: BuddyProfileSocialLinkInput[];
+  socialLinks: BuddyProfileSocialLinkRequest[];
   profilePublic: boolean;
   snsPublic: boolean;
   allowsMessages: boolean;

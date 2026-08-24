@@ -35,6 +35,8 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import { formatCountryDisplay, normalizeCountryCode } from '@/utils/country';
+import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
+import { resolveProfileImageUri } from '@/utils/profile-image';
 
 type MessageComposeParams = {
   receiverProfileId?: string;
@@ -64,9 +66,17 @@ const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'lang
   languages: [
     { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
     { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'CN', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
+    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
+    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
     { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
+    { code: 'TH', labelKo: '태국어', labelEn: 'Thai', displayOrder: 6 },
+    { code: 'VI', labelKo: '베트남어', labelEn: 'Vietnamese', displayOrder: 7 },
+    { code: 'MN', labelKo: '몽골어', labelEn: 'Mongolian', displayOrder: 8 },
+    { code: 'RU', labelKo: '러시아어', labelEn: 'Russian', displayOrder: 9 },
+    { code: 'ID', labelKo: '인도네시아어', labelEn: 'Indonesian', displayOrder: 10 },
+    { code: 'ES', labelKo: '스페인어', labelEn: 'Spanish', displayOrder: 11 },
+    { code: 'DE', labelKo: '독일어', labelEn: 'German', displayOrder: 12 },
+    { code: 'AR', labelKo: '아랍어', labelEn: 'Arabic', displayOrder: 13 },
   ],
   koreanLevels: [
     { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
@@ -275,15 +285,13 @@ export default function MessageComposeScreen() {
       return [];
     }
 
-    const sortedLanguages = sortCodesByOptionOrder(profile.availableLanguages, resolvedOptions.languages);
-    const levelLabel = getLabel(profile.koreanLevel, resolvedOptions.koreanLevels);
-    const hasKorean = sortedLanguages.includes('KO');
-
-    return sortedLanguages.map((languageCode, index) => {
-      const languageLabel = getLabel(languageCode, resolvedOptions.languages);
-      const shouldAppendLevel = languageCode === 'KO' || (!hasKorean && index === 0);
-      return shouldAppendLevel && levelLabel ? `${languageLabel} (${levelLabel})` : languageLabel;
-    });
+    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, resolvedOptions.languages);
+    return buildLanguageDisplayLabels(
+      sortedLanguages,
+      profile.koreanLevel,
+      (code) => getLabel(code, resolvedOptions.languages),
+      (level) => getLabel(level, resolvedOptions.koreanLevels),
+    );
   }, [profile, resolvedOptions.koreanLevels, resolvedOptions.languages]);
 
   const handleSend = useCallback(async () => {
@@ -611,10 +619,12 @@ function ScreenShell({ children }: { children: ReactNode }) {
 }
 
 function ProfileAvatar({ imageUrl, nickname }: { imageUrl: string | null; nickname: string }) {
+  const resolvedImageUrl = resolveProfileImageUri(imageUrl);
+
   return (
     <View style={styles.avatarWrap}>
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
+      {resolvedImageUrl ? (
+        <Image source={{ uri: resolvedImageUrl }} style={styles.avatarImage} contentFit="cover" />
       ) : (
         <View style={styles.avatarFallback}>
           <CustomText style={styles.avatarInitial}>{nickname.trim().charAt(0).toUpperCase() || 'M'}</CustomText>
@@ -642,6 +652,35 @@ function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
     }
 
     return leftIndex - rightIndex;
+  });
+}
+
+function sortLanguageCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
+  const order = new Map(
+    options.map((option, index) => [normalizeLanguageCode(option.code), index] as const),
+  );
+  const normalized = codes
+    .map(normalizeLanguageCode)
+    .filter((code): code is string => typeof code === 'string' && code.length > 0);
+  const unique = Array.from(new Set(normalized));
+
+  return unique.sort((left, right) => {
+    const leftOrder = order.get(left);
+    const rightOrder = order.get(right);
+
+    if (leftOrder == null && rightOrder == null) {
+      return left.localeCompare(right);
+    }
+
+    if (leftOrder == null) {
+      return 1;
+    }
+
+    if (rightOrder == null) {
+      return -1;
+    }
+
+    return leftOrder - rightOrder;
   });
 }
 

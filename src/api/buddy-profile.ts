@@ -38,9 +38,17 @@ const DEV_PROFILE_OPTIONS: ProfileOptionsResponse = {
   languages: sortOptions([
     { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
     { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'CN', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
+    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
+    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
     { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
+    { code: 'TH', labelKo: '태국어', labelEn: 'Thai', displayOrder: 6 },
+    { code: 'VI', labelKo: '베트남어', labelEn: 'Vietnamese', displayOrder: 7 },
+    { code: 'MN', labelKo: '몽골어', labelEn: 'Mongolian', displayOrder: 8 },
+    { code: 'RU', labelKo: '러시아어', labelEn: 'Russian', displayOrder: 9 },
+    { code: 'ID', labelKo: '인도네시아어', labelEn: 'Indonesian', displayOrder: 10 },
+    { code: 'ES', labelKo: '스페인어', labelEn: 'Spanish', displayOrder: 11 },
+    { code: 'DE', labelKo: '독일어', labelEn: 'German', displayOrder: 12 },
+    { code: 'AR', labelKo: '아랍어', labelEn: 'Arabic', displayOrder: 13 },
   ]),
   koreanLevels: sortOptions([
     { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
@@ -57,11 +65,12 @@ const DEV_PROFILE_OPTIONS: ProfileOptionsResponse = {
     { code: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'Drama Location', displayOrder: 7 },
   ]),
   buddyStyles: sortOptions([
-    { code: 'TRADITIONAL_CULTURE', labelKo: '전통 문화', labelEn: 'Traditional Culture', displayOrder: 1 },
-    { code: 'FOODIE', labelKo: '먹방 메이트', labelEn: 'Foodie', displayOrder: 2 },
-    { code: 'PHOTOGRAPHY', labelKo: '사진', labelEn: 'Photography', displayOrder: 3 },
-    { code: 'SLOW_TRAVEL', labelKo: '느린 여행', labelEn: 'Slow Travel', displayOrder: 4 },
-    { code: 'QUIET_TRAVEL', labelKo: '조용한 여행', labelEn: 'Quiet Travel', displayOrder: 5 },
+    { code: 'TRADITIONAL_CULTURE', labelKo: '전통문화', labelEn: 'Traditional culture', displayOrder: 1 },
+    { code: 'CAFE_TOUR', labelKo: '카페 투어', labelEn: 'Cafe tour', displayOrder: 2 },
+    { code: 'FOODIE', labelKo: '맛집 탐방', labelEn: 'Foodie', displayOrder: 3 },
+    { code: 'PHOTOGRAPHY', labelKo: '사진', labelEn: 'Photography', displayOrder: 4 },
+    { code: 'HANOK_EXPERIENCE', labelKo: '한옥 체험', labelEn: 'Hanok experience', displayOrder: 5 },
+    { code: 'QUIET_TRAVEL', labelKo: '조용한 여행', labelEn: 'Quiet travel', displayOrder: 6 },
   ]),
   socialPlatforms: sortOptions([
     { code: 'INSTAGRAM', labelKo: 'Instagram', labelEn: 'Instagram', displayOrder: 1 },
@@ -80,6 +89,7 @@ const DEV_BUDDY_PROFILE_RESPONSE: BuddyProfileResponse = {
     profileImageUrl: 'https://picsum.photos/id/1027/300/300',
     nickname: 'Luna',
     nationality: 'France',
+    nationalityCode: 'FR',
     availableLanguages: ['EN', 'KO'],
     koreanLevel: 'BEGINNER',
     travelStyles: ['LOCAL_FOOD', 'NATURE'],
@@ -114,6 +124,40 @@ function isDevMockSession() {
 
 function sortOptions<T extends ProfileOptionItem>(options: T[]): T[] {
   return [...options].sort((left, right) => left.displayOrder - right.displayOrder);
+}
+
+function normalizeSocialLinkUrl(type: string, value: string) {
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  const handle = normalizedValue.replace(/^@+/, '').trim();
+  if (!handle) {
+    return '';
+  }
+
+  const encodedHandle = encodeURIComponent(handle);
+  switch (type) {
+    case 'INSTAGRAM':
+      return `https://instagram.com/${encodedHandle}`;
+    case 'TIKTOK':
+      return `https://tiktok.com/@${encodedHandle}`;
+    case 'WECHAT':
+      return `https://wechat.com/${encodedHandle}`;
+    case 'XIAOHONGSHU':
+      return `https://xiaohongshu.com/${encodedHandle}`;
+    case 'LINE':
+      return `https://line.me/ti/p/${encodedHandle}`;
+    case 'KAKAOTALK':
+      return `https://open.kakao.com/o/${encodedHandle}`;
+    default:
+      return `https://${type.toLowerCase()}.com/${encodedHandle}`;
+  }
 }
 
 function cloneBuddyProfileResponse(response: BuddyProfileResponse): BuddyProfileResponse {
@@ -165,6 +209,7 @@ function getDefaultProfile(): BuddyProfile {
     profileImageUrl: null,
     nickname: '',
     nationality: '',
+    nationalityCode: '',
     availableLanguages: [],
     koreanLevel: '',
     travelStyles: [],
@@ -207,7 +252,7 @@ export async function updateMyBuddyProfile(
       ...current,
       profileImageUrl: payload.profileImageUrl,
       nickname: payload.nickname,
-      nationality: payload.nationality,
+      nationalityCode: payload.nationalityCode,
       availableLanguages: [...payload.availableLanguages],
       koreanLevel: payload.koreanLevel,
       bio: payload.bio,
@@ -215,8 +260,8 @@ export async function updateMyBuddyProfile(
       buddyStyles: [...payload.buddyStyles],
       socialLinks: payload.socialLinks.map((link) => ({
         type: link.type,
-        displayValue: link.displayValue,
-        url: link.url ?? '',
+        displayValue: link.value,
+        url: normalizeSocialLinkUrl(link.type, link.value),
       })),
       profilePublic: payload.profilePublic,
       snsPublic: payload.snsPublic,
@@ -269,11 +314,11 @@ export async function fetchBuddyProfile(profileId: number): Promise<BuddyProfile
 }
 
 export async function requestProfileImageUploadUrl(
-  payload?: ProfileImageUploadUrlRequest,
+  payload: ProfileImageUploadUrlRequest,
 ): Promise<ProfileImageUploadUrlResponse> {
   const response = await client.post<ProfileImageUploadUrlEnvelope>(
     '/users/me/profile-image/upload-url',
-    payload ?? undefined,
+    payload,
   );
   return response.data.data;
 }

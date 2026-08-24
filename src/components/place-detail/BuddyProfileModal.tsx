@@ -15,14 +15,17 @@ import {
 import { SvgUri } from 'react-native-svg';
 
 import { BuddyProfileNotFoundError, fetchBuddyProfile } from '@/api/buddy-profile';
-import type { BuddyProfileDetail, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
+import type { BuddyProfileDetail, LanguageCode, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { formatCountryDisplay } from '@/utils/country';
+import { buildLanguageDisplayLabels } from '@/utils/language-display';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
+import { resolveProfileImageUri } from '@/utils/profile-image';
+import { useLanguageStore } from '@/store/language-store';
 
 const SOCIAL_PLATFORM_ICON_URIS = {
   INSTAGRAM: Asset.fromModule(require('../../assets/images/social/instagram.svg')).uri,
@@ -45,9 +48,17 @@ const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
   languages: [
     { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
     { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'CN', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
+    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
+    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
     { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
+    { code: 'TH', labelKo: '태국어', labelEn: 'Thai', displayOrder: 6 },
+    { code: 'VI', labelKo: '베트남어', labelEn: 'Vietnamese', displayOrder: 7 },
+    { code: 'MN', labelKo: '몽골어', labelEn: 'Mongolian', displayOrder: 8 },
+    { code: 'RU', labelKo: '러시아어', labelEn: 'Russian', displayOrder: 9 },
+    { code: 'ID', labelKo: '인도네시아어', labelEn: 'Indonesian', displayOrder: 10 },
+    { code: 'ES', labelKo: '스페인어', labelEn: 'Spanish', displayOrder: 11 },
+    { code: 'DE', labelKo: '독일어', labelEn: 'German', displayOrder: 12 },
+    { code: 'AR', labelKo: '아랍어', labelEn: 'Arabic', displayOrder: 13 },
   ],
   koreanLevels: [
     { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
@@ -77,18 +88,78 @@ const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
 const FALLBACK_LANGUAGE_LABELS: Record<string, string> = {
   EN: '영어',
   KO: '한국어',
+  JA: '일본어',
   JP: '일본어',
+  ZH: '중국어',
   CN: '중국어',
   FR: '프랑스어',
+  TH: '태국어',
+  VI: '베트남어',
+  MN: '몽골어',
+  RU: '러시아어',
+  ID: '인도네시아어',
+  ES: '스페인어',
+  DE: '독일어',
+  AR: '아랍어',
 };
 
 const FALLBACK_KOREAN_LEVEL_LABELS: Record<string, string> = {
   BEGINNER: '초급',
-  ELEMENTARY: '초급',
   INTERMEDIATE: '중급',
   ADVANCED: '고급',
-  FLUENT: '유창',
-  NATIVE: '원어민 수준',
+};
+
+const PROFILE_MODAL_COPY: Record<
+  LanguageCode,
+  {
+    loading: string;
+    errorTitle: string;
+    retry: string;
+    subtitle: string;
+    sectionAbout: string;
+    aboutEmpty: string;
+    sectionTravelStyle: string;
+    sectionContact: string;
+    contactDescription: string;
+    canMessage: string;
+    cannotMessage: string;
+    linkErrorTitle: string;
+    linkErrorBody: string;
+    messageUnavailable: string;
+  }
+> = {
+  KO: {
+    loading: '프로필을 불러오는 중이에요',
+    errorTitle: '프로필을 불러오지 못했어요',
+    retry: '다시 시도',
+    subtitle: '같은 여행지에 관심 있는 Buddy예요.',
+    sectionAbout: '한 줄 소개',
+    aboutEmpty: '소개가 아직 없어요.',
+    sectionTravelStyle: '관심 여행 스타일',
+    sectionContact: '연락 정보',
+    contactDescription: '공개로 설정한 정보만 표시됩니다.',
+    canMessage: '쪽지 보내기',
+    cannotMessage: '쪽지 불가',
+    linkErrorTitle: '링크를 열 수 없어요',
+    linkErrorBody: '잠시 후 다시 시도해 주세요.',
+    messageUnavailable: '쪽지 불가',
+  },
+  EN: {
+    loading: 'Loading profile...',
+    errorTitle: "Couldn't load the profile.",
+    retry: 'Try again',
+    subtitle: 'This Buddy is interested in the same destination.',
+    sectionAbout: 'About',
+    aboutEmpty: 'No bio yet.',
+    sectionTravelStyle: 'Travel interests',
+    sectionContact: 'Contact info',
+    contactDescription: 'Only information set to public will be shown.',
+    canMessage: 'Send message',
+    cannotMessage: 'Not available',
+    linkErrorTitle: 'Couldn’t open the link',
+    linkErrorBody: 'Please try again in a moment.',
+    messageUnavailable: 'Message unavailable',
+  },
 };
 
 const FALLBACK_TRAVEL_STYLE_LABELS: Record<string, string> = {
@@ -108,15 +179,47 @@ const LANGUAGE_CODE_ALIASES: Record<string, string> = {
   KO: 'KO',
   KOREAN: 'KO',
   '한국어': 'KO',
-  JP: 'JP',
-  JAPANESE: 'JP',
-  '일본어': 'JP',
-  CN: 'CN',
-  CHINESE: 'CN',
-  '중국어': 'CN',
+  JP: 'JA',
+  JA: 'JA',
+  JPN: 'JA',
+  JAPANESE: 'JA',
+  '일본어': 'JA',
+  CN: 'ZH',
+  ZH: 'ZH',
+  CHN: 'ZH',
+  'ZH CN': 'ZH',
+  'ZH HANS': 'ZH',
+  'ZH HANT': 'ZH',
+  CHINESE: 'ZH',
+  '중국어': 'ZH',
   FR: 'FR',
   FRENCH: 'FR',
   '프랑스어': 'FR',
+  TH: 'TH',
+  THAI: 'TH',
+  '태국어': 'TH',
+  VI: 'VI',
+  VIETNAMESE: 'VI',
+  '베트남어': 'VI',
+  MN: 'MN',
+  MONGOLIAN: 'MN',
+  '몽골어': 'MN',
+  RU: 'RU',
+  RUSSIAN: 'RU',
+  '러시아어': 'RU',
+  ID: 'ID',
+  INDONESIAN: 'ID',
+  INDONESSIAN: 'ID',
+  '인도네시아어': 'ID',
+  ES: 'ES',
+  SPANISH: 'ES',
+  '스페인어': 'ES',
+  DE: 'DE',
+  GERMAN: 'DE',
+  '독일어': 'DE',
+  AR: 'AR',
+  ARABIC: 'AR',
+  '아랍어': 'AR',
 };
 
 const TRAVEL_STYLE_CODE_ALIASES: Record<string, string> = {
@@ -149,10 +252,6 @@ const KOREAN_LEVEL_CODE_ALIASES: Record<string, string> = {
   '중급': 'INTERMEDIATE',
   ADVANCED: 'ADVANCED',
   '고급': 'ADVANCED',
-  FLUENT: 'FLUENT',
-  '유창': 'FLUENT',
-  NATIVE: 'NATIVE',
-  '원어민 수준': 'NATIVE',
 };
 
 type BuddyProfileModalProps = {
@@ -176,6 +275,8 @@ export default function BuddyProfileModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const language = useLanguageStore((state) => state.language);
+  const copy = PROFILE_MODAL_COPY[language];
 
   const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const languageOptions = resolvedOptions.languages;
@@ -212,7 +313,7 @@ export default function BuddyProfileModal({
         }
 
         setProfile(loadedProfile);
-      } catch (loadError) {
+    } catch (loadError) {
         if (cancelled) {
           return;
         }
@@ -236,7 +337,7 @@ export default function BuddyProfileModal({
           return;
         }
 
-        setError(loadError instanceof Error ? loadError.message : '프로필을 불러오지 못했어요.');
+        setError(loadError instanceof Error ? loadError.message : copy.errorTitle);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -247,48 +348,46 @@ export default function BuddyProfileModal({
     return () => {
       cancelled = true;
     };
-  }, [fallbackProfile, handleClose, profileId, reloadKey, visible]);
+  }, [copy.errorTitle, fallbackProfile, handleClose, language, profileId, reloadKey, visible]);
 
   const languageChips = useMemo(() => {
     if (!profile) {
       return [];
     }
 
-    const sortedLanguages = sortCodesByOptionOrder(
-      profile.availableLanguages.map(normalizeLanguageCode),
-      languageOptions,
-    );
-    const levelLabel = getLabel(
-      normalizeKoreanLevel(profile.koreanLevel),
-      koreanLevelOptions,
-      FALLBACK_KOREAN_LEVEL_LABELS,
-    );
-    const hasKorean = sortedLanguages.includes('KO');
+    const languageFallbacks = createFallbackLabelMaps(languageOptions);
+    const levelFallbacks = createFallbackLabelMaps(koreanLevelOptions);
 
-    return sortedLanguages.map((languageCode, index) => {
-      const languageLabel = getLabel(languageCode, languageOptions, FALLBACK_LANGUAGE_LABELS);
-      const shouldAppendLevel = languageCode === 'KO' || (!hasKorean && index === 0);
-      return shouldAppendLevel && levelLabel ? `${languageLabel} (${levelLabel})` : languageLabel;
-    });
-  }, [koreanLevelOptions, languageOptions, profile]);
+    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, languageOptions);
+    return buildLanguageDisplayLabels(
+      sortedLanguages,
+      normalizeKoreanLevel(profile.koreanLevel),
+      (code) => getLabel(code, languageOptions, language, languageFallbacks),
+      (level) => getLabel(level, koreanLevelOptions, language, levelFallbacks),
+    );
+  }, [language, koreanLevelOptions, languageOptions, profile]);
 
   const travelStyleChips = useMemo(() => {
     if (!profile) {
       return [];
     }
 
+    const travelStyleFallbacks = createFallbackLabelMaps(travelStyleOptions);
+
     return sortCodesByOptionOrder(
       profile.travelStyles.map(normalizeTravelStyleCode),
       travelStyleOptions,
     ).map((code) =>
-      getLabel(code, travelStyleOptions, FALLBACK_TRAVEL_STYLE_LABELS),
+      getLabel(code, travelStyleOptions, language, travelStyleFallbacks),
     );
-  }, [profile, travelStyleOptions]);
+  }, [language, profile, travelStyleOptions]);
 
   const socialLinks = useMemo(() => {
     if (!profile) {
       return [];
     }
+
+    const socialFallbacks = createFallbackLabelMaps(socialPlatformOptions);
 
     return profile.socialLinks
       .map((link) => {
@@ -296,11 +395,11 @@ export default function BuddyProfileModal({
         return {
           ...link,
           type,
-          label: getLabel(type, socialPlatformOptions, type),
+          label: getLabel(type, socialPlatformOptions, language, socialFallbacks),
         };
       })
       .filter((link) => Boolean(link.url.trim()));
-  }, [profile, socialPlatformOptions]);
+  }, [language, profile, socialPlatformOptions]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
@@ -311,14 +410,14 @@ export default function BuddyProfileModal({
           {isLoading ? (
             <View style={styles.loadingState}>
               <ActivityIndicator color={Palette.primary} />
-              <CustomText style={styles.loadingText}>프로필을 불러오는 중이에요</CustomText>
+              <CustomText style={styles.loadingText}>{copy.loading}</CustomText>
             </View>
           ) : error ? (
             <View style={styles.loadingState}>
-              <CustomText style={styles.errorTitle}>프로필을 불러오지 못했어요</CustomText>
+              <CustomText style={styles.errorTitle}>{copy.errorTitle}</CustomText>
               <CustomText style={styles.errorDescription}>{error}</CustomText>
               <Pressable style={styles.retryButton} onPress={() => setReloadKey((value) => value + 1)}>
-                <CustomText style={styles.retryButtonText}>다시 시도</CustomText>
+                <CustomText style={styles.retryButtonText}>{copy.retry}</CustomText>
               </Pressable>
             </View>
           ) : profile ? (
@@ -338,6 +437,7 @@ export default function BuddyProfileModal({
                         {formatCountryDisplay(
                           profile.nationalityCode ?? profile.nationality ?? '',
                           resolvedOptions.countries,
+                          language,
                         )}
                       </CustomText>
                     </View>
@@ -350,22 +450,20 @@ export default function BuddyProfileModal({
                       ))}
                     </View>
 
-                    <CustomText style={styles.subtitle}>
-                      같은 여행지에 관심 있는 Buddy예요.
-                    </CustomText>
+                    <CustomText style={styles.subtitle}>{copy.subtitle}</CustomText>
                   </View>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.section}>
-                  <CustomText style={styles.sectionTitle}>한 줄 소개</CustomText>
-                  <CustomText style={styles.bioText}>{profile.bio || '소개가 아직 없어요.'}</CustomText>
+                  <CustomText style={styles.sectionTitle}>{copy.sectionAbout}</CustomText>
+                  <CustomText style={styles.bioText}>{profile.bio || copy.aboutEmpty}</CustomText>
                 </View>
 
                 {travelStyleChips.length > 0 ? (
                   <View style={styles.section}>
-                    <CustomText style={styles.sectionTitle}>관심 여행 스타일</CustomText>
+                    <CustomText style={styles.sectionTitle}>{copy.sectionTravelStyle}</CustomText>
                     <View style={styles.travelChipWrap}>
                       {travelStyleChips.map((chipLabel, index) => (
                         <View key={toStableListKey(chipLabel, index)} style={styles.travelChip}>
@@ -377,10 +475,8 @@ export default function BuddyProfileModal({
                 ) : null}
 
                 <View style={styles.section}>
-                  <CustomText style={styles.sectionTitle}>연락 정보</CustomText>
-                  <CustomText style={styles.contactDescription}>
-                    공개로 설정한 정보만 표시됩니다.
-                  </CustomText>
+                  <CustomText style={styles.sectionTitle}>{copy.sectionContact}</CustomText>
+                  <CustomText style={styles.contactDescription}>{copy.contactDescription}</CustomText>
 
                   <View style={styles.socialList}>
                     {socialLinks.map((link) => (
@@ -391,7 +487,7 @@ export default function BuddyProfileModal({
                           try {
                             await Linking.openURL(link.url);
                           } catch {
-                            Alert.alert('링크를 열 수 없어요', '잠시 후 다시 시도해 주세요.');
+                            Alert.alert(copy.linkErrorTitle, copy.linkErrorBody);
                           }
                         }}>
                         <SocialPlatformIcon code={link.type} size={40} />
@@ -430,7 +526,12 @@ export default function BuddyProfileModal({
                     return;
                   }
 
-                  Alert.alert('준비 중', '쪽지 보내기 기능은 다음 단계에서 연결됩니다.');
+                  Alert.alert(
+                    copy.messageUnavailable,
+                    language === 'EN'
+                      ? 'Message sending will be connected in the next step.'
+                      : '쪽지 보내기 기능은 다음 단계에서 연결됩니다.',
+                  );
                 }}>
                 <SendPlaneIcon color={profile.canMessage ? '#FFFFFF' : Palette.grey500} />
                 <CustomText
@@ -438,7 +539,7 @@ export default function BuddyProfileModal({
                     styles.messageButtonText,
                     !profile.canMessage && styles.messageButtonTextDisabled,
                   ]}>
-                  {profile.canMessage ? '쪽지 보내기' : '쪽지 불가'}
+                  {profile.canMessage ? copy.canMessage : copy.cannotMessage}
                 </CustomText>
               </Pressable>
             </>
@@ -459,10 +560,12 @@ export default function BuddyProfileModal({
 }
 
 function ProfileAvatar({ imageUrl, nickname }: { imageUrl: string | null; nickname: string }) {
+  const resolvedImageUrl = resolveProfileImageUri(imageUrl);
+
   return (
     <View style={styles.avatarFrame}>
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
+      {resolvedImageUrl ? (
+        <Image source={{ uri: resolvedImageUrl }} style={styles.avatarImage} contentFit="cover" />
       ) : (
         <View style={styles.avatarFallback}>
           <CustomText style={styles.avatarInitial}>{nickname.trim().charAt(0).toUpperCase() || 'M'}</CustomText>
@@ -507,26 +610,54 @@ function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
   });
 }
 
+function sortLanguageCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
+  const order = new Map(
+    options.map((option, index) => [normalizeLanguageCode(option.code), index] as const),
+  );
+  const normalized = codes
+    .map(normalizeLanguageCode)
+    .filter((code): code is string => typeof code === 'string' && code.length > 0);
+  const unique = Array.from(new Set(normalized));
+
+  return unique.sort((left, right) => {
+    const leftOrder = order.get(left);
+    const rightOrder = order.get(right);
+
+    if (leftOrder == null && rightOrder == null) {
+      return left.localeCompare(right);
+    }
+
+    if (leftOrder == null) {
+      return 1;
+    }
+
+    if (rightOrder == null) {
+      return -1;
+    }
+
+    return leftOrder - rightOrder;
+  });
+}
+
 function getLabel(
   code: string,
   options: ProfileOptionItem[],
-  fallbackLabel?: string | Record<string, string>,
+  language: LanguageCode,
+  fallbackLabels: Record<LanguageCode, Record<string, string>>,
 ) {
-  const matchedLabel = options.find((option) => option.code === code)?.labelKo;
-
-  if (matchedLabel) {
-    return matchedLabel;
+  const matchedOption = options.find((option) => option.code === code);
+  if (matchedOption) {
+    return language === 'EN' ? matchedOption.labelEn : matchedOption.labelKo;
   }
 
-  if (typeof fallbackLabel === 'string') {
-    return fallbackLabel;
-  }
+  return fallbackLabels[language][code] ?? fallbackLabels.KO[code] ?? code;
+}
 
-  if (fallbackLabel && code in fallbackLabel) {
-    return fallbackLabel[code];
-  }
-
-  return code;
+function createFallbackLabelMaps(options: ProfileOptionItem[]) {
+  return {
+    KO: Object.fromEntries(options.map((option) => [option.code, option.labelKo])),
+    EN: Object.fromEntries(options.map((option) => [option.code, option.labelEn])),
+  } satisfies Record<LanguageCode, Record<string, string>>;
 }
 
 function normalizeLanguageCode(value: string) {

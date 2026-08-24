@@ -6,15 +6,18 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 
 import { fetchProfileOptions } from '@/api/buddy-profile';
 import { fetchMockPlaceMates, fetchPlaceMates } from '@/api/mate';
-import type { PlaceMate, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
+import type { LanguageCode, PlaceMate, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
 import CustomText from '@/components/CustomText';
-import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
+import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
+import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
+import { resolveProfileImageUri } from '@/utils/profile-image';
 
 type MateTabProps = {
   placeId: string;
@@ -39,8 +42,8 @@ const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'lang
   languages: [
     { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
     { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'CN', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
+    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
+    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
     { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
   ],
   koreanLevels: [
@@ -50,21 +53,81 @@ const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'lang
   ],
 };
 
-const FALLBACK_LANGUAGE_LABELS: Record<string, string> = {
-  KO: '한국어',
-  EN: '영어',
-  JP: '일본어',
-  CN: '중국어',
-  FR: '프랑스어',
-};
-
-const FALLBACK_KOREAN_LEVEL_LABELS: Record<string, string> = {
-  BEGINNER: '초급',
-  ELEMENTARY: '초급',
-  INTERMEDIATE: '중급',
-  ADVANCED: '고급',
-  FLUENT: '유창',
-  NATIVE: '원어민 수준',
+const MATE_TAB_COPY: Record<
+  LanguageCode,
+  {
+    listTitle: string;
+    listSubtitle: string;
+    beforeTitle: string;
+    beforeDescription: string;
+    beforeButton: string;
+    afterTitle: string;
+    afterDescription: string;
+    devTitle: string;
+    devBefore: string;
+    devAfter: string;
+    devList: string;
+    moreButton: string;
+    profileButton: string;
+    messageButtonAvailable: string;
+    messageButtonUnavailable: string;
+    errorTitle: string;
+    errorDescription: string;
+    errorRetry: string;
+    messageUnavailableTitle: string;
+    messageUnavailableBody: string;
+    profileRequiredTitle: string;
+    profileRequiredBody: string;
+  }
+> = {
+  KO: {
+    listTitle: '이 여행지에 관심 있는 친구들',
+    listSubtitle: '같이 여행갈 친구를 찾고 있나요?',
+    beforeTitle: '여행 메이트를 찾기 위한\n준비가 필요해요',
+    beforeDescription: '프로필을 완성하고 취향이 맞는 친구들을 만나보세요.',
+    beforeButton: '프로필 설정하기',
+    afterTitle: '함께할 여행 메이트를\n찾고 있어요',
+    afterDescription: '나와 취향이 맞는 메이트가 나타나면 알려드릴게요.',
+    devTitle: '개발 토글',
+    devBefore: '프로필 설정 전',
+    devAfter: '프로필 설정 후',
+    devList: '다른 사용자들 목록',
+    moreButton: '메이트 더 보기',
+    profileButton: '프로필 보기',
+    messageButtonAvailable: '쪽지 보내기',
+    messageButtonUnavailable: '쪽지 불가',
+    errorTitle: '메이트를 불러오지 못했어요.',
+    errorDescription: '잠시 후 다시 시도해 주세요.',
+    errorRetry: '다시 시도',
+    messageUnavailableTitle: '쪽지 불가',
+    messageUnavailableBody: '이 메이트는 쪽지를 받을 수 없어요.',
+    profileRequiredTitle: '쪽지 불가',
+    profileRequiredBody: '프로필을 먼저 설정해 주세요.',
+  },
+  EN: {
+    listTitle: 'Travelers Interested in This Place',
+    listSubtitle: 'Looking for someone to travel with?',
+    beforeTitle: 'Set up your profile to find travel mates',
+    beforeDescription: 'Complete your profile and meet travelers who share your\ninterests.',
+    beforeButton: 'Set Up Profile',
+    afterTitle: 'Finding travel mates for you',
+    afterDescription: 'We’ll let you know when we find someone who matches\nyour travel style.',
+    devTitle: 'Dev preview',
+    devBefore: 'Before profile setup',
+    devAfter: 'After profile setup',
+    devList: 'Other users',
+    moreButton: 'See more mates',
+    profileButton: 'View profile',
+    messageButtonAvailable: 'Send message',
+    messageButtonUnavailable: 'Not available',
+    errorTitle: "Couldn't load travel buddies.",
+    errorDescription: 'Please try again in a moment.',
+    errorRetry: 'Try again',
+    messageUnavailableTitle: 'Message unavailable',
+    messageUnavailableBody: "This mate can't receive messages.",
+    profileRequiredTitle: 'Message unavailable',
+    profileRequiredBody: 'Please set up your profile first.',
+  },
 };
 
 export default function MateTab({
@@ -78,6 +141,8 @@ export default function MateTab({
   const router = useRouter();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const buddyProfileExists = useAuthStore((state) => state.buddyProfileExists);
+  const language = useLanguageStore((state) => state.language);
+  const copy = MATE_TAB_COPY[language];
 
   const [previewMode, setPreviewMode] = useState<PreviewMode | null>(null);
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
@@ -166,7 +231,7 @@ export default function MateTab({
         setNextCursor(matesResult.value.nextCursor);
         setHasMore(matesResult.value.hasMore);
       } else {
-        setError(extractErrorMessage(matesResult.reason));
+        setError(extractErrorMessage(matesResult.reason, copy.errorDescription));
       }
 
       setIsLoading(false);
@@ -175,7 +240,7 @@ export default function MateTab({
     return () => {
       cancelled = true;
     };
-  }, [buddyProfileExists, hasHydrated, isPreviewAfter, isPreviewBefore, isPreviewList, placeId, reloadToken]);
+  }, [buddyProfileExists, copy.errorDescription, hasHydrated, isPreviewAfter, isPreviewBefore, isPreviewList, language, placeId, reloadToken]);
 
   if (!hasHydrated) {
     return (
@@ -188,8 +253,13 @@ export default function MateTab({
   if (isPreviewBefore || (!previewMode && !buddyProfileExists)) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <BeforeProfileView onPressProfileEdit={() => router.push('/profile-edit' as never)} />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <BeforeProfileView
+          title={copy.beforeTitle}
+          description={copy.beforeDescription}
+          buttonLabel={copy.beforeButton}
+          onPressProfileEdit={() => router.push('/profile-edit' as never)}
+        />
       </View>
     );
   }
@@ -197,8 +267,8 @@ export default function MateTab({
   if (isPreviewAfter) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <SearchingState />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
   }
@@ -206,8 +276,8 @@ export default function MateTab({
   if (isPreviewList && isLoading) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <SearchingState />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
   }
@@ -215,8 +285,8 @@ export default function MateTab({
   if (isLoading) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <SearchingState />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
   }
@@ -224,12 +294,8 @@ export default function MateTab({
   if (error && mates.length === 0) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <ErrorState
-          message="메이트를 불러오지 못했어요."
-          description={error}
-          onPressRetry={() => setReloadToken((value) => value + 1)}
-        />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <ErrorState message={copy.errorTitle} description={error || copy.errorDescription} retryLabel={copy.errorRetry} onPressRetry={() => setReloadToken((value) => value + 1)} />
       </View>
     );
   }
@@ -237,8 +303,8 @@ export default function MateTab({
   if (mates.length === 0) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode)}
-        <SearchingState />
+        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
+        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
   }
@@ -261,19 +327,19 @@ export default function MateTab({
       setNextCursor(response.nextCursor);
       setHasMore(response.hasMore);
     } catch (loadMoreError) {
-      setError(extractErrorMessage(loadMoreError));
+      setError(extractErrorMessage(loadMoreError, copy.errorDescription));
     } finally {
       setIsLoadingMore(false);
     }
   };
 
   return (
-    <View style={styles.screenRoot}>
-      {renderPreviewSwitcher(previewMode, setPreviewMode)}
+      <View style={styles.screenRoot}>
+      {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
       <View style={styles.container}>
         <View style={styles.listHeader}>
-          <CustomText style={styles.listTitle}>이 여행지에 관심 있는 친구들</CustomText>
-          <CustomText style={styles.listSubtitle}>같이 여행갈 친구를 찾고 있나요?</CustomText>
+          <CustomText style={styles.listTitle}>{copy.listTitle}</CustomText>
+          <CustomText style={styles.listSubtitle}>{copy.listSubtitle}</CustomText>
         </View>
 
         <View style={styles.cardList}>
@@ -282,10 +348,12 @@ export default function MateTab({
               key={mate.profileId}
               mate={mate}
               options={resolvedOptions}
+              language={language}
+              copy={copy}
               onPressProfile={(profileId) => setSelectedProfileId(profileId)}
               onPressMessage={(profileId) => {
                 if (!mate.canMessage) {
-                  Alert.alert('쪽지 불가', '이 메이트는 쪽지를 받을 수 없어요.');
+                  Alert.alert(copy.messageUnavailableTitle, copy.messageUnavailableBody);
                   return;
                 }
 
@@ -307,7 +375,7 @@ export default function MateTab({
             {isLoadingMore ? (
               <ActivityIndicator color={Palette.primary} />
             ) : (
-              <CustomText style={styles.loadMoreText}>메이트 더 보기</CustomText>
+              <CustomText style={styles.loadMoreText}>{copy.moreButton}</CustomText>
             )}
           </Pressable>
         ) : null}
@@ -320,7 +388,7 @@ export default function MateTab({
         onPressMessage={(profileId) => {
           setSelectedProfileId(null);
           if (!buddyProfileExists) {
-            Alert.alert('쪽지 불가', '프로필을 먼저 설정해 주세요.');
+            Alert.alert(copy.profileRequiredTitle, copy.profileRequiredBody);
             return;
           }
 
@@ -332,7 +400,17 @@ export default function MateTab({
   );
 }
 
-function BeforeProfileView({ onPressProfileEdit }: { onPressProfileEdit: () => void }) {
+function BeforeProfileView({
+  title,
+  description,
+  buttonLabel,
+  onPressProfileEdit,
+}: {
+  title: string;
+  description: string;
+  buttonLabel: string;
+  onPressProfileEdit: () => void;
+}) {
   return (
     <View style={styles.previewBlock}>
       <Image
@@ -341,22 +419,18 @@ function BeforeProfileView({ onPressProfileEdit }: { onPressProfileEdit: () => v
         contentFit="contain"
       />
 
-      <CustomText style={styles.previewTitle}>
-        여행 메이트를 찾기 위한{`\n`}준비가 필요해요
-      </CustomText>
+      <CustomText style={styles.previewTitle}>{title}</CustomText>
 
-      <CustomText style={styles.previewDescription}>
-        프로필을 완성하고 취향이 맞는 친구들을 만나보세요.
-      </CustomText>
+      <CustomText style={styles.previewDescription}>{description}</CustomText>
 
       <Pressable style={styles.primaryButton} onPress={onPressProfileEdit}>
-        <CustomText style={styles.primaryButtonText}>프로필 설정하기</CustomText>
+        <CustomText style={styles.primaryButtonText}>{buttonLabel}</CustomText>
       </Pressable>
     </View>
   );
 }
 
-function SearchingState() {
+function SearchingState({ title, description }: { title: string; description: string }) {
   return (
     <View style={styles.searchingState}>
       <Image
@@ -365,13 +439,9 @@ function SearchingState() {
         contentFit="contain"
       />
 
-      <CustomText style={styles.previewTitle}>
-        함께할 여행 메이트를{`\n`}찾고 있어요
-      </CustomText>
+      <CustomText style={styles.previewTitle}>{title}</CustomText>
 
-      <CustomText style={styles.previewDescription}>
-        나와 취향이 맞는 메이트가 나타나면 알려드릴게요.
-      </CustomText>
+      <CustomText style={styles.previewDescription}>{description}</CustomText>
     </View>
   );
 }
@@ -379,10 +449,12 @@ function SearchingState() {
 function ErrorState({
   message,
   description,
+  retryLabel,
   onPressRetry,
 }: {
   message: string;
   description: string;
+  retryLabel: string;
   onPressRetry: () => void;
 }) {
   return (
@@ -391,7 +463,7 @@ function ErrorState({
       <CustomText style={styles.errorDescription}>{description}</CustomText>
 
       <Pressable style={styles.primaryButton} onPress={onPressRetry}>
-        <CustomText style={styles.primaryButtonText}>다시 시도</CustomText>
+        <CustomText style={styles.primaryButtonText}>{retryLabel}</CustomText>
       </Pressable>
     </View>
   );
@@ -400,16 +472,20 @@ function ErrorState({
 function MateCard({
   mate,
   options,
+  language,
+  copy,
   onPressProfile,
   onPressMessage,
 }: {
   mate: PlaceMate;
   options: Pick<ProfileOptionsResponse, 'countries' | 'languages' | 'koreanLevels'>;
+  language: LanguageCode;
+  copy: (typeof MATE_TAB_COPY)[LanguageCode];
   onPressProfile: (profileId: number) => void;
   onPressMessage: (profileId: number) => void;
 }) {
-  const countryLabel = formatCountryDisplay(mate.nationalityCode, options.countries);
-  const languageChips = buildLanguageChips(mate, options.languages, options.koreanLevels);
+  const countryLabel = formatCountryDisplay(mate.nationalityCode, options.countries, language);
+  const languageChips = buildLanguageChips(mate, options.languages, options.koreanLevels, language);
 
   return (
     <View style={styles.card}>
@@ -447,7 +523,7 @@ function MateCard({
             weight="regular"
             tintColor={Palette.primary}
           />
-          <CustomText style={styles.outlineButtonText}>프로필 보기</CustomText>
+          <CustomText style={styles.outlineButtonText}>{copy.profileButton}</CustomText>
         </Pressable>
 
         <Pressable
@@ -464,7 +540,7 @@ function MateCard({
               styles.filledButtonText,
               !mate.canMessage && styles.filledButtonTextDisabled,
             ]}>
-            {mate.canMessage ? '쪽지 보내기' : '쪽지 불가'}
+            {mate.canMessage ? copy.messageButtonAvailable : copy.messageButtonUnavailable}
           </CustomText>
         </Pressable>
       </View>
@@ -473,10 +549,12 @@ function MateCard({
 }
 
 function ProfileAvatar({ imageUrl, nickname }: { imageUrl: string | null; nickname: string }) {
+  const resolvedImageUrl = resolveProfileImageUri(imageUrl);
+
   return (
     <View style={styles.avatarFrame}>
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.avatarImage} contentFit="cover" />
+      {resolvedImageUrl ? (
+        <Image source={{ uri: resolvedImageUrl }} style={styles.avatarImage} contentFit="cover" />
       ) : (
         <View style={styles.avatarFallback}>
           <CustomText style={styles.avatarInitial}>{nickname.trim().charAt(0).toUpperCase() || 'M'}</CustomText>
@@ -490,36 +568,42 @@ function buildLanguageChips(
   mate: PlaceMate,
   languageOptions: ProfileOptionItem[],
   koreanLevelOptions: ProfileOptionItem[],
+  language: LanguageCode,
 ) {
   const sortedLanguages = sortCodesByOptionOrder(mate.availableLanguages, languageOptions);
-  const levelLabel = getLabel(
-    mate.koreanLevel,
-    koreanLevelOptions,
-    FALLBACK_KOREAN_LEVEL_LABELS,
-  );
-  const hasKorean = sortedLanguages.includes('KO');
+  const languageFallbacks = createFallbackLabelMaps(languageOptions);
+  const levelFallbacks = createFallbackLabelMaps(koreanLevelOptions);
 
-  return sortedLanguages.map((languageCode, index) => {
-    const languageLabel = getLabel(languageCode, languageOptions, FALLBACK_LANGUAGE_LABELS);
-    const shouldAppendLevel = languageCode === 'KO' || (!hasKorean && index === 0);
-    return shouldAppendLevel && levelLabel ? `${languageLabel} (${levelLabel})` : languageLabel;
-  });
+  return buildLanguageDisplayLabels(
+    sortedLanguages,
+    mate.koreanLevel,
+    (code) => getLabel(code, languageOptions, language, languageFallbacks),
+    (level) => getLabel(level, koreanLevelOptions, language, levelFallbacks),
+  );
 }
 
 function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
-  return [...codes].sort((left, right) => {
-    const leftIndex = options.findIndex((option) => option.code === left);
-    const rightIndex = options.findIndex((option) => option.code === right);
+  const order = new Map(
+    options.map((option, index) => [normalizeLanguageCode(option.code), index] as const),
+  );
+  const normalized = codes
+    .map(normalizeLanguageCode)
+    .filter((code): code is string => typeof code === 'string' && code.length > 0);
+  const unique = Array.from(new Set(normalized));
 
-    if (leftIndex === -1 && rightIndex === -1) {
+  return unique.sort((left, right) => {
+    const leftIndex = order.get(left);
+    const rightIndex = order.get(right);
+
+    if (leftIndex == null && rightIndex == null) {
       return left.localeCompare(right);
     }
 
-    if (leftIndex === -1) {
+    if (leftIndex == null) {
       return 1;
     }
 
-    if (rightIndex === -1) {
+    if (rightIndex == null) {
       return -1;
     }
 
@@ -530,9 +614,22 @@ function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
 function getLabel(
   code: string,
   options: ProfileOptionItem[],
-  fallbackLabels: Record<string, string>,
+  language: LanguageCode,
+  fallbackLabels: Record<LanguageCode, Record<string, string>>,
 ) {
-  return options.find((option) => option.code === code)?.labelKo ?? fallbackLabels[code] ?? code;
+  const matchedOption = options.find((option) => option.code === code);
+  if (matchedOption) {
+    return language === 'EN' ? matchedOption.labelEn : matchedOption.labelKo;
+  }
+
+  return fallbackLabels[language][code] ?? fallbackLabels.KO[code] ?? code;
+}
+
+function createFallbackLabelMaps(options: ProfileOptionItem[]) {
+  return {
+    KO: Object.fromEntries(options.map((option) => [option.code, option.labelKo])),
+    EN: Object.fromEntries(options.map((option) => [option.code, option.labelEn])),
+  } satisfies Record<LanguageCode, Record<string, string>>;
 }
 
 function mergeUniqueMates(existing: PlaceMate[], incoming: PlaceMate[]) {
@@ -545,23 +642,24 @@ function mergeUniqueMates(existing: PlaceMate[], incoming: PlaceMate[]) {
   return [...byProfileId.values()];
 }
 
-function extractErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '메이트 목록을 불러오지 못했어요.';
+function extractErrorMessage(error: unknown, fallbackMessage: string) {
+  return error instanceof Error ? error.message : fallbackMessage;
 }
 
 function renderPreviewSwitcher(
   previewMode: PreviewMode | null,
   onChangePreviewMode: (mode: PreviewMode | null) => void,
+  copy: (typeof MATE_TAB_COPY)[LanguageCode],
 ) {
   const options: Array<{ key: PreviewMode; label: string }> = [
-    { key: 'before', label: '프로필 설정 전' },
-    { key: 'after', label: '프로필 설정 후' },
-    { key: 'list', label: '다른 사용자들 목록' },
+    { key: 'before', label: copy.devBefore },
+    { key: 'after', label: copy.devAfter },
+    { key: 'list', label: copy.devList },
   ];
 
   return (
     <View style={styles.previewPanel}>
-      <CustomText style={styles.previewPanelTitle}>개발 토글</CustomText>
+      <CustomText style={styles.previewPanelTitle}>{copy.devTitle}</CustomText>
       <View style={styles.previewSwitcher}>
         {options.map((option) => {
           const isActive = previewMode === option.key;

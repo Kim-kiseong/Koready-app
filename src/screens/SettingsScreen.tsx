@@ -2,14 +2,24 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Alert,
+  InteractionManager,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { logout } from '@/api/auth';
 import CustomText from '@/components/CustomText';
+import ConfirmationModal from '@/components/ConfirmationModal';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
@@ -30,12 +40,26 @@ const ROW_RIGHT_ICON = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const t = useTranslation();
+  const copy = t.settings;
   const refreshToken = useAuthStore((state) => state.refreshToken);
   const deviceId = useAuthStore((state) => state.deviceId);
   const clearSession = useAuthStore((state) => state.clearSession);
   const language = useLanguageStore((state) => state.language);
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const [pendingAccountAction, setPendingAccountAction] = useState<'logout' | 'withdraw' | null>(null);
+  const accountActionModalCopy =
+    pendingAccountAction === 'logout'
+      ? {
+          message: copy.actions.logoutConfirmTitle,
+          confirmLabel: copy.actions.logoutConfirmButton,
+        }
+      : pendingAccountAction === 'withdraw'
+        ? {
+            message: copy.actions.withdrawConfirmTitle,
+            confirmLabel: copy.actions.withdrawConfirmButton,
+          }
+        : null;
 
   const handleLogout = async () => {
     if (!refreshToken) {
@@ -49,7 +73,7 @@ export default function SettingsScreen() {
       clearSession();
       router.replace('/login');
     } catch {
-      Alert.alert('오류', '로그아웃에 실패했습니다.');
+      Alert.alert(copy.alerts.errorTitle, copy.alerts.logoutFailed);
     }
   };
 
@@ -67,18 +91,11 @@ export default function SettingsScreen() {
     }
 
     if (action === 'withdraw') {
-      Alert.alert('준비 중', '회원 탈퇴는 다음 단계에서 연결됩니다.');
+      InteractionManager.runAfterInteractions(() => {
+        Alert.alert(copy.alerts.withdrawComingSoonTitle, copy.alerts.withdrawComingSoonBody);
+      });
     }
   };
-
-  const accountActionTitle =
-    pendingAccountAction === 'logout'
-      ? '정말 로그아웃 하시나요?'
-      : pendingAccountAction === 'withdraw'
-        ? '정말 탈퇴 하시나요?'
-        : '';
-
-  const accountActionConfirmLabel = pendingAccountAction === 'logout' ? '로그아웃' : '탈퇴하기';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -92,36 +109,38 @@ export default function SettingsScreen() {
           />
         </Pressable>
 
-        <CustomText style={styles.headerTitle}>설정</CustomText>
+        <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
         <View style={styles.headerButton} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <SettingsSection title="이용 설정">
+        <SettingsSection title={copy.sections.preferences}>
           <SettingRow
-            label="언어 설정"
+            label={copy.rows.language}
             icon={<LanguageSettingIcon />}
-            value={language === 'KO' ? '한국어' : 'English'}
+            value={copy.languageValues[language]}
             showDivider
             onPress={() => router.push('/settings-language')}
           />
         </SettingsSection>
 
-        <SettingsSection title="서비스 정보">
+        <SettingsSection title={copy.sections.serviceInfo}>
           <SettingRow
-            label="이용약관"
+            label={copy.rows.termsOfService}
             icon={<TermsIcon />}
             showDivider
             onPress={() => router.push('/terms')}
           />
           <SettingRow
-            label="개인정보 처리방침"
+            label={copy.rows.privacyPolicy}
             icon={<PrivacyPolicyIcon />}
             showDivider
-            onPress={() => Alert.alert('준비 중', '개인정보 처리방침 화면은 다음 단계에서 연결됩니다.')}
+            onPress={() =>
+              Alert.alert(copy.alerts.privacyComingSoonTitle, copy.alerts.privacyComingSoonBody)
+            }
           />
           <SettingRow
-            label="오픈소스 라이선스"
+            label={copy.rows.openSourceLicenses}
             icon={
               <SymbolView
                 name={{ ios: 'chevron.left.forwardslash.chevron.right', android: 'code', web: 'code' }}
@@ -131,10 +150,12 @@ export default function SettingsScreen() {
               />
             }
             showDivider
-            onPress={() => Alert.alert('준비 중', '오픈소스 라이선스 화면은 다음 단계에서 연결됩니다.')}
+            onPress={() =>
+              Alert.alert(copy.alerts.licensesComingSoonTitle, copy.alerts.licensesComingSoonBody)
+            }
           />
           <SettingRow
-            label="앱 버전"
+            label={copy.rows.appVersion}
             icon={
               <SymbolView
                 name={{ ios: 'info.circle', android: 'info', web: 'info' }}
@@ -144,55 +165,40 @@ export default function SettingsScreen() {
               />
             }
             value={appVersion}
-            onPress={() => Alert.alert('앱 버전', `현재 버전은 ${appVersion}입니다.`)}
+            onPress={() =>
+              Alert.alert(
+                copy.alerts.versionTitle,
+                copy.alerts.versionMessage.replace('{version}', appVersion),
+              )
+            }
           />
         </SettingsSection>
 
-        <SettingsSection title="계정">
+        <SettingsSection title={copy.sections.account}>
           <SettingRow
-            label="로그아웃"
+            label={copy.rows.logOut}
             icon={<LogoutIcon />}
             showDivider
             onPress={() => setPendingAccountAction('logout')}
           />
           <SettingRow
-            label="회원 탈퇴"
+            label={copy.rows.deleteAccount}
             icon={<WithdrawIcon />}
             onPress={() => setPendingAccountAction('withdraw')}
           />
         </SettingsSection>
       </ScrollView>
 
-      <Modal
-        visible={pendingAccountAction !== null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={closeAccountActionModal}>
-        <Pressable style={styles.modalOverlay} onPress={closeAccountActionModal}>
-          <Pressable
-            style={styles.modalCard}
-            onPress={(event) => {
-              event.stopPropagation();
-            }}>
-            <CustomText style={styles.modalTitle}>{accountActionTitle}</CustomText>
-
-            <View style={styles.modalButtonRow}>
-              <Pressable
-                style={({ pressed }) => [styles.modalButton, styles.modalCancelButton, pressed && styles.modalButtonPressed]}
-                onPress={closeAccountActionModal}>
-                <CustomText style={styles.modalCancelText}>취소</CustomText>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [styles.modalButton, styles.modalConfirmButton, pressed && styles.modalButtonPressed]}
-                onPress={handleConfirmAccountAction}>
-                <CustomText style={styles.modalConfirmText}>{accountActionConfirmLabel}</CustomText>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {accountActionModalCopy ? (
+        <ConfirmationModal
+          visible
+          message={accountActionModalCopy.message}
+          cancelLabel={copy.actions.cancel}
+          confirmLabel={accountActionModalCopy.confirmLabel}
+          onCancel={closeAccountActionModal}
+          onConfirm={handleConfirmAccountAction}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -340,7 +346,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 335,
+    maxWidth: 350,
     padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -386,6 +392,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 18,
     lineHeight: 25.2,
+    paddingHorizontal: 6,
   },
 });
 

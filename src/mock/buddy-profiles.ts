@@ -43,7 +43,7 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'INTERMEDIATE',
     travelStyles: ['NATURE', 'EXHIBITION_MUSEUM'],
     bio: '자연 풍경과 전시 관람을 함께 즐기는 여행을 좋아해요.',
-    buddyStyles: ['PHOTOGRAPHY', 'SLOW_TRAVEL'],
+    buddyStyles: ['PHOTOGRAPHY', 'QUIET_TRAVEL'],
     socialLinks: [
       {
         type: 'INSTAGRAM',
@@ -93,7 +93,7 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['DRAMA_LOCATION', 'LOCAL_FOOD'],
     bio: '좋네요! 다녀오면 어땠는지 알려주세요.',
-    buddyStyles: ['SLOW_TRAVEL', 'FOODIE'],
+    buddyStyles: ['QUIET_TRAVEL', 'FOODIE'],
     socialLinks: [],
     profilePublic: true,
     snsPublic: false,
