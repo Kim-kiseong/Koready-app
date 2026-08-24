@@ -27,6 +27,7 @@ import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useAuthStore } from '@/store/auth-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import { formatCountryDisplay } from '@/utils/country';
+import { resolveProfileImageUri } from '@/utils/profile-image';
 
 type MessageThreadParams = {
   threadId?: string;
@@ -527,8 +528,9 @@ function Avatar({
   size?: number;
 }) {
   const initials = nickname.trim().charAt(0).toUpperCase() || 'M';
+  const resolvedImageUrl = resolveProfileImageUri(imageUrl);
 
-  if (!imageUrl) {
+  if (!resolvedImageUrl) {
     return (
       <View style={[styles.avatarFallback, { width: size, height: size, borderRadius: size / 2 }]}>
         <CustomText style={styles.avatarInitial}>{initials}</CustomText>
@@ -536,7 +538,7 @@ function Avatar({
     );
   }
 
-  return <Image source={{ uri: imageUrl }} style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]} contentFit="cover" />;
+  return <Image source={{ uri: resolvedImageUrl }} style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]} contentFit="cover" />;
 }
 
 function resolvePlaceImageSource(place: PlaceDetail) {

@@ -178,7 +178,6 @@ function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
 export default function PicksScreen() {
   const router = useRouter();
   const t = useTranslation();
-  const language = useLanguageStore((state) => state.language);
   const SCOPES: { id: PicksScope; label: string }[] = [
     { id: 'NEARBY', label: t.picks.scopeNearby },
     { id: 'NATIONWIDE', label: t.picks.scopeNationwide },
@@ -240,7 +239,7 @@ export default function PicksScreen() {
 
     for (const card of reconciledCards) {
       if (!card.saved) continue;
-      upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS'));
+      upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'RECOMMENDATION_CARD'));
     }
   };
 
@@ -281,15 +280,6 @@ export default function PicksScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated]);
 
-  useEffect(() => {
-    // Re-fetch the deck when the language toggle changes mid-session so the
-    // dev-mock cards (and, for a real session, the Accept-Language-driven
-    // backend response) switch language without needing a full remount.
-    if (!hasHydrated || !onboardingHasHydrated || !savedPlaceHydrated) return;
-    loadDeck(scope);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
-
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
   useEffect(() => {
@@ -312,7 +302,7 @@ export default function PicksScreen() {
 
         for (const card of reconciledCards) {
           if (!card.saved) continue;
-          upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS'));
+          upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'RECOMMENDATION_CARD'));
         }
       })
       .catch(() => {
@@ -353,19 +343,26 @@ export default function PicksScreen() {
   const toggleSaved = () => {
     if (!card) return;
     const nextSaved = !card.saved;
-    recordEvent(card.placeId, nextSaved ? 'PLACE_SAVED' : 'PLACE_UNSAVED');
 
     setCards((prev) => prev.map((c, i) => (i === currentIndex ? { ...c, saved: nextSaved } : c)));
 
     if (nextSaved) {
-      const snapshot = buildSavedPlaceFromPickCard({ ...card, saved: true }, 'PICKS');
+      const snapshot = buildSavedPlaceFromPickCard({ ...card, saved: true }, 'RECOMMENDATION_CARD');
       upsertSavedPlace(snapshot);
-      void savePlace(card.placeId, 'PICKS', snapshot).catch(() => {});
+      void savePlace(card.placeId, 'RECOMMENDATION_CARD', snapshot)
+        .then(() => {
+          recordEvent(card.placeId, 'PLACE_SAVED');
+        })
+        .catch(() => {});
       return;
     }
 
     removeSavedPlace(card.placeId);
-    void unsavePlace(card.placeId).catch(() => {});
+    void unsavePlace(card.placeId)
+      .then(() => {
+        recordEvent(card.placeId, 'PLACE_UNSAVED');
+      })
+      .catch(() => {});
   };
 
   return (
@@ -422,7 +419,13 @@ export default function PicksScreen() {
             onExpand={() => recordEvent(card.placeId, 'CARD_EXPANDED')}
             onViewDetail={() => {
               recordEvent(card.placeId, 'PLACE_DETAIL_CLICKED');
-              router.push({ pathname: '/places/[placeId]', params: { placeId: String(card.placeId) } });
+              router.push({
+                pathname: '/places/[placeId]',
+                params: {
+                  placeId: String(card.placeId),
+                  deckId: deckId ?? undefined,
+                },
+              });
             }}
             canSwipeNext={currentIndex + 1 < cards.length}
             canSwipePrev={currentIndex > 0}

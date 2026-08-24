@@ -52,6 +52,177 @@ export interface Translations {
     saved: string;
     my: string;
   };
+  settings: {
+    title: string;
+    sections: {
+      preferences: string;
+      serviceInfo: string;
+      account: string;
+    };
+    rows: {
+      language: string;
+      termsOfService: string;
+      privacyPolicy: string;
+      openSourceLicenses: string;
+      appVersion: string;
+      logOut: string;
+      deleteAccount: string;
+    };
+    languageValues: Record<LanguageCode, string>;
+    actions: {
+      logoutConfirmTitle: string;
+      withdrawConfirmTitle: string;
+      logoutConfirmButton: string;
+      withdrawConfirmButton: string;
+      cancel: string;
+    };
+    alerts: {
+      errorTitle: string;
+      logoutFailed: string;
+      privacyComingSoonTitle: string;
+      privacyComingSoonBody: string;
+      licensesComingSoonTitle: string;
+      licensesComingSoonBody: string;
+      versionTitle: string;
+      versionMessage: string;
+      withdrawComingSoonTitle: string;
+      withdrawComingSoonBody: string;
+    };
+  };
+  my: {
+    title: string;
+    profileBadgePublic: string;
+    profileBadgePrivate: string;
+    editProfile: string;
+    languageLabels: Record<string, string>;
+    koreanLevelLabels: Record<string, string>;
+    shortcuts: {
+      messages: string;
+      addresses: string;
+    };
+    error: {
+      title: string;
+      retry: string;
+      description: string;
+    };
+    languageFallback: string;
+    emptyProfileSetup: {
+      title: string;
+      description: string;
+      button: string;
+    };
+  };
+  settingsLanguage: {
+    title: string;
+    subtitle: string;
+    options: Record<LanguageCode, { title: string; subtitle: string }>;
+    done: string;
+    unsavedChangesMessage: string;
+    cancel: string;
+    leave: string;
+    errorTitle: string;
+    errorMessage: string;
+  };
+  profileEdit: {
+    titleSetup: string;
+    titleEdit: string;
+    loadErrorTitle: string;
+    retry: string;
+    alerts: {
+      errorTitle: string;
+      infoTitle: string;
+      travelStyleMin: string;
+      travelStyleMax: string;
+      photoPermissionTitle: string;
+      photoPermissionBody: string;
+      unsupportedTypeTitle: string;
+      unsupportedTypeBody: string;
+      unreadableFileTitle: string;
+      unreadableFileBody: string;
+      fileTooLargeTitle: string;
+      fileTooLargeBody: string;
+    };
+    errors: {
+      generic: string;
+      uploadFailed: string;
+      uploadUrl: string;
+      imageId: string;
+      loadOptions: string;
+    };
+    sections: {
+      profilePhoto: string;
+      nickname: string;
+      nationality: string;
+      languages: string;
+      koreanLevel: string;
+      bio: string;
+      travelStyles: {
+        title: string;
+        subtitle: string;
+      };
+      buddyStyles: {
+        title: string;
+        subtitle: string;
+      };
+      socialAccounts: {
+        title: string;
+        subtitle: string;
+      };
+      contactSettings: string;
+    };
+    placeholders: {
+      nickname: string;
+      nationality: string;
+      bio: string;
+      snsId: string;
+    };
+    buttons: {
+      done: string;
+      addSocialAccount: string;
+      cancel: string;
+      save: string;
+    };
+    toggles: {
+      profilePublic: string;
+      snsPublic: string;
+      allowsMessages: string;
+    };
+    modals: {
+      country: {
+        title: string;
+        subtitle: string;
+        confirm: string;
+        searchPlaceholder: string;
+      };
+      language: {
+        title: string;
+        subtitle: string;
+        confirm: string;
+        searchPlaceholder: string;
+      };
+      searchNoResults: string;
+      unsavedChanges: {
+        message: string;
+        cancel: string;
+        confirm: string;
+      };
+      avatar: {
+        selectPhoto: string;
+        deletePhoto: string;
+        cancel: string;
+      };
+      sns: {
+        title: string;
+        platformsTitle: string;
+        platformsSubtitle: string;
+        idsTitle: string;
+        idsSubtitle: string;
+        inputPlaceholder: string;
+        cancel: string;
+        save: string;
+      };
+    };
+  };
   guideList: {
     title: string;
     description: Record<GuideCategoryId, string>;
@@ -135,6 +306,45 @@ export interface Translations {
     };
     enjoyTitle: string;
     nearbyTitle: string;
+    routeTab: {
+      title: string;
+      subtitle: string;
+      loading: string;
+      error: string;
+      retry: string;
+      summaryLabels: {
+        transport: string;
+        time: string;
+        dayTrip: string;
+      };
+      timeFormats: {
+        minuteOnly: string;
+        hourOnly: string;
+        hourMinute: string;
+      };
+      statLabels: {
+        estimatedTime: string;
+        transport: string;
+        difficulty: string;
+        dayTrip: string;
+      };
+      difficultyValues: {
+        easy: string;
+        normal: string;
+        hard: string;
+      };
+      dayTripValues: {
+        available: string;
+        unavailable: string;
+      };
+      fareTitle: string;
+      fareOneWay: string;
+      fareRoundTrip: string;
+      farePrefix: string;
+      fareDisclaimer: string;
+      detailButton: string;
+      routeBetween: string;
+    };
     routePlaceholder: string;
     matePlaceholder: string;
   };
@@ -226,6 +436,206 @@ export const ko: Translations = {
     picks: '추천',
     saved: '저장',
     my: '마이',
+  },
+  settings: {
+    title: '설정',
+    sections: {
+      preferences: '이용 설정',
+      serviceInfo: '서비스 정보',
+      account: '계정',
+    },
+    rows: {
+      language: '언어 설정',
+      termsOfService: '이용약관',
+      privacyPolicy: '개인정보 처리방침',
+      openSourceLicenses: '오픈소스 라이선스',
+      appVersion: '앱 버전',
+      logOut: '로그아웃',
+      deleteAccount: '회원 탈퇴',
+    },
+    languageValues: {
+      KO: '한국어',
+      EN: 'English',
+    },
+    actions: {
+      logoutConfirmTitle: '정말 로그아웃 하시나요?',
+      withdrawConfirmTitle: '정말 탈퇴 하시나요?',
+      logoutConfirmButton: '로그아웃',
+      withdrawConfirmButton: '탈퇴하기',
+      cancel: '취소',
+    },
+    alerts: {
+      errorTitle: '오류',
+      logoutFailed: '로그아웃에 실패했습니다.',
+      privacyComingSoonTitle: '준비 중',
+      privacyComingSoonBody: '개인정보 처리방침 화면은 다음 단계에서 연결됩니다.',
+      licensesComingSoonTitle: '준비 중',
+      licensesComingSoonBody: '오픈소스 라이선스 화면은 다음 단계에서 연결됩니다.',
+      versionTitle: '앱 버전',
+      versionMessage: '현재 버전은 {version}입니다.',
+      withdrawComingSoonTitle: '준비 중',
+      withdrawComingSoonBody: '회원 탈퇴는 다음 단계에서 연결됩니다.',
+    },
+  },
+  my: {
+    title: '마이페이지',
+    profileBadgePublic: '프로필 공개 중',
+    profileBadgePrivate: '프로필 비공개',
+    editProfile: '프로필 수정',
+    languageLabels: {
+      KO: '한국어',
+      EN: '영어',
+      JA: '일본어',
+      JP: '일본어',
+      ZH: '중국어',
+      CN: '중국어',
+      TH: '태국어',
+      VI: '베트남어',
+      MN: '몽골어',
+      RU: '러시아어',
+      ID: '인도네시아어',
+      ES: '스페인어',
+      FR: '프랑스어',
+      DE: '독일어',
+      AR: '아랍어',
+    },
+    koreanLevelLabels: {
+      BEGINNER: '초급',
+      ELEMENTARY: '초급',
+      INTERMEDIATE: '중급',
+      ADVANCED: '고급',
+      FLUENT: '유창',
+      NATIVE: '원어민 수준',
+    },
+    shortcuts: {
+      messages: '쪽지함',
+      addresses: '출발지 관리',
+    },
+    error: {
+      title: '오류',
+      retry: '다시 시도',
+      description: '프로필 정보를 불러오지 못했어요.',
+    },
+    languageFallback: '언어 정보 없음',
+    emptyProfileSetup: {
+      title: '여행 메이트를 찾기 위한\n준비가 필요해요',
+      description: '프로필을 완성하고 취향이 맞는 친구들을 만나보세요.',
+      button: '프로필 설정하기',
+    },
+  },
+  settingsLanguage: {
+    title: '언어를 선택해주세요',
+    subtitle: 'Choose your language',
+    options: {
+      EN: { title: 'English', subtitle: '영어' },
+      KO: { title: '한국어', subtitle: 'Korean' },
+    },
+    done: '완료',
+    unsavedChangesMessage: '지금 나가면 \n변경한 내용이 저장되지 않아요',
+    cancel: '취소',
+    leave: '나가기',
+    errorTitle: '오류',
+    errorMessage: '언어 설정에 실패했습니다.',
+  },
+  profileEdit: {
+    titleSetup: '프로필 설정',
+    titleEdit: '프로필 수정',
+    loadErrorTitle: '프로필 설정을 불러오지 못했어요',
+    retry: '다시 시도',
+    alerts: {
+      errorTitle: '오류',
+      infoTitle: '안내',
+      travelStyleMin: '관심 여행 스타일은 최소 1개 이상 선택해야 해요.',
+      travelStyleMax: '관심 여행 스타일은 최대 4개까지 선택할 수 있어요.',
+      photoPermissionTitle: '권한 필요',
+      photoPermissionBody: '사진 보관함 접근 권한을 허용해 주세요.',
+      unsupportedTypeTitle: '지원하지 않는 파일 형식',
+      unsupportedTypeBody: 'JPEG, PNG, WebP 사진만 업로드할 수 있어요.',
+      unreadableFileTitle: '파일을 읽을 수 없어요',
+      unreadableFileBody: '다른 사진으로 다시 시도해 주세요.',
+      fileTooLargeTitle: '파일이 너무 커요',
+      fileTooLargeBody: '5MiB 이하의 사진만 업로드할 수 있어요.',
+    },
+    errors: {
+      generic: '알 수 없는 오류가 발생했습니다.',
+      uploadFailed: '프로필 사진 업로드에 실패했어요.',
+      uploadUrl: '프로필 사진 업로드 URL을 받지 못했어요.',
+      imageId: '프로필 사진 ID를 받지 못했어요.',
+      loadOptions: '프로필 옵션을 불러오지 못했습니다.',
+    },
+    sections: {
+      profilePhoto: '프로필 사진',
+      nickname: '닉네임',
+      nationality: '국적',
+      languages: '사용 언어',
+      koreanLevel: '한국어 수준',
+      bio: '한 줄 소개',
+      travelStyles: {
+        title: '관심 여행 스타일',
+        subtitle: '중복 선택이 가능해요',
+      },
+      buddyStyles: {
+        title: '동행 스타일',
+        subtitle: '중복 선택이 가능해요',
+      },
+      socialAccounts: {
+        title: '공개 SNS',
+        subtitle: '최대 2개까지 공개할 수 있어요.',
+      },
+      contactSettings: '연락 및 공개 설정',
+    },
+    placeholders: {
+      nickname: '나를 표현하는 닉네임을 적어주세요',
+      nationality: '어디서 오셨나요?',
+      bio: '나를 한 줄로 표현한다면?',
+      snsId: '아이디를 입력해 주세요.',
+    },
+    buttons: {
+      done: '완료',
+      addSocialAccount: '+ SNS 추가',
+      cancel: '취소',
+      save: '저장',
+    },
+    toggles: {
+      profilePublic: '프로필 공개',
+      snsPublic: 'SNS 공개',
+      allowsMessages: '쪽지 받기',
+    },
+    modals: {
+      country: {
+        title: '국적 선택',
+        subtitle: '어느 나라에서 오셨나요?',
+        confirm: '선택',
+        searchPlaceholder: '국가 검색',
+      },
+      language: {
+        title: '사용 언어 추가',
+        subtitle: '대화할 수 있는 언어를 선택해 주세요.',
+        confirm: '추가',
+        searchPlaceholder: '언어 검색',
+      },
+      searchNoResults: '검색 결과가 없습니다.',
+      unsavedChanges: {
+        message: '지금 나가면 \n변경한 내용이 저장되지 않아요',
+        cancel: '취소',
+        confirm: '나가기',
+      },
+      avatar: {
+        selectPhoto: '사진 선택',
+        deletePhoto: '프로필 사진 삭제',
+        cancel: '취소',
+      },
+      sns: {
+        title: 'SNS 공개 설정',
+        platformsTitle: '플랫폼 선택',
+        platformsSubtitle: '최대 2개까지 공개할 수 있어요.',
+        idsTitle: '아이디 입력',
+        idsSubtitle: '선택한 플랫폼의 아이디를 입력해 주세요.',
+        inputPlaceholder: '아이디를 입력해 주세요.',
+        cancel: '취소',
+        save: '저장',
+      },
+    },
   },
   guideList: {
     title: '한국 여행 가이드',
@@ -348,6 +758,45 @@ export const ko: Translations = {
     },
     enjoyTitle: '이렇게 즐겨보세요',
     nearbyTitle: '같이 가보면 좋은 명소',
+    routeTab: {
+      title: 'Buddy Route',
+      subtitle: '추천 여행지까지 가는 방법을 확인해보세요.',
+      loading: '이동 경로를 불러오는 중이에요.',
+      error: '이동 경로를 불러오지 못했어요.',
+      retry: '다시 시도',
+      summaryLabels: {
+        transport: '교통수단',
+        time: '예상 시간',
+        dayTrip: '당일치기',
+      },
+      timeFormats: {
+        minuteOnly: '약 {minutes}분',
+        hourOnly: '약 {hours}시간',
+        hourMinute: '약 {hours}시간 {minutes}분',
+      },
+      statLabels: {
+        estimatedTime: '예상 이동 시간',
+        transport: '추천 교통수단',
+        difficulty: '이동 난이도',
+        dayTrip: '여행 판단',
+      },
+      difficultyValues: {
+        easy: '쉬움',
+        normal: '보통',
+        hard: '어려움',
+      },
+      dayTripValues: {
+        available: '당일치기 가능',
+        unavailable: '숙박 권장',
+      },
+      fareTitle: '예상 교통비',
+      fareOneWay: 'KTX 편도',
+      fareRoundTrip: 'KTX 왕복',
+      farePrefix: '약',
+      fareDisclaimer: '* 전체 경비 기준으로 작성',
+      detailButton: '자세한 경로 보기  →',
+      routeBetween: '{origin}에서 {destination}까지',
+    },
     routePlaceholder: '이동 정보는 준비 중이에요.',
     matePlaceholder: '메이트 기능은 준비 중이에요.',
   },

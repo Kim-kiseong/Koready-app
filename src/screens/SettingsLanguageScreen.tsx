@@ -2,29 +2,27 @@ import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { LanguageCode } from '@/api/types';
 import { updateMyLanguage } from '@/api/user';
 import CustomText from '@/components/CustomText';
+import ConfirmationModal from '@/components/ConfirmationModal';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
-
-type UnsavedChangesModalProps = {
-  visible: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
 
 export default function SettingsLanguageScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
+  const copy = t.settingsLanguage;
   const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
   const hasHydrated = useLanguageStore((state) => state.hasHydrated);
   const savedLanguage = useLanguageStore((state) => state.language);
@@ -79,7 +77,7 @@ export default function SettingsLanguageScreen() {
       setUnsavedChangesModalOpen(false);
       setIsLeaving(true);
     } catch (error) {
-      Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
+      Alert.alert(copy.errorTitle, error instanceof Error ? error.message : copy.errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -125,20 +123,20 @@ export default function SettingsLanguageScreen() {
 
       <View style={styles.content}>
         <View style={styles.textGroup}>
-          <CustomText style={styles.title}>언어를 선택해주세요</CustomText>
-          <CustomText style={styles.subtitle}>Choose your language</CustomText>
+          <CustomText style={styles.title}>{copy.title}</CustomText>
+          <CustomText style={styles.subtitle}>{copy.subtitle}</CustomText>
         </View>
 
         <View style={styles.cardList}>
           <LanguageOptionCard
-            title="English"
-            subtitle="영어"
+            title={copy.options.EN.title}
+            subtitle={copy.options.EN.subtitle}
             selected={selected === 'EN'}
             onPress={() => handleSelect('EN')}
           />
           <LanguageOptionCard
-            title="한국어"
-            subtitle="Korean"
+            title={copy.options.KO.title}
+            subtitle={copy.options.KO.subtitle}
             selected={selected === 'KO'}
             onPress={() => handleSelect('KO')}
           />
@@ -146,38 +144,18 @@ export default function SettingsLanguageScreen() {
       </View>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom - 30, 0) }]}>
-        <PrimaryButton title="완료" disabled={!selected || isSubmitting} onPress={handleSave} />
+        <PrimaryButton title={copy.done} disabled={!selected || isSubmitting} onPress={handleSave} />
       </View>
 
-      <UnsavedChangesModal
+      <ConfirmationModal
         visible={unsavedChangesModalOpen}
+        message={copy.unsavedChangesMessage}
+        cancelLabel={copy.cancel}
+        confirmLabel={copy.leave}
         onCancel={cancelLeaveScreen}
         onConfirm={confirmLeaveScreen}
       />
     </SafeAreaView>
-  );
-}
-
-function UnsavedChangesModal({ visible, onCancel, onConfirm }: UnsavedChangesModalProps) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.unsavedChangesOverlay} onPress={onCancel}>
-        <Pressable style={styles.unsavedChangesSheet} onPress={() => {}}>
-          <CustomText style={styles.unsavedChangesMessage}>
-            {`지금 나가면 \n변경한 내용이 저장되지 않아요`}
-          </CustomText>
-
-          <View style={styles.unsavedChangesButtonRow}>
-            <Pressable style={styles.unsavedChangesCancelButton} onPress={onCancel}>
-              <CustomText style={styles.unsavedChangesCancelText}>취소</CustomText>
-            </Pressable>
-            <Pressable style={styles.unsavedChangesConfirmButton} onPress={onConfirm}>
-              <CustomText style={styles.unsavedChangesConfirmText}>나가기</CustomText>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
   );
 }
 
@@ -327,7 +305,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesSheet: {
     width: '100%',
-    maxWidth: 335,
+    maxWidth: 350,
     padding: 20,
     backgroundColor: Palette.white,
     borderRadius: 24,
@@ -356,7 +334,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesCancelText: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 22.4,
     color: Palette.grey400,
   },
@@ -370,7 +348,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesConfirmText: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 22.4,
     color: Palette.white,
   },

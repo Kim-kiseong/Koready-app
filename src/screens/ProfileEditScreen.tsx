@@ -1,6 +1,7 @@
+import { isAxiosError } from 'axios';
 import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
@@ -33,19 +34,28 @@ import {
 import type {
   BuddyProfileResponse,
   BuddyProfileSocialLinkInput,
+  BuddyProfileSocialLinkRequest,
   ProfileOptionItem,
   ProfileOptionsResponse,
+  ProfileImageUploadUrlRequest,
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import ConfirmationModal from '@/components/ConfirmationModal';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
-import { API_BASE_URL } from '@/constants/env';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { getCountryDisplayName } from '@/utils/country';
+import { normalizeLanguageCode } from '@/utils/language-display';
+import {
+  buildProfileImagePath,
+  resolveProfileImageSource,
+  toProfileImagePath,
+} from '@/utils/profile-image';
 
 type BuddyProfileFormState = {
   profileImageUrl: string | null;
@@ -72,6 +82,7 @@ type SelectionModalProps = {
   multiSelect: boolean;
   presentation?: 'grid' | 'list';
   confirmLabel: string;
+  searchPlaceholder: string;
   optionLabelFormatter?: (option: ProfileOptionItem) => string;
   onCancel: () => void;
   onConfirm: (selectedCodes: string[]) => void;
@@ -84,12 +95,6 @@ type SnsEditorOverlayProps = {
   value: BuddyProfileSocialLinkInput[];
   onCancel: () => void;
   onSave: (nextLinks: BuddyProfileSocialLinkInput[]) => void;
-};
-
-type UnsavedChangesModalProps = {
-  visible: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
 };
 
 const EMPTY_FORM: BuddyProfileFormState = {
@@ -111,7 +116,16 @@ const MAX_SNS_LINKS = 2;
 const MAX_TRAVEL_STYLES = 4;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
-const ALLOWED_PROFILE_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+type ProfileImageContentType = ProfileImageUploadUrlRequest['contentType'];
+
+const ALLOWED_PROFILE_IMAGE_MIME_TYPES = new Set<ProfileImageContentType>([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+const BUDDY_STYLE_ALIASES: Record<string, string> = {
+  SLOW_TRAVEL: 'QUIET_TRAVEL',
+};
 
 const SOCIAL_PLATFORM_ICON_URIS = {
   INSTAGRAM: Asset.fromModule(require('../assets/images/social/instagram.svg')).uri,
@@ -127,6 +141,9 @@ export default function ProfileEditScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const language = useLanguageStore((state) => state.language);
+  const t = useTranslation();
+  const copy = t.profileEdit;
+  const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
   const onboardingTravelStyles = useOnboardingStore((state) => state.travelStyles);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const isMountedRef = useRef(true);
@@ -176,7 +193,7 @@ export default function ProfileEditScreen() {
           setLoadError(
             optionsResult.reason instanceof Error
               ? optionsResult.reason.message
-              : '프로필 옵션을 불러오지 못했습니다.',
+              : copy.errors.loadOptions,
           );
           return;
         }
@@ -191,7 +208,12 @@ export default function ProfileEditScreen() {
 
         setOptions(loadedOptions);
         setProfileExists(loadedProfile.exists);
-        const nextForm = buildInitialForm(loadedProfile, loadedOptions, onboardingTravelStyles);
+        const nextForm = buildInitialForm(
+          loadedProfile,
+          loadedOptions,
+          onboardingTravelStyles,
+          authProfileImageUrl,
+        );
         setForm(nextForm);
         setInitialForm(nextForm);
       } catch (error) {
@@ -208,7 +230,7 @@ export default function ProfileEditScreen() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey, onboardingHasHydrated, onboardingTravelStyles]);
+  }, [authProfileImageUrl, reloadKey, onboardingHasHydrated, onboardingTravelStyles]);
 
   useEffect(() => {
     return () => {
@@ -216,22 +238,52 @@ export default function ProfileEditScreen() {
     };
   }, []);
 
+  const normalizedLanguageOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const normalizedOptions: ProfileOptionItem[] = [];
+
+    for (const option of options?.languages ?? []) {
+      const normalizedCode = normalizeLanguageCode(option.code);
+      if (!normalizedCode || seen.has(normalizedCode)) {
+        continue;
+      }
+
+      seen.add(normalizedCode);
+      normalizedOptions.push({
+        ...option,
+        code: normalizedCode,
+      });
+    }
+
+    return normalizedOptions;
+  }, [options?.languages]);
+
   const sortedLanguageCodes = useMemo(
-    () => sortCodesByOptionOrder(form.availableLanguages, options?.languages ?? []),
-    [form.availableLanguages, options],
+    () => sortLanguageCodesByOptionOrder(form.availableLanguages, normalizedLanguageOptions),
+    [form.availableLanguages, normalizedLanguageOptions],
   );
 
   const sortedTravelStyles = useMemo(
     () => sortCodesByOptionOrder(form.travelStyles, options?.travelStyles ?? []),
     [form.travelStyles, options],
   );
+  const travelStyleColumnCount = language === 'EN' ? 2 : 3;
   const travelStyleRows = useMemo(
-    () => chunkItems(options?.travelStyles ?? [], 3),
-    [options],
+    () => chunkItems(options?.travelStyles ?? [], travelStyleColumnCount),
+    [options, travelStyleColumnCount],
+  );
+  const buddyStyleRows = useMemo(
+    () => chunkItems(options?.buddyStyles ?? [], travelStyleColumnCount),
+    [options, travelStyleColumnCount],
   );
 
   const sortedBuddyStyles = useMemo(
-    () => sortCodesByOptionOrder(form.buddyStyles, options?.buddyStyles ?? []),
+    () =>
+      sortCodesByOptionOrder(
+        form.buddyStyles,
+        options?.buddyStyles ?? [],
+        BUDDY_STYLE_ALIASES,
+      ),
     [form.buddyStyles, options],
   );
 
@@ -239,7 +291,9 @@ export default function ProfileEditScreen() {
     () => sortSocialLinks(form.socialLinks, options?.socialPlatforms ?? []),
     [form.socialLinks, options],
   );
-  const profileImageUri = profileImagePreviewUri ?? form.profileImageUrl;
+  const profileImageSource = profileImagePreviewUri
+    ? { uri: profileImagePreviewUri }
+    : resolveProfileImageSource(form.profileImageUrl);
   const hasUnsavedChanges = useMemo(
     () =>
       !areBuddyProfileFormsEqual(form, initialForm) ||
@@ -249,10 +303,10 @@ export default function ProfileEditScreen() {
   );
 
   const currentCountryLabel = form.nationality
-    ? getCountryDisplayName(form.nationality, options?.countries)
+    ? getCountryDisplayName(form.nationality, options?.countries, language)
     : '';
-  const headerTitle = profileExists ? '프로필 수정' : '프로필 설정';
-  const hasProfileImage = profileImageUri !== null;
+  const headerTitle = profileExists ? copy.titleEdit : copy.titleSetup;
+  const hasProfileImage = profileImageSource !== null;
 
   const canSave = isFormComplete(form) && !isUploadingProfileImage;
   const shouldPreventRemove = hasUnsavedChanges && !isBypassingUnsavedChangesGuard;
@@ -310,35 +364,35 @@ export default function ProfileEditScreen() {
 
     setIsSaving(true);
     try {
+      const apiNationalityCode = resolveCountryCode(form.nationality, options.countries);
+      const normalizedSocialLinks = normalizeSocialLinks(sortedSocialLinks);
+      const socialLinkRequests = toSocialLinkRequests(normalizedSocialLinks);
+      const nextSnsPublic = normalizedSocialLinks.length > 0 ? form.snsPublic : false;
       const nextForm: BuddyProfileFormState = {
-        profileImageUrl: form.profileImageUrl,
+        profileImageUrl: toProfileImagePath(form.profileImageUrl),
         nickname: form.nickname.trim(),
         nationality: form.nationality.trim(),
-        availableLanguages: sortedLanguageCodes,
+        availableLanguages: sortedLanguageCodes.map(normalizeLanguageCode),
         koreanLevel: form.koreanLevel,
         bio: form.bio.trim(),
         travelStyles: sortedTravelStyles,
         buddyStyles: sortedBuddyStyles,
-        socialLinks: sortedSocialLinks.map((link) => ({
-          type: link.type,
-          displayValue: link.displayValue.trim(),
-          url: link.url && link.url.trim().length > 0 ? link.url.trim() : null,
-        })),
+        socialLinks: normalizedSocialLinks,
         profilePublic: form.profilePublic,
-        snsPublic: form.snsPublic,
+        snsPublic: nextSnsPublic,
         allowsMessages: form.allowsMessages,
       };
 
       await updateMyBuddyProfile({
         profileImageUrl: nextForm.profileImageUrl,
         nickname: nextForm.nickname,
-        nationality: nextForm.nationality,
-        availableLanguages: nextForm.availableLanguages,
+        nationalityCode: apiNationalityCode || form.nationality.trim(),
+        availableLanguages: nextForm.availableLanguages.map(normalizeLanguageCode),
         koreanLevel: nextForm.koreanLevel,
         bio: nextForm.bio,
         travelStyles: nextForm.travelStyles,
         buddyStyles: nextForm.buddyStyles,
-        socialLinks: nextForm.socialLinks,
+        socialLinks: socialLinkRequests,
         profilePublic: nextForm.profilePublic,
         snsPublic: nextForm.snsPublic,
         allowsMessages: nextForm.allowsMessages,
@@ -346,6 +400,7 @@ export default function ProfileEditScreen() {
       if (!isMountedRef.current) return;
 
       useAuthStore.getState().setBuddyProfileExists(true);
+      useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
 
       setForm(nextForm);
       setInitialForm(nextForm);
@@ -364,7 +419,7 @@ export default function ProfileEditScreen() {
       goBackOrRoot(router);
     } catch (error) {
       if (!isMountedRef.current) return;
-      Alert.alert('오류', extractErrorMessage(error));
+      Alert.alert(copy.alerts.errorTitle, extractErrorMessage(error, copy.errors.generic));
     } finally {
       if (isMountedRef.current) {
         setIsSaving(false);
@@ -373,9 +428,12 @@ export default function ProfileEditScreen() {
   };
 
   const handleRemoveLanguage = (code: string) => {
+    const normalizedCode = normalizeLanguageCode(code);
     setForm((prev) => ({
       ...prev,
-      availableLanguages: prev.availableLanguages.filter((item) => item !== code),
+      availableLanguages: prev.availableLanguages.filter(
+        (item) => normalizeLanguageCode(item) !== normalizedCode,
+      ),
     }));
   };
 
@@ -410,12 +468,12 @@ export default function ProfileEditScreen() {
       const exists = currentTravelStyles.includes(code);
 
       if (exists && currentTravelStyles.length <= 1) {
-        Alert.alert('안내', '관심 여행 스타일은 최소 1개 이상 선택해야 해요.');
+        Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMin);
         return;
       }
 
       if (!exists && currentTravelStyles.length >= MAX_TRAVEL_STYLES) {
-        Alert.alert('안내', '관심 여행 스타일은 최대 4개까지 선택할 수 있어요.');
+        Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMax);
         return;
       }
     }
@@ -436,7 +494,7 @@ export default function ProfileEditScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       if (!isMountedRef.current) return;
-      Alert.alert('권한 필요', '사진 보관함 접근 권한을 허용해 주세요.');
+      Alert.alert(copy.alerts.photoPermissionTitle, copy.alerts.photoPermissionBody);
       return;
     }
 
@@ -457,7 +515,7 @@ export default function ProfileEditScreen() {
 
     if (!mimeType) {
       if (!isMountedRef.current) return;
-      Alert.alert('지원하지 않는 파일 형식', 'JPEG, PNG, WebP 사진만 업로드할 수 있어요.');
+      Alert.alert(copy.alerts.unsupportedTypeTitle, copy.alerts.unsupportedTypeBody);
       return;
     }
 
@@ -466,13 +524,13 @@ export default function ProfileEditScreen() {
 
     if (!Number.isFinite(fileSize) || fileSize <= 0) {
       if (!isMountedRef.current) return;
-      Alert.alert('파일을 읽을 수 없어요', '다른 사진으로 다시 시도해 주세요.');
+      Alert.alert(copy.alerts.unreadableFileTitle, copy.alerts.unreadableFileBody);
       return;
     }
 
     if (fileSize > MAX_PROFILE_IMAGE_SIZE_BYTES) {
       if (!isMountedRef.current) return;
-      Alert.alert('파일이 너무 커요', '5MiB 이하의 사진만 업로드할 수 있어요.');
+      Alert.alert(copy.alerts.fileTooLargeTitle, copy.alerts.fileTooLargeBody);
       return;
     }
 
@@ -481,16 +539,19 @@ export default function ProfileEditScreen() {
     setIsUploadingProfileImage(true);
 
     try {
-      const uploadInfo = await requestProfileImageUploadUrl();
+      const uploadInfo = await requestProfileImageUploadUrl({
+        contentType: mimeType,
+        size: fileSize,
+      });
       const uploadUrl = uploadInfo.uploadUrl?.trim();
       const imageId = uploadInfo.imageId?.trim();
 
       if (!uploadUrl) {
-        throw new Error('프로필 사진 업로드 URL을 받지 못했어요.');
+        throw new Error(copy.errors.uploadUrl);
       }
 
       if (!imageId) {
-        throw new Error('프로필 사진 ID를 받지 못했어요.');
+        throw new Error(copy.errors.imageId);
       }
 
       const uploadResponse = await expoFetch(uploadUrl, {
@@ -502,7 +563,7 @@ export default function ProfileEditScreen() {
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text().catch(() => '');
         throw new Error(
-          `프로필 사진 업로드에 실패했어요.${errorText ? ` (${errorText.slice(0, 120)})` : ''}`,
+          `${copy.errors.uploadFailed}${errorText ? ` (${errorText.slice(0, 120)})` : ''}`,
         );
       }
 
@@ -510,18 +571,17 @@ export default function ProfileEditScreen() {
       if (!isMountedRef.current) return;
       const nextProfileImageUrl =
         firstNonEmptyString(
-          completed.profileImageUrl,
-          completed.profile?.profileImageUrl,
+          toProfileImagePath(completed.profileImageUrl),
+          toProfileImagePath(completed.profile?.profileImageUrl),
           completed.imageId ? buildProfileImagePath(completed.imageId) : null,
-        ) ??
-        buildProfileImagePath(imageId);
+        ) ?? buildProfileImagePath(imageId);
 
       setForm((prev) => ({ ...prev, profileImageUrl: nextProfileImageUrl }));
       setProfileImagePreviewUri(null);
     } catch (error) {
       if (!isMountedRef.current) return;
       setProfileImagePreviewUri(null);
-      Alert.alert('오류', extractErrorMessage(error));
+      Alert.alert(copy.alerts.errorTitle, extractErrorMessage(error, copy.errors.generic));
     } finally {
       if (isMountedRef.current) {
         setIsUploadingProfileImage(false);
@@ -533,10 +593,10 @@ export default function ProfileEditScreen() {
     return (
       <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
         <View style={styles.errorState}>
-          <CustomText style={styles.errorTitle}>프로필 설정을 불러오지 못했어요</CustomText>
+          <CustomText style={styles.errorTitle}>{copy.loadErrorTitle}</CustomText>
           <CustomText style={styles.errorDescription}>{loadError}</CustomText>
           <PrimaryButton
-            title="다시 시도"
+            title={copy.retry}
             onPress={() => {
               setLoadError(null);
               setReloadKey((prev) => prev + 1);
@@ -583,10 +643,10 @@ export default function ProfileEditScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={[styles.section, styles.sectionAvatar]}>
-            <SectionHeading title="프로필 사진" />
+            <SectionHeading title={copy.sections.profilePhoto} />
             <View style={styles.avatarRow}>
               <ProfileAvatarButton
-                uri={profileImageUri}
+                source={profileImageSource}
                 loading={isUploadingProfileImage}
                 onPressAdd={handlePressProfileImageAdd}
               />
@@ -594,12 +654,12 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionNickname]}>
-            <FieldLabel label="닉네임" />
+            <FieldLabel label={copy.sections.nickname} />
             <View style={[styles.inputFrame, isNicknameFocused && styles.inputFrameFocused]}>
               <TextInput
                 value={form.nickname}
                 onChangeText={(text) => handleUpdateField('nickname', text)}
-                placeholder="나를 표현하는 닉네임을 적어주세요"
+                placeholder={copy.placeholders.nickname}
                 placeholderTextColor="#8B95A1"
                 cursorColor="#4FAE98"
                 selectionColor="#4FAE98"
@@ -630,7 +690,7 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionCountry]}>
-            <FieldLabel label="국적" />
+            <FieldLabel label={copy.sections.nationality} />
             <Pressable
               style={styles.selectFrame}
               onPress={() => setCountryPickerOpen(true)}>
@@ -639,7 +699,7 @@ export default function ProfileEditScreen() {
                   styles.selectText,
                   form.nationality ? styles.selectTextValue : styles.selectTextPlaceholder,
                 ]}>
-                {currentCountryLabel || form.nationality || '어디서 오셨나요?'}
+                {currentCountryLabel || form.nationality || copy.placeholders.nationality}
               </CustomText>
               <View pointerEvents="none" style={styles.fieldTrailingAction}>
                 <DropdownArrowIcon />
@@ -648,10 +708,10 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionLanguage]}>
-            <FieldLabel label="사용 언어" />
+              <FieldLabel label={copy.sections.languages} />
             <View style={styles.chipWrap}>
               {sortedLanguageCodes.map((code) => {
-                const option = options.languages.find((item) => item.code === code);
+                const option = normalizedLanguageOptions.find((item) => item.code === code);
                 if (!option) return null;
                 return (
                   <RemovableLanguageChip
@@ -670,7 +730,7 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionKorean]}>
-            <FieldLabel label="한국어 수준" />
+            <FieldLabel label={copy.sections.koreanLevel} />
             <View style={styles.levelRow}>
               {options.koreanLevels.map((option) => {
                 const selected = form.koreanLevel === option.code;
@@ -687,12 +747,12 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionBio]}>
-            <FieldLabel label="한 줄 소개" />
+            <FieldLabel label={copy.sections.bio} />
             <View style={[styles.bioFrame, isBioFocused && styles.bioFrameFocused]}>
               <TextInput
                 value={form.bio}
                 onChangeText={(text) => handleUpdateField('bio', text.slice(0, 500))}
-                placeholder="나를 한 줄로 표현한다면?"
+                placeholder={copy.placeholders.bio}
                 placeholderTextColor="#8B95A1"
                 cursorColor="#4FAE98"
                 selectionColor="#4FAE98"
@@ -716,7 +776,10 @@ export default function ProfileEditScreen() {
           <View style={styles.sectionDivider} />
 
           <View style={[styles.section, styles.sectionTravel]}>
-            <SectionHeading title="관심 여행 스타일" subtitle="중복 선택이 가능해요" />
+            <SectionHeading
+              title={copy.sections.travelStyles.title}
+              subtitle={copy.sections.travelStyles.subtitle}
+            />
             <View style={styles.travelStyleRows}>
               {travelStyleRows.map((row, rowIndex) => (
                 <View key={`travel-row-${rowIndex}`} style={styles.travelStyleRow}>
@@ -734,11 +797,36 @@ export default function ProfileEditScreen() {
             </View>
           </View>
 
+          <View style={[styles.section, styles.sectionBuddyStyles]}>
+            <SectionHeading
+              title={copy.sections.buddyStyles.title}
+              subtitle={copy.sections.buddyStyles.subtitle}
+            />
+            <View style={styles.travelStyleRows}>
+              {buddyStyleRows.map((row, rowIndex) => (
+                <View key={`buddy-row-${rowIndex}`} style={styles.travelStyleRow}>
+                  {row.map((option) => (
+                    <ChoiceChip
+                      key={option.code}
+                      label={getOptionLabel(option, language)}
+                      selected={form.buddyStyles.includes(option.code)}
+                      onPress={() => handleToggleStyle('buddyStyles', option.code)}
+                      variant="travelStyle"
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+
           <View style={[styles.section, styles.sectionPublicSns]}>
-            <SectionHeading title="공개 SNS" subtitle="최대 2개까지 공개할 수 있어요." />
+            <SectionHeading
+              title={copy.sections.socialAccounts.title}
+              subtitle={copy.sections.socialAccounts.subtitle}
+            />
             {sortedSocialLinks.length === 0 ? (
               <Pressable style={styles.addSnsButton} onPress={() => setSnsEditorOpen(true)}>
-                <CustomText style={styles.addSnsButtonText}>+ SNS 추가</CustomText>
+                <CustomText style={styles.addSnsButtonText}>{copy.buttons.addSocialAccount}</CustomText>
               </Pressable>
             ) : (
               <View style={styles.snsList}>
@@ -756,7 +844,9 @@ export default function ProfileEditScreen() {
                 })}
                 {sortedSocialLinks.length < MAX_SNS_LINKS ? (
                   <Pressable style={styles.smallAddSnsButton} onPress={() => setSnsEditorOpen(true)}>
-                    <CustomText style={styles.smallAddSnsButtonText}>+ SNS 추가</CustomText>
+                    <CustomText style={styles.smallAddSnsButtonText}>
+                      {copy.buttons.addSocialAccount}
+                    </CustomText>
                   </Pressable>
                 ) : null}
               </View>
@@ -764,20 +854,20 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionContact]}>
-            <SectionHeading title="연락 및 공개 설정" />
+            <SectionHeading title={copy.sections.contactSettings} />
             <View style={styles.toggleGroup}>
               <ToggleRow
-                label="프로필 공개"
+                label={copy.toggles.profilePublic}
                 value={form.profilePublic}
                 onValueChange={(value) => handleUpdateField('profilePublic', value)}
               />
               <ToggleRow
-                label="SNS 공개"
+                label={copy.toggles.snsPublic}
                 value={form.snsPublic}
                 onValueChange={(value) => handleUpdateField('snsPublic', value)}
               />
               <ToggleRow
-                label="쪽지 받기"
+                label={copy.toggles.allowsMessages}
                 value={form.allowsMessages}
                 onValueChange={(value) => handleUpdateField('allowsMessages', value)}
               />
@@ -787,7 +877,7 @@ export default function ProfileEditScreen() {
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom - 40, 0) }]}>
           <PrimaryButton
-            title="완료"
+            title={copy.buttons.done}
             onPress={handleSave}
             disabled={!canSave || isSaving}
           />
@@ -796,15 +886,18 @@ export default function ProfileEditScreen() {
 
       <SelectionModal
         visible={countryPickerOpen}
-        title="국적 선택"
-        subtitle="어느 나라에서 오셨나요?"
+        title={copy.modals.country.title}
+        subtitle={copy.modals.country.subtitle}
         language={language}
         options={options.countries}
         selectedCodes={form.nationality ? [form.nationality] : []}
         multiSelect={false}
         presentation="list"
-        confirmLabel="선택"
-        optionLabelFormatter={(option) => getCountryDisplayName(option.code, options.countries)}
+        confirmLabel={copy.modals.country.confirm}
+        searchPlaceholder={copy.modals.country.searchPlaceholder}
+        optionLabelFormatter={(option) =>
+          getCountryDisplayName(option.code, options.countries, language)
+        }
         onCancel={() => setCountryPickerOpen(false)}
         onConfirm={(selectedCodes) => {
           setForm((prev) => ({ ...prev, nationality: selectedCodes[0] ?? '' }));
@@ -812,21 +905,26 @@ export default function ProfileEditScreen() {
         }}
       />
 
-      <SelectionModal
+          <SelectionModal
         visible={languagePickerOpen}
-        title="사용 언어 추가"
-        subtitle="대화할 수 있는 언어를 선택해 주세요."
+        title={copy.modals.language.title}
+        subtitle={copy.modals.language.subtitle}
         language={language}
-        options={options.languages}
+        options={normalizedLanguageOptions}
         selectedCodes={form.availableLanguages}
         multiSelect
         presentation="list"
-        confirmLabel="추가"
+        confirmLabel={copy.modals.language.confirm}
+        searchPlaceholder={copy.modals.language.searchPlaceholder}
         onCancel={() => setLanguagePickerOpen(false)}
         onConfirm={(selectedCodes) => {
+          const normalizedSelectedCodes = selectedCodes.map(normalizeLanguageCode).filter(Boolean);
           setForm((prev) => ({
             ...prev,
-            availableLanguages: sortCodesByOptionOrder(selectedCodes, options.languages),
+            availableLanguages: sortLanguageCodesByOptionOrder(
+              normalizedSelectedCodes,
+              normalizedLanguageOptions,
+            ),
           }));
           setLanguagePickerOpen(false);
         }}
@@ -852,8 +950,11 @@ export default function ProfileEditScreen() {
         onDeletePhoto={handleDeleteProfileImage}
       />
 
-      <UnsavedChangesModal
+      <ConfirmationModal
         visible={unsavedChangesModalOpen}
+        message={copy.modals.unsavedChanges.message}
+        cancelLabel={copy.modals.unsavedChanges.cancel}
+        confirmLabel={copy.modals.unsavedChanges.confirm}
         onCancel={cancelLeaveScreen}
         onConfirm={confirmLeaveScreen}
       />
@@ -865,6 +966,7 @@ function buildInitialForm(
   profileResponse: BuddyProfileResponse,
   options: ProfileOptionsResponse,
   defaultTravelStyles: string[],
+  fallbackProfileImageUrl: string | null,
 ): BuddyProfileFormState {
   const profile = profileResponse.profile;
   if (!profile) {
@@ -875,22 +977,29 @@ function buildInitialForm(
   }
 
   return {
-    profileImageUrl: profile.profileImageUrl,
+    profileImageUrl: profile.profileImageUrl ?? fallbackProfileImageUrl,
     nickname: profile.nickname ?? '',
-    nationality: resolveCountryCode(profile.nationality, options.countries),
-    availableLanguages: sortCodesByOptionOrder(profile.availableLanguages, options.languages),
+    nationality: resolveCountryCode(profile.nationalityCode ?? profile.nationality, options.countries),
+    availableLanguages: sortLanguageCodesByOptionOrder(
+      profile.availableLanguages.map(normalizeLanguageCode),
+      options.languages,
+    ),
     koreanLevel: resolveProfileOptionCode(profile.koreanLevel, options.koreanLevels),
     bio: profile.bio ?? '',
-    // 온보딩에서 고른 여행 스타일을 프로필 생성 초기값으로 그대로 보여준다.
+    // Keep the onboarding travel styles as the initial profile draft.
     travelStyles: sortCodesByOptionOrder(profile.travelStyles, options.travelStyles),
-    buddyStyles: sortCodesByOptionOrder(profile.buddyStyles, options.buddyStyles),
+    buddyStyles: sortCodesByOptionOrder(
+      profile.buddyStyles,
+      options.buddyStyles,
+      BUDDY_STYLE_ALIASES,
+    ),
     socialLinks: profile.socialLinks
       .map((link) => ({
         type: resolveProfileOptionCode(link.type, options.socialPlatforms),
         displayValue: link.displayValue ?? '',
-        url: link.url ?? null,
+        url: link.url ?? normalizeSocialLinkUrl(link.type, link.displayValue ?? ''),
       }))
-      .filter((link) => !!link.type),
+      .filter((link) => !!link.type && link.displayValue.trim().length > 0),
     profilePublic: profile.profilePublic,
     snsPublic: profile.snsPublic,
     allowsMessages: profile.allowsMessages,
@@ -956,12 +1065,48 @@ function socialLinksEqual(
   });
 }
 
-function sortCodesByOptionOrder(values: string[], options: ProfileOptionItem[]) {
+function sortCodesByOptionOrder(
+  values: string[],
+  options: ProfileOptionItem[],
+  aliases: Record<string, string> = {},
+) {
   const order = new Map(options.map((option, index) => [option.code, index] as const));
-  const unique = Array.from(new Set(values));
+  const normalized = values
+    .map((value) => aliases[value] ?? value)
+    .filter((value) => order.has(value));
+  const unique = Array.from(new Set(normalized));
   return unique.sort((left, right) => {
     const leftOrder = order.get(left) ?? Number.MAX_SAFE_INTEGER;
     const rightOrder = order.get(right) ?? Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  });
+}
+
+function sortLanguageCodesByOptionOrder(values: string[], options: ProfileOptionItem[]) {
+  const order = new Map(
+    options.map((option, index) => [normalizeLanguageCode(option.code), index] as const),
+  );
+  const normalized = values
+    .map(normalizeLanguageCode)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  const unique = Array.from(new Set(normalized));
+
+  return unique.sort((left, right) => {
+    const leftOrder = order.get(left);
+    const rightOrder = order.get(right);
+
+    if (leftOrder == null && rightOrder == null) {
+      return left.localeCompare(right);
+    }
+
+    if (leftOrder == null) {
+      return 1;
+    }
+
+    if (rightOrder == null) {
+      return -1;
+    }
+
     return leftOrder - rightOrder;
   });
 }
@@ -971,7 +1116,8 @@ function sortSocialLinks(values: BuddyProfileSocialLinkInput[], options: Profile
   const unique = values.filter(
     (link, index, array) => array.findIndex((item) => item.type === link.type) === index,
   );
-  return unique.sort((left, right) => {
+  const normalized = unique.filter((link) => order.has(link.type));
+  return normalized.sort((left, right) => {
     const leftOrder = order.get(left.type) ?? Number.MAX_SAFE_INTEGER;
     const rightOrder = order.get(right.type) ?? Number.MAX_SAFE_INTEGER;
     return leftOrder - rightOrder;
@@ -996,7 +1142,8 @@ function isFormComplete(form: BuddyProfileFormState) {
     form.koreanLevel.trim().length > 0 &&
     form.bio.trim().length > 0 &&
     form.travelStyles.length >= 1 &&
-    form.travelStyles.length <= MAX_TRAVEL_STYLES
+    form.travelStyles.length <= MAX_TRAVEL_STYLES &&
+    form.buddyStyles.length >= 1
   );
 }
 
@@ -1005,9 +1152,23 @@ function getOptionLabel(option: ProfileOptionItem | undefined, language: string)
   return language === 'EN' ? option.labelEn : option.labelKo;
 }
 
-function extractErrorMessage(error: unknown): string {
+function extractErrorMessage(error: unknown, fallbackMessage = 'An unknown error occurred.') {
+  if (isAxiosError(error)) {
+    const responseData = error.response?.data;
+    if (responseData && typeof responseData === 'object') {
+      const message = (responseData as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    if (error.response?.status === 400) {
+      return 'Invalid profile data. Please check the selected values and try again.';
+    }
+  }
+
   if (error instanceof Error) return error.message;
-  return '알 수 없는 오류가 발생했습니다.';
+  return fallbackMessage;
 }
 
 function normalizeHeaders(headers: Record<string, string | undefined | null> | undefined) {
@@ -1020,14 +1181,17 @@ function normalizeProfileImageMimeType(
   mimeType?: string | null,
   fileName?: string | null,
   uri?: string | null,
-) {
+): ProfileImageContentType | null {
   const normalizedMimeType = mimeType?.toLowerCase().trim();
   if (normalizedMimeType === 'image/jpg') {
     return 'image/jpeg';
   }
 
-  if (normalizedMimeType && ALLOWED_PROFILE_IMAGE_MIME_TYPES.has(normalizedMimeType)) {
-    return normalizedMimeType;
+  if (normalizedMimeType) {
+    const normalizedContentType = normalizedMimeType as ProfileImageContentType;
+    if (ALLOWED_PROFILE_IMAGE_MIME_TYPES.has(normalizedContentType)) {
+      return normalizedContentType;
+    }
   }
 
   const candidate = fileName ?? uri ?? '';
@@ -1048,11 +1212,6 @@ function normalizeProfileImageMimeType(
   return null;
 }
 
-function buildProfileImagePath(imageId: string) {
-  const normalizedBaseUrl = API_BASE_URL.replace(/\/$/, '');
-  return `${normalizedBaseUrl}/profile-images/${encodeURIComponent(imageId)}`;
-}
-
 function firstNonEmptyString(...values: Array<string | null | undefined>) {
   for (const value of values) {
     const trimmed = value?.trim();
@@ -1061,6 +1220,77 @@ function firstNonEmptyString(...values: Array<string | null | undefined>) {
     }
   }
   return null;
+}
+
+function normalizeSocialLinks(values: BuddyProfileSocialLinkInput[]) {
+  const normalized: BuddyProfileSocialLinkInput[] = [];
+
+  for (const link of values) {
+    const type = link.type.trim();
+    const displayValue = link.displayValue.trim();
+    if (!type || !displayValue) {
+      continue;
+    }
+
+    const existingUrl = link.url?.trim();
+    const url =
+      existingUrl && existingUrl.length > 0
+        ? existingUrl
+        : normalizeSocialLinkUrl(type, displayValue);
+
+    normalized.push({
+      type,
+      displayValue,
+      url: url ?? null,
+    });
+  }
+
+  return normalized;
+}
+
+function toSocialLinkRequests(
+  values: BuddyProfileSocialLinkInput[],
+): BuddyProfileSocialLinkRequest[] {
+  return values
+    .map((link) => ({
+      type: link.type.trim(),
+      value: link.displayValue.trim(),
+    }))
+    .filter((link) => link.type.length > 0 && link.value.length > 0);
+}
+
+function normalizeSocialLinkUrl(type: string, displayValue: string) {
+  const normalizedValue = displayValue.trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  const handle = normalizedValue.replace(/^@+/, '').trim();
+  if (!handle) {
+    return null;
+  }
+
+  const encodedHandle = encodeURIComponent(handle);
+  switch (type) {
+    case 'INSTAGRAM':
+      return `https://instagram.com/${encodedHandle}`;
+    case 'TIKTOK':
+      return `https://tiktok.com/@${encodedHandle}`;
+    case 'WECHAT':
+      return `https://wechat.com/${encodedHandle}`;
+    case 'XIAOHONGSHU':
+      return `https://xiaohongshu.com/${encodedHandle}`;
+    case 'LINE':
+      return `https://line.me/ti/p/${encodedHandle}`;
+    case 'KAKAOTALK':
+      return `https://open.kakao.com/o/${encodedHandle}`;
+    default:
+      return `https://${type.toLowerCase()}.com/${encodedHandle}`;
+  }
 }
 
 function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -1076,33 +1306,6 @@ function FieldLabel({ label }: { label: string }) {
   return <CustomText style={styles.fieldLabel}>{label}</CustomText>;
 }
 
-function UnsavedChangesModal({
-  visible,
-  onCancel,
-  onConfirm,
-}: UnsavedChangesModalProps) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.unsavedChangesOverlay} onPress={onCancel}>
-        <Pressable style={styles.unsavedChangesSheet} onPress={() => {}}>
-          <CustomText style={styles.unsavedChangesMessage}>
-            {`지금 나가면 \n변경한 내용이 저장되지 않아요`}
-          </CustomText>
-
-          <View style={styles.unsavedChangesButtonRow}>
-            <Pressable style={styles.unsavedChangesCancelButton} onPress={onCancel}>
-              <CustomText style={styles.unsavedChangesCancelText}>취소</CustomText>
-            </Pressable>
-            <Pressable style={styles.unsavedChangesConfirmButton} onPress={onConfirm}>
-              <CustomText style={styles.unsavedChangesConfirmText}>나가기</CustomText>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 function AvatarActionSheet({
   visible,
   hasExistingImage,
@@ -1116,6 +1319,8 @@ function AvatarActionSheet({
   onSelectPhoto: () => void;
   onDeletePhoto: () => void;
 }) {
+  const t = useTranslation();
+  const copy = t.profileEdit.modals.avatar;
   const insets = useSafeAreaInsets();
 
   return (
@@ -1132,14 +1337,14 @@ function AvatarActionSheet({
             <Pressable
               style={({ pressed }) => [styles.avatarSheetRow, pressed && styles.pressed]}
               onPress={onSelectPhoto}>
-              <CustomText style={styles.avatarSheetRowText}>사진 선택</CustomText>
+              <CustomText style={styles.avatarSheetRowText}>{copy.selectPhoto}</CustomText>
             </Pressable>
 
             {hasExistingImage ? (
               <Pressable
                 style={({ pressed }) => [styles.avatarSheetRow, pressed && styles.pressed]}
                 onPress={onDeletePhoto}>
-                <CustomText style={styles.avatarSheetDeleteText}>프로필 사진 삭제</CustomText>
+                <CustomText style={styles.avatarSheetDeleteText}>{copy.deletePhoto}</CustomText>
               </Pressable>
             ) : null}
 
@@ -1148,9 +1353,9 @@ function AvatarActionSheet({
                 styles.avatarSheetRow,
                 styles.avatarSheetCancelRow,
                 pressed && styles.pressed,
-              ]}
+              ]} 
               onPress={onCancel}>
-              <CustomText style={styles.avatarSheetCancelText}>취소</CustomText>
+              <CustomText style={styles.avatarSheetCancelText}>{copy.cancel}</CustomText>
             </Pressable>
           </View>
         </Pressable>
@@ -1160,23 +1365,23 @@ function AvatarActionSheet({
 }
 
 function ProfileAvatarButton({
-  uri,
+  source,
   loading,
   onPressAdd,
 }: {
-  uri: string | null;
+  source: ImageSource | null;
   loading?: boolean;
   onPressAdd: () => void;
 }) {
   return (
     <View style={[styles.avatarButton, loading && styles.avatarButtonDisabled]}>
       <View style={styles.avatarFrame}>
-        {uri ? (
-          <Image source={{ uri }} style={styles.avatarImage} contentFit="cover" />
+        {source ? (
+          <Image source={source} style={styles.avatarImage} contentFit="cover" />
         ) : (
           <AvatarPlaceholderIcon />
         )}
-        {loading && !uri ? (
+        {loading && !source ? (
           <View style={styles.avatarLoadingOverlay}>
             <ActivityIndicator color={Palette.primary} />
           </View>
@@ -1404,21 +1609,51 @@ function SelectionModal({
   multiSelect,
   presentation = 'grid',
   confirmLabel,
+  searchPlaceholder,
   optionLabelFormatter,
   onCancel,
   onConfirm,
 }: SelectionModalProps) {
+  const t = useTranslation();
+  const copy = t.profileEdit.buttons;
+  const modalCopy = t.profileEdit.modals;
   const [draft, setDraft] = useState<string[]>(selectedCodes);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const isListPresentation = presentation === 'list';
-  const renderOptionLabel = optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
+  const renderOptionLabel =
+    optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
 
   useEffect(() => {
     if (visible) {
       setDraft(selectedCodes);
+      setSearchQuery('');
+      setIsSearchFocused(false);
     }
   }, [selectedCodes, visible]);
+
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    if (!isListPresentation || normalizedQuery.length === 0) {
+      return options;
+    }
+
+    return options.filter((option) => {
+      const labels = [
+        option.code,
+        option.labelKo,
+        option.labelEn,
+        renderOptionLabel(option),
+      ]
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .map((value) => value.toLowerCase());
+
+      return labels.some((value) => value.includes(normalizedQuery));
+    });
+  }, [isListPresentation, options, renderOptionLabel, searchQuery]);
 
   const toggleOption = (code: string) => {
     setDraft((prev) => {
@@ -1444,51 +1679,102 @@ function SelectionModal({
             {subtitle ? <CustomText style={styles.sheetSubtitle}>{subtitle}</CustomText> : null}
           </View>
 
-          <ScrollView contentContainerStyle={styles.sheetBody} showsVerticalScrollIndicator={false}>
+          {isListPresentation ? (
+            <View
+              style={[
+                styles.sheetSearchFrame,
+                isSearchFocused && styles.sheetSearchFrameFocused,
+              ]}>
+              <SymbolView
+                name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+                size={18}
+                weight="regular"
+                tintColor={Palette.grey400}
+              />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={searchPlaceholder}
+                placeholderTextColor={Palette.grey400}
+                style={styles.sheetSearchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+              />
+              {searchQuery.length > 0 ? (
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => setSearchQuery('')}
+                  style={styles.sheetSearchClearButton}>
+                  <SymbolView
+                    name={{ ios: 'xmark.circle.fill', android: 'close', web: 'close' }}
+                    size={18}
+                    weight="semibold"
+                    tintColor={Palette.grey350}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          <ScrollView
+            contentContainerStyle={styles.sheetBody}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
             {isListPresentation ? (
-              <View style={styles.optionList}>
-                {options.map((option) => {
-                  const selected = draft.includes(option.code);
-                  return (
-                    <Pressable
-                      key={option.code}
-                      onPress={() => toggleOption(option.code)}
-                      style={({ pressed }) => [
-                        styles.optionRow,
-                        selected && styles.optionRowSelected,
-                        pressed && styles.pressed,
-                      ]}>
-                      <CustomText
-                        style={[
-                        styles.optionRowText,
-                          selected ? styles.optionRowTextSelected : styles.optionRowTextUnselected,
+              filteredOptions.length > 0 ? (
+                <View style={styles.optionList}>
+                  {filteredOptions.map((option) => {
+                    const selected = draft.includes(option.code);
+                    return (
+                      <Pressable
+                        key={option.code}
+                        onPress={() => toggleOption(option.code)}
+                        style={({ pressed }) => [
+                          styles.optionRow,
+                          selected && styles.optionRowSelected,
+                          pressed && styles.pressed,
                         ]}>
-                        {renderOptionLabel(option)}
-                      </CustomText>
-                      <View
-                        style={[
-                          styles.optionRowToggle,
-                          selected ? styles.optionRowToggleSelected : styles.optionRowToggleUnselected,
-                        ]}>
-                        {selected ? (
-                          <SymbolView
-                            name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                            size={12}
-                            weight="semibold"
-                            tintColor={Palette.white}
-                          />
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                        <CustomText
+                          style={[
+                            styles.optionRowText,
+                            selected ? styles.optionRowTextSelected : styles.optionRowTextUnselected,
+                          ]}>
+                          {renderOptionLabel(option)}
+                        </CustomText>
+                        <View
+                          style={[
+                            styles.optionRowToggle,
+                            selected
+                              ? styles.optionRowToggleSelected
+                              : styles.optionRowToggleUnselected,
+                          ]}>
+                          {selected ? (
+                            <SymbolView
+                              name={{ ios: 'checkmark', android: 'check', web: 'check' }}
+                              size={12}
+                              weight="semibold"
+                              tintColor={Palette.white}
+                            />
+                          ) : null}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.optionEmptyState}>
+                  <CustomText style={styles.optionEmptyText}>{modalCopy.searchNoResults}</CustomText>
+                </View>
+              )
             ) : (
               <View style={styles.optionGrid}>
-                {options.map((option) => {
+                {filteredOptions.map((option) => {
                   const selected = draft.includes(option.code);
                   return (
-                      <ChoiceChip
+                    <ChoiceChip
                       key={option.code}
                       label={renderOptionLabel(option)}
                       selected={selected}
@@ -1502,7 +1788,7 @@ function SelectionModal({
 
           <View style={[styles.sheetFooter, { paddingBottom: insets.bottom + 12 }]}>
             <Pressable style={styles.sheetCancelButton} onPress={onCancel}>
-              <CustomText style={styles.sheetCancelText}>취소</CustomText>
+              <CustomText style={styles.sheetCancelText}>{copy.cancel}</CustomText>
             </Pressable>
             <Pressable
               style={[
@@ -1534,6 +1820,8 @@ function SnsEditorOverlay({
   onCancel,
   onSave,
 }: SnsEditorOverlayProps) {
+  const t = useTranslation();
+  const copy = t.profileEdit.modals.sns;
   const insets = useSafeAreaInsets();
   const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(value);
   const [focusedSnsCode, setFocusedSnsCode] = useState<string | null>(null);
@@ -1595,7 +1883,7 @@ function SnsEditorOverlay({
               tintColor={Palette.text}
             />
           </Pressable>
-          <CustomText style={styles.headerTitle}>SNS 공개 설정</CustomText>
+          <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
           <View style={styles.headerButton} />
         </View>
 
@@ -1605,7 +1893,7 @@ function SnsEditorOverlay({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
-            <SectionHeading title="플랫폼 선택" subtitle="최대 2개까지 공개할 수 있어요." />
+            <SectionHeading title={copy.platformsTitle} subtitle={copy.platformsSubtitle} />
             <View style={styles.platformGrid}>
               {options.map((option) => {
                 const selected = selectedCodes.includes(option.code);
@@ -1635,10 +1923,7 @@ function SnsEditorOverlay({
 
           {draftLinks.length > 0 ? (
             <View style={styles.section}>
-              <SectionHeading
-                title="아이디 입력"
-                subtitle="선택한 플랫폼의 아이디를 입력해 주세요."
-              />
+              <SectionHeading title={copy.idsTitle} subtitle={copy.idsSubtitle} />
               <View style={styles.snsInputList}>
                 {draftLinks.map((link) => {
                   const option = options.find((item) => item.code === link.type);
@@ -1661,7 +1946,7 @@ function SnsEditorOverlay({
                         <TextInput
                           value={link.displayValue}
                           onChangeText={(text) => updateValue(link.type, text)}
-                          placeholder="아이디를 입력해 주세요."
+                          placeholder={copy.inputPlaceholder}
                           placeholderTextColor="#8B95A1"
                           cursorColor="#4FAE98"
                           selectionColor="#4FAE98"
@@ -1688,7 +1973,7 @@ function SnsEditorOverlay({
 
         <View style={[styles.sheetFooterWrap, { paddingBottom: insets.bottom }]}>
           <Pressable style={styles.sheetCancelButtonLarge} onPress={close}>
-            <CustomText style={styles.sheetCancelText}>취소</CustomText>
+            <CustomText style={styles.sheetCancelText}>{copy.cancel}</CustomText>
           </Pressable>
           <Pressable
             style={[
@@ -1696,13 +1981,13 @@ function SnsEditorOverlay({
               saveDisabled && styles.sheetConfirmButtonDisabled,
             ]}
             disabled={saveDisabled}
-            onPress={() => onSave(sortSocialLinks(draftLinks, options))}>
+            onPress={() => onSave(normalizeSocialLinks(sortSocialLinks(draftLinks, options)))}>
             <CustomText
               style={[
                 styles.sheetConfirmTextLarge,
                 saveDisabled && styles.sheetConfirmTextDisabled,
               ]}>
-              저장
+              {copy.save}
             </CustomText>
           </Pressable>
         </View>
@@ -1776,6 +2061,10 @@ const styles = StyleSheet.create({
   sectionTravel: {
     gap: 12,
     marginTop: 24,
+    marginBottom: 32,
+  },
+  sectionBuddyStyles: {
+    gap: 12,
     marginBottom: 32,
   },
   sectionPublicSns: {
@@ -2139,7 +2428,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesSheet: {
     width: '100%',
-    maxWidth: 335,
+    maxWidth: 350,
     padding: 20,
     backgroundColor: Palette.white,
     borderRadius: 24,
@@ -2168,7 +2457,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesCancelText: {
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 22.4,
     color: Palette.grey400,
   },
@@ -2182,7 +2471,7 @@ const styles = StyleSheet.create({
   },
   unsavedChangesConfirmText: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 22.4,
     color: Palette.white,
   },
@@ -2477,6 +2766,37 @@ const styles = StyleSheet.create({
     lineHeight: 19.6,
     color: Palette.grey500,
   },
+  sheetSearchFrame: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E8EEF2',
+    borderRadius: 12,
+    backgroundColor: '#F6F9FB',
+    paddingHorizontal: 14,
+  },
+  sheetSearchFrameFocused: {
+    borderColor: Palette.primaryLight,
+    backgroundColor: Palette.secondary,
+  },
+  sheetSearchInput: {
+    flex: 1,
+    height: 22,
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 15,
+    lineHeight: 21,
+    color: Palette.text,
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
+  sheetSearchClearButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sheetBody: {
     paddingBottom: 0,
     gap: 16,
@@ -2488,6 +2808,18 @@ const styles = StyleSheet.create({
   },
   optionList: {
     gap: 8,
+  },
+  optionEmptyState: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionEmptyText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
+    textAlign: 'center',
   },
   optionRow: {
     minHeight: 52,

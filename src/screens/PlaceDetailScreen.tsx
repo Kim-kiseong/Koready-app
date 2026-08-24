@@ -26,6 +26,7 @@ import {
   savePlace,
   unsavePlace,
 } from '@/api/saved-place';
+import { recordRecommendationEvent } from '@/api/picks';
 import CustomText from '@/components/CustomText';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
@@ -43,18 +44,21 @@ import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 export default function PlaceDetailScreen() {
-  const { placeId, tab } =
+  const { placeId, tab, deckId } =
     useLocalSearchParams<{
       placeId: string;
       tab?: string;
+      deckId?: string;
     }>();
   const normalizedTab = Array.isArray(tab) ? tab[0] : tab;
+  const normalizedDeckId = Array.isArray(deckId) ? deckId[0] : deckId;
 
   return (
     <PlaceDetailScreenContent
       key={placeId ?? 'unknown'}
       placeId={placeId}
       normalizedTab={normalizedTab}
+      deckId={normalizedDeckId}
     />
   );
 }
@@ -62,9 +66,11 @@ export default function PlaceDetailScreen() {
 function PlaceDetailScreenContent({
   placeId,
   normalizedTab,
+  deckId,
 }: {
   placeId: string;
   normalizedTab?: string;
+  deckId?: string;
 }) {
   const router = useRouter();
   const t = useTranslation();
@@ -206,6 +212,31 @@ function PlaceDetailScreenContent({
     });
   };
 
+  const handleViewRouteDetail = (routeId: string) => {
+    const placeNumericId = Number(placeId);
+    if (deckId && deckId !== 'dev-mock-deck' && Number.isFinite(placeNumericId)) {
+      if (__DEV__) {
+        console.info('[picks] ROUTE_OPENED recording', {
+          routeId,
+          deckId,
+          placeId,
+        });
+      }
+      recordRecommendationEvent(deckId, placeNumericId, 'ROUTE_OPENED').catch(() => {});
+    }
+
+    router.push({
+      pathname: '/routes/[routeId]',
+      params: {
+        routeId,
+        placeId,
+        placeName: place.title,
+        placeAddress: place.address,
+        deckId: deckId ?? undefined,
+      },
+    });
+  };
+
   return (
     <SafeAreaView
       style={styles.screen}
@@ -268,47 +299,45 @@ function PlaceDetailScreenContent({
               points={description.enjoyPoints}
             />
 
-            {place.relatedPlaces.length > 0 && (
-              <View
+            <View
+              style={
+                styles.nearbySection
+              }
+            >
+              <CustomText
                 style={
-                  styles.nearbySection
+                  styles.sectionTitle
                 }
               >
-                <CustomText
-                  style={
-                    styles.sectionTitle
-                  }
-                >
-                  {
-                    t.placeDetail
-                      .nearbyTitle
-                  }
-                </CustomText>
+                {
+                  t.placeDetail
+                    .nearbyTitle
+                }
+              </CustomText>
 
-                {place.relatedPlaces.map(
-                  (relatedPlace) => (
-                    <NearbyPlaceCard
-                      key={
-                        relatedPlace.id
-                      }
-                      place={
-                        relatedPlace
-                      }
-                      onPress={() =>
-                        router.push({
-                          pathname:
-                            '/places/[placeId]',
-                          params: {
-                            placeId:
-                              relatedPlace.id,
-                          },
-                        })
-                      }
-                    />
-                  ),
-                )}
-              </View>
-            )}
+              {place.relatedPlaces.map(
+                (relatedPlace) => (
+                  <NearbyPlaceCard
+                    key={
+                      relatedPlace.id
+                    }
+                    place={
+                      relatedPlace
+                    }
+                    onPress={() =>
+                      router.push({
+                        pathname:
+                          '/places/[placeId]',
+                        params: {
+                          placeId:
+                            relatedPlace.id,
+                        },
+                      })
+                    }
+                  />
+                ),
+              )}
+            </View>
           </>
         )}
 
@@ -319,17 +348,7 @@ function PlaceDetailScreenContent({
               name: place.title,
               address: place.address,
             }}
-            onViewDetail={(routeId) =>
-              router.push({
-                pathname: '/routes/[routeId]',
-                params: {
-                  routeId,
-                  placeId,
-                  placeName: place.title,
-                  placeAddress: place.address,
-                },
-              })
-            }
+            onViewDetail={handleViewRouteDetail}
           />
         )}
 

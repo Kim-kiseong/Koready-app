@@ -4,6 +4,7 @@ import type { ImageSource } from 'expo-image';
 
 import { HomeImages } from '@/constants/home-images';
 import { useLanguageStore } from '@/store/language-store';
+import type { ServiceRegionCode } from './onboarding';
 import type {
   PlaceListItem,
   PlaceListResponse,
@@ -391,6 +392,8 @@ const MOCK_PLACE_DETAILS_EN: Record<string, PlaceDetail> = {
   'gimcheon-museum': GIMCHEON_MUSEUM_DETAIL_EN,
 };
 
+const PLACE_DETAIL_IN_FLIGHT_REQUESTS = new Map<string, Promise<PlaceDetail>>();
+
 function getMockPlaceDetailsMap(): Record<string, PlaceDetail> {
   return isEnglish() ? MOCK_PLACE_DETAILS_EN : MOCK_PLACE_DETAILS_KO;
 }
@@ -420,6 +423,28 @@ function buildRelatedPlaces(place: MockPlaceListItem): RelatedPlace[] {
     : `${place.serviceRegionName}에서 함께 둘러보기 좋은 곳이에요.`;
   return regionPlaces
     .filter((candidate) => candidate.placeId !== place.placeId)
+    .slice(0, RELATED_PLACES_COUNT)
+    .map((candidate) => ({
+      id: String(candidate.placeId),
+      title: candidate.title,
+      imageUrl: candidate.imageUrl,
+      shortDescription: candidate.shortDescription ?? candidate.overview ?? fallbackDescription,
+    }));
+}
+
+function buildRelatedPlacesFromRegionCode(serviceRegionCode: ServiceRegionCode, currentPlaceId: number): RelatedPlace[] {
+  const regionPlaces = MOCK_PLACES_BY_REGION[serviceRegionCode] ?? [];
+  if (regionPlaces.length === 0) {
+    return [];
+  }
+
+  const fallbackRegionName = regionPlaces[0]?.serviceRegionName ?? serviceRegionCode;
+  const fallbackDescription = isEnglish()
+    ? `A place worth visiting in ${fallbackRegionName}.`
+    : `${fallbackRegionName}에서 함께 둘러보기 좋은 곳이에요.`;
+
+  return regionPlaces
+    .filter((candidate) => candidate.placeId !== currentPlaceId)
     .slice(0, RELATED_PLACES_COUNT)
     .map((candidate) => ({
       id: String(candidate.placeId),
@@ -1950,6 +1975,7 @@ type PlaceDetailApiRelatedPlace = {
 
 type PlaceDetailApiResponse = {
   placeId: number;
+  serviceRegionCode: ServiceRegionCode;
   title: string;
   address: string;
   tags: string[];
@@ -1968,6 +1994,16 @@ type PlaceDetailEnvelope = {
 };
 
 function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
+  const relatedPlaces =
+    response.relatedPlaces.length > 0
+      ? response.relatedPlaces.map((related) => ({
+          id: String(related.placeId),
+          title: related.title,
+          imageUrl: related.imageUrl,
+          shortDescription: related.shortDescription,
+        }))
+      : buildRelatedPlacesFromRegionCode(response.serviceRegionCode, response.placeId);
+
   return {
     id: String(response.placeId),
     routeId: String(response.placeId),
@@ -1984,12 +2020,7 @@ function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
         altText: image.altText,
       })),
     description: response.description ?? DEFAULT_PLACE_DESCRIPTION,
-    relatedPlaces: response.relatedPlaces.map((related) => ({
-      id: String(related.placeId),
-      title: related.title,
-      imageUrl: related.imageUrl,
-      shortDescription: related.shortDescription,
-    })),
+    relatedPlaces,
   };
 }
 
@@ -2033,12 +2064,36 @@ function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
 export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
   const numericId = Number(placeId);
   if (Number.isFinite(numericId) && numericId > 0) {
-    try {
-      const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
-      return mapPlaceDetailResponse(response.data.data);
-    } catch (error) {
-      if (!isAxiosError(error)) throw error;
+    const language = useLanguageStore.getState().language;
+    const cacheKey = `${language}:${numericId}`;
+    const inflightRequest = PLACE_DETAIL_IN_FLIGHT_REQUESTS.get(cacheKey);
+
+    if (inflightRequest) {
+      return inflightRequest;
     }
+
+    const request = (async () => {
+      try {
+        const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
+        if (__DEV__) {
+          console.info('[place-detail] GET /places/{placeId} response.relatedPlaces', {
+            placeId: numericId,
+            serviceRegionCode: response.data.data.serviceRegionCode,
+            relatedPlacesCount: response.data.data.relatedPlaces.length,
+            relatedPlaces: response.data.data.relatedPlaces,
+          });
+        }
+        return mapPlaceDetailResponse(response.data.data);
+      } catch (error) {
+        if (!isAxiosError(error)) throw error;
+        return buildFallbackPlaceDetail(placeId);
+      } finally {
+        PLACE_DETAIL_IN_FLIGHT_REQUESTS.delete(cacheKey);
+      }
+    })();
+
+    PLACE_DETAIL_IN_FLIGHT_REQUESTS.set(cacheKey, request);
+    return request;
   }
 
   return buildFallbackPlaceDetail(placeId);

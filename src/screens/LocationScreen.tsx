@@ -23,24 +23,6 @@ const SEARCH_DEBOUNCE_MS = 400;
 // The dev-bypass session's token isn't real — sending it to GET /locations/search
 // or POST /users/me/locations 401s, which trips client.ts's refresh-then-logout
 // cascade. Mirrors TermsScreen's/LanguageScreen's same dev-only bypass.
-const DEV_MOCK_SEARCH_RESULTS: LocationSearchItem[] = [
-  {
-    searchResultToken: 'dev-mock-search-token',
-    provider: 'KAKAO',
-    resultType: 'ADDRESS',
-    providerPlaceId: null,
-    name: '성신여자대학교',
-    roadAddress: '서울 성북구 보문로34다길 2',
-    address: '서울 성북구 동선동4가 389',
-    latitude: 37.5926,
-    longitude: 127.016,
-    sido: '서울',
-    sigungu: '성북구',
-    dong: '동선동',
-    serviceRegionCode: 'SEOUL',
-  },
-];
-
 export default function LocationScreen() {
   const router = useRouter();
   const t = useTranslation();
@@ -50,6 +32,24 @@ export default function LocationScreen() {
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
+
+  const DEV_MOCK_SEARCH_RESULTS: LocationSearchItem[] = [
+    {
+      searchResultToken: 'dev-mock-search-token',
+      provider: 'KAKAO',
+      resultType: 'ADDRESS',
+      providerPlaceId: null,
+      name: location?.displayAddress ?? '저장된 주소',
+      roadAddress: location?.displayAddress ?? '저장된 주소',
+      address: location?.displayAddress ?? '저장된 주소',
+      latitude: 37.5926,
+      longitude: 127.016,
+      sido: '서울',
+      sigungu: '성북구',
+      dong: '동선동',
+      serviceRegionCode: 'SEOUL',
+    },
+  ];
 
   const [query, setQuery] = useState(location?.displayAddress ?? '');
   const [isFocused, setIsFocused] = useState(false);

@@ -26,6 +26,7 @@ import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { getCountryDisplayName, getCountryFlag, normalizeCountryCode } from '@/utils/country';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
+import { resolveProfileImageUri } from '@/utils/profile-image';
 
 type MessageThreadsScreenState = {
   items: MessageThreadListItem[];
@@ -385,8 +386,10 @@ function MessageThreadCard({
 }
 
 function Avatar({ imageUrl, nickname }: { imageUrl: string | null; nickname: string }) {
-  if (imageUrl) {
-    return <Image source={{ uri: imageUrl }} style={styles.avatar} contentFit="cover" />;
+  const resolvedImageUrl = resolveProfileImageUri(imageUrl);
+
+  if (resolvedImageUrl) {
+    return <Image source={{ uri: resolvedImageUrl }} style={styles.avatar} contentFit="cover" />;
   }
 
   const initial = nickname.trim().charAt(0).toUpperCase() || 'M';
