@@ -1,0 +1,9 @@
+language: "ko-KR" # 리뷰 언어: 한국어
+
+reviews:
+  profile: "chill" # 부드러운 리뷰 톤
+  high_level_summary: true # PR 요약 작성
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*" 

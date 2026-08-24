@@ -1,0 +1,186 @@
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import CustomText from '@/components/CustomText';
+import BulletList from '@/components/guide-blocks/BulletList';
+import HoriTipCard from '@/components/HoriTipCard';
+import OnboardingHeader from '@/components/OnboardingHeader';
+import { Palette } from '@/constants/colors';
+import { FontFamily } from '@/constants/typography';
+import { KTX_STEP3_DETAIL, KTX_STEPS } from '@/constants/ktx-content';
+import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
+
+function NoteBox({ text }: { text: string }) {
+  const [first, ...rest] = text.split('\n');
+  return (
+    <View style={styles.note}>
+      <CustomText style={styles.noteRegular}>{first}</CustomText>
+      {rest.map((line) => (
+        <CustomText key={line} style={styles.noteEmphasis}>
+          {line}
+        </CustomText>
+      ))}
+    </View>
+  );
+}
+
+function ChecklistGrid({ title, columns }: { title: string; columns: string[][] }) {
+  return (
+    <View style={styles.checklistCard}>
+      <CustomText style={styles.checklistTitle}>{title}</CustomText>
+      <View style={styles.checklistColumns}>
+        {columns.map((column, index) => (
+          <View key={index} style={styles.checklistColumn}>
+            {column.map((item) => (
+              <View key={item} style={styles.checklistRow}>
+                <SymbolView
+                  name={{ ios: 'checkmark', android: 'check', web: 'check' }}
+                  size={14}
+                  weight="semibold"
+                  tintColor={Palette.text}
+                />
+                <CustomText style={styles.checklistText}>{item}</CustomText>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export default function KtxStepDetailScreen() {
+  const router = useRouter();
+  const t = useTranslation();
+  const { stepId } = useLocalSearchParams<{ stepId: string }>();
+  const step = KTX_STEPS.find((item) => String(item.id) === stepId);
+
+  if (!step || stepId !== '3') {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+        <OnboardingHeader onBack={() => goBackOrRoot(router)} title={step?.title ?? ''} rightIcon={null} />
+        <View style={styles.emptyState}>
+          <CustomText style={styles.emptyTitle}>{t.guideDetail.stepComingSoonTitle}</CustomText>
+          <CustomText style={styles.emptyBody}>{t.guideDetail.stepComingSoonBody}</CustomText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const detail = KTX_STEP3_DETAIL;
+
+  return (
+    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={detail.title} rightIcon={null} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <NoteBox text={detail.note} />
+
+        <View style={styles.screenshotGroup}>
+          <Image source={detail.screenshot} style={styles.screenshot} contentFit="cover" />
+          <CustomText style={styles.screenshotCaption}>{detail.screenshotCaption}</CustomText>
+        </View>
+
+        <HoriTipCard body={detail.tipBody} />
+
+        <BulletList columns={detail.stationColumns} />
+
+        <ChecklistGrid title={detail.checklistTitle} columns={detail.checklistColumns} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 32,
+    gap: 16,
+  },
+  note: {
+    backgroundColor: Palette.grey100,
+    borderRadius: 12,
+    padding: 16,
+  },
+  noteRegular: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 20.8,
+    color: Palette.grey500,
+  },
+  noteEmphasis: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    lineHeight: 20.8,
+    color: Palette.grey700,
+  },
+  screenshotGroup: {
+    gap: 10,
+    alignItems: 'flex-end',
+  },
+  screenshot: {
+    width: '100%',
+    aspectRatio: 459 / 555,
+    borderRadius: 16,
+  },
+  screenshotCaption: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 13,
+    color: Palette.grey400,
+  },
+  checklistCard: {
+    borderWidth: 1,
+    borderColor: Palette.grey200,
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
+  },
+  checklistTitle: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    color: Palette.grey600,
+  },
+  checklistColumns: {
+    flexDirection: 'row',
+    gap: 29,
+  },
+  checklistColumn: {
+    gap: 8,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checklistText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 13,
+    color: Palette.text,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    color: Palette.text,
+  },
+  emptyBody: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    color: Palette.grey600,
+    textAlign: 'center',
+  },
+});
