@@ -52,7 +52,7 @@ export default function CompleteScreen() {
   // recovery the spec calls for, rather than a single generic failure message.
   const handleCompletionError = async (error: unknown) => {
     if (!isAxiosError<ApiErrorEnvelope>(error)) {
-      Alert.alert('오류', '온보딩 완료에 실패했습니다.');
+      Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.genericFailed);
       return;
     }
     const status = error.response?.status;
@@ -68,11 +68,11 @@ export default function CompleteScreen() {
           clearCompletedFlowSelections();
           router.replace('/home');
         } else {
-          Alert.alert('오류', '이미 다른 선택으로 완료된 온보딩이에요.');
+          Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.alreadyCompletedOther);
           router.replace(await resolveOnboardingResumeRoute());
         }
       } catch {
-        Alert.alert('오류', '저장된 온보딩 상태를 확인하지 못했어요. 다시 시도해 주세요.');
+        Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.resumeCheckFailed);
       }
       return;
     }
@@ -80,32 +80,32 @@ export default function CompleteScreen() {
     switch (code) {
       case 'ONBOARDING_LOCATION_INVALID':
         setCurrentLocationId(null);
-        Alert.alert('오류', '위치 정보가 유효하지 않아요. 위치를 다시 선택해 주세요.');
+        Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.invalidLocation);
         router.replace('/location');
         return;
       case 'ONBOARDING_TRAVEL_STYLES_INVALID':
-        Alert.alert('오류', '여행 스타일을 1~4개, 중복 없이 다시 선택해 주세요.');
+        Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.invalidTravelStyles);
         router.replace('/travel-style');
         return;
       case 'ONBOARDING_CANDIDATE_SET_INVALID':
         clearPreferencePlaceSelection();
-        Alert.alert('오류', '여행지 후보가 갱신됐어요. 다시 선택해 주세요.');
+        Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.invalidCandidateSet);
         router.replace('/destinations');
         return;
       case 'ONBOARDING_SELECTION_INVALID':
         clearPreferencePlaceSelection();
-        Alert.alert('오류', '선택한 여행지를 확인해 주세요 (1~3개, 같은 후보 세트).');
+        Alert.alert(t.complete.alerts.errorTitle, t.complete.alerts.invalidSelection);
         router.replace('/destinations');
         return;
       default:
-        Alert.alert('오류', error.response?.data?.message || '온보딩 완료에 실패했습니다.');
+        Alert.alert(t.complete.alerts.errorTitle, error.response?.data?.message || t.complete.alerts.genericFailed);
     }
   };
 
   const handleNext = async () => {
     if (isSubmitting) return;
     if (!canComplete) {
-      Alert.alert('알림', '위치와 여행지를 모두 선택해야 완료할 수 있어요.');
+      Alert.alert(t.complete.alerts.noticeTitle, t.complete.alerts.incompleteSelection);
       return;
     }
     if (isDevMockSession) {
