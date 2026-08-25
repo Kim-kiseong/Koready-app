@@ -221,7 +221,16 @@ export default function HomeScreen() {
             onMomentumScrollEnd={handleGuideScroll}
             contentContainerStyle={styles.guideRow}>
             {guides.map((guide) => (
-              <GuideCard key={guide.id} guide={guide} width={guideCardWidth} />
+              <GuideCard
+                key={guide.id}
+                guide={guide}
+                width={guideCardWidth}
+                onPress={() =>
+                  guide.id === 'ktx-easy-booking'
+                    ? router.push('/guides/ktx')
+                    : router.push({ pathname: '/guides/[guideId]', params: { guideId: guide.id } })
+                }
+              />
             ))}
           </ScrollView>
 

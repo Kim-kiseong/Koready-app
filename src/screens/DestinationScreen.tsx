@@ -14,6 +14,7 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 // The dev-bypass session's token isn't real — sending it to GET
@@ -63,9 +64,49 @@ const DEV_MOCK_CANDIDATE_SET: OnboardingCandidateSetResponse = {
   ],
 };
 
+const DEV_MOCK_CANDIDATE_SET_EN: OnboardingCandidateSetResponse = {
+  ...DEV_MOCK_CANDIDATE_SET,
+  items: [
+    {
+      placeId: 1,
+      title: 'Gyeongju Heritage Stroll',
+      imageUrl: 'https://picsum.photos/seed/gyeongju/600/600',
+      serviceRegionCode: 'GYEONGSANG',
+      serviceRegionName: 'Gyeongsang',
+      travelStyle: 'CULTURE_EXPERIENCE',
+      tags: ['History', 'Tradition'],
+      curatorMessage: "Experience Gyeongju's cultural heritage.",
+      displayOrder: 1,
+    },
+    {
+      placeId: 2,
+      title: 'Jeonju Hanok Village Stroll',
+      imageUrl: 'https://picsum.photos/seed/jeonju/600/600',
+      serviceRegionCode: 'JEOLLA',
+      serviceRegionName: 'Jeolla',
+      travelStyle: 'TRADITIONAL_MARKET',
+      tags: ['Hanok', 'Traditional Market'],
+      curatorMessage: 'Take in the charm of Jeonju.',
+      displayOrder: 2,
+    },
+    {
+      placeId: 3,
+      title: 'Busan Haeundae Stroll',
+      imageUrl: 'https://picsum.photos/seed/haeundae/600/600',
+      serviceRegionCode: 'GYEONGSANG',
+      serviceRegionName: 'Gyeongsang',
+      travelStyle: 'NATURE',
+      tags: ['Beach', 'Walking'],
+      curatorMessage: 'Enjoy the sea at Haeundae.',
+      displayOrder: 3,
+    },
+  ],
+};
+
 export default function DestinationScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const accessToken = useAuthStore((state) => state.accessToken);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const selectedPreferencePlaceIds = useOnboardingStore((state) => state.selectedPreferencePlaceIds);
@@ -79,8 +120,9 @@ export default function DestinationScreen() {
 
   const loadCandidateSet = useCallback(() => {
     if (isDevMockSession) {
-      setCandidateSetData(DEV_MOCK_CANDIDATE_SET);
-      setCandidateSet(DEV_MOCK_CANDIDATE_SET.candidateSetId, DEV_MOCK_CANDIDATE_SET.version);
+      const mockSet = language === 'EN' ? DEV_MOCK_CANDIDATE_SET_EN : DEV_MOCK_CANDIDATE_SET;
+      setCandidateSetData(mockSet);
+      setCandidateSet(mockSet.candidateSetId, mockSet.version);
       setIsLoading(false);
       return;
     }
@@ -95,12 +137,12 @@ export default function DestinationScreen() {
         setHasError(true);
       })
       .finally(() => setIsLoading(false));
-  }, [setCandidateSet, isDevMockSession]);
+  }, [setCandidateSet, isDevMockSession, language]);
 
   useEffect(() => {
     loadCandidateSet();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDevMockSession]);
+  }, [isDevMockSession, language]);
 
   const handleNext = () => {
     if (selectedPreferencePlaceIds.length === 0) return;
@@ -127,15 +169,15 @@ export default function DestinationScreen() {
         {isLoading && (
           <View style={styles.statusBox}>
             <ActivityIndicator color={Palette.primary} />
-            <CustomText style={styles.statusText}>여행지 후보를 불러오는 중이에요.</CustomText>
+            <CustomText style={styles.statusText}>{t.destination.loadingText}</CustomText>
           </View>
         )}
 
         {!isLoading && hasError && (
           <View style={styles.statusBox}>
-            <CustomText style={styles.statusText}>여행지 후보를 불러오지 못했어요.</CustomText>
+            <CustomText style={styles.statusText}>{t.destination.errorText}</CustomText>
             <Pressable style={styles.retryButton} onPress={loadCandidateSet}>
-              <CustomText style={styles.retryButtonText}>다시 시도</CustomText>
+              <CustomText style={styles.retryButtonText}>{t.destination.retryButton}</CustomText>
             </Pressable>
           </View>
         )}

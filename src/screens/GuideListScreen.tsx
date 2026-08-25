@@ -14,6 +14,7 @@ import { GuideCategoryImages } from '@/constants/guide-category-images';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
 const GRID_COLUMNS = 2;
 const GRID_GAP = 13;
@@ -27,6 +28,7 @@ const WEB_SCROLLBAR_ALLOWANCE = Platform.OS === 'web' ? 20 : 0;
 export default function GuideListScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const { width: windowWidth } = useWindowDimensions();
   const guideCardWidth =
     (windowWidth - SCREEN_PADDING * 2 - WEB_SCROLLBAR_ALLOWANCE - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
@@ -34,8 +36,8 @@ export default function GuideListScreen() {
   const [guides, setGuides] = useState<GuideVideo[]>([]);
 
   useEffect(() => {
-    fetchGuideVideos(category).then(setGuides);
-  }, [category]);
+    fetchGuideVideos(category, language).then(setGuides);
+  }, [category, language]);
 
   const handleCategoryPress = (id: GuideCategoryId) => {
     // LANGUAGE has no card grid of its own — it's a single 6-card phrase

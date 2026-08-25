@@ -46,6 +46,7 @@ export default function IconFlow({ title, description, steps }: IconFlowProps) {
                 size={16}
                 weight="regular"
                 tintColor={Palette.grey350}
+                style={styles.arrow}
               />
             )}
           </Fragment>
@@ -81,12 +82,17 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
   step: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
     gap: 8,
+  },
+  arrow: {
+    marginTop: 12,
   },
   iconCircle: {
     width: 40,
