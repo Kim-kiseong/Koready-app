@@ -30,6 +30,7 @@ import {
 } from '@/api/saved-place';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
+import HeartIcon from '@/components/HeartIcon';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
@@ -415,6 +416,7 @@ export default function PicksScreen() {
         {!isLoading && !hasError && card && (
           <PicksDeck
             card={card}
+            nextCards={cards.slice(currentIndex + 1, currentIndex + 3)}
             onToggleSave={toggleSaved}
             onExpand={() => recordEvent(card.placeId, 'CARD_EXPANDED')}
             onViewDetail={() => {
@@ -450,6 +452,7 @@ export default function PicksScreen() {
 
 type PicksDeckProps = {
   card: PicksCard;
+  nextCards: PicksCard[];
   onToggleSave: () => void;
   onExpand: () => void;
   onViewDetail: () => void;
@@ -461,6 +464,7 @@ type PicksDeckProps = {
 
 function PicksDeck({
   card,
+  nextCards,
   onToggleSave,
   onExpand,
   onViewDetail,
@@ -515,17 +519,49 @@ function PicksDeck({
   }));
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.cardStack, swipeStyle]}>
-        <PicksFlipCard
-          key={card.placeId}
-          card={card}
-          onToggleSave={onToggleSave}
-          onExpand={onExpand}
-          onViewDetail={onViewDetail}
+    <View style={styles.cardStack}>
+      {/* Furthest card first so nearer ones paint on top of it. */}
+      {[...nextCards].reverse().map((behindCard, reverseIndex) => (
+        <BehindCard
+          key={behindCard.placeId}
+          card={behindCard}
+          depth={nextCards.length - reverseIndex}
         />
-      </Animated.View>
-    </GestureDetector>
+      ))}
+
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.cardStack, styles.topCard, swipeStyle]}>
+          <PicksFlipCard
+            key={card.placeId}
+            card={card}
+            onToggleSave={onToggleSave}
+            onExpand={onExpand}
+            onViewDetail={onViewDetail}
+          />
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  );
+}
+
+function BehindCard({ card, depth }: { card: PicksCard; depth: number }) {
+  return (
+    <View
+      style={[
+        styles.card,
+        styles.behindCard,
+        {
+          transform: [{ translateY: depth * 10 }, { scale: 1 - depth * 0.05 }],
+          opacity: 1 - depth * 0.25,
+        },
+      ]}
+      pointerEvents="none">
+      {card.imageUrl ? (
+        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
+      )}
+    </View>
   );
 }
 
@@ -557,16 +593,7 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
   }));
 
   const heartIcon = (
-    <SymbolView
-      name={{
-        ios: card.saved ? 'heart.fill' : 'heart',
-        android: card.saved ? 'favorite' : 'favorite_border',
-        web: card.saved ? 'favorite' : 'favorite_border',
-      }}
-      size={20}
-      weight="regular"
-      tintColor={card.saved ? Palette.red300 : Palette.grey400}
-    />
+    <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={20} />
   );
 
   return (
@@ -752,8 +779,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   cardStack: {
+    position: 'relative',
     width: 343,
     height: CARD_HEIGHT,
+  },
+  topCard: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 10,
+    elevation: 10,
   },
   card: {
     width: 343,
@@ -767,6 +802,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
+  },
+  behindCard: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: CARD_HEIGHT,
+    shadowOpacity: 0.04,
+    elevation: 1,
   },
   cardFace: {
     position: 'absolute',

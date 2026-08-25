@@ -13,8 +13,6 @@ export const en: DeepPartial<Translations> = {
   location: {
     title: 'Search Location',
     searchPlaceholder: 'Search for a city, school, or neighborhood',
-    currentLocationButton: 'Use Current Location',
-    currentLocationValue: 'Current Location',
     roadAddressBadge: 'Road',
     lotNumberBadge: 'Lot',
     next: 'Next',
@@ -350,6 +348,12 @@ export const en: DeepPartial<Translations> = {
       EXHIBITION_MUSEUM: 'Exhibition & Museum',
       DRAMA_LOCATION: 'Drama Filming Location',
     },
+    cancel: 'Cancel',
+    apply: 'Apply',
+  },
+  dateRangePicker: {
+    title: 'Select dates',
+    reset: 'Reset',
     cancel: 'Cancel',
     apply: 'Apply',
   },

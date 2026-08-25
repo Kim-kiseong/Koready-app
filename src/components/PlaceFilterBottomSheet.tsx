@@ -1,20 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Modal,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import type { TravelStyleId } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
+import DateRangeBottomSheet, {
+  EMPTY_DATE_RANGE,
+  type DateOnly,
+  type DateRangeSelection,
+} from '@/components/DateRangeBottomSheet';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import {
@@ -30,27 +25,6 @@ export type PlaceFilterBottomSheetProps = {
   value: PlaceFilterSelection;
   onApply: (value: PlaceFilterSelection) => void;
   onClose: () => void;
-};
-
-type DateOnly = {
-  year: number;
-  monthIndex: number;
-  day: number;
-};
-
-type DateRangeSelection = {
-  start: DateOnly | null;
-  end: DateOnly | null;
-};
-
-type YearMonth = {
-  year: number;
-  monthIndex: number;
-};
-
-type MonthCell = {
-  date: DateOnly;
-  inCurrentMonth: boolean;
 };
 
 const DATE_OPTIONS: { value: PlaceDateFilterPreset; label: string }[] = [
@@ -69,18 +43,6 @@ const TRAVEL_STYLE_OPTIONS: { value: TravelStyleId; label: string }[] = [
   { value: 'EXHIBITION_MUSEUM', label: '전시/미술관' },
   { value: 'DRAMA_LOCATION', label: '드라마 촬영지' },
 ];
-
-const WEEKDAY_LABELS = [
-  { label: '일', color: '#FD4C4D' },
-  { label: '월', color: Palette.grey600 },
-  { label: '화', color: Palette.grey600 },
-  { label: '수', color: Palette.grey600 },
-  { label: '목', color: Palette.grey600 },
-  { label: '금', color: Palette.grey600 },
-  { label: '토', color: '#3B82F6' },
-] as const;
-
-const EMPTY_DATE_RANGE: DateRangeSelection = { start: null, end: null };
 
 function toPlaceDateRange(selection: DateRangeSelection): PlaceDateRange {
   if (!selection.start && !selection.end) {
@@ -134,16 +96,6 @@ function parseDateOnly(value: string): DateOnly {
 
 function formatDateOnly(date: DateOnly) {
   return `${date.year}-${String(date.monthIndex + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
-}
-
-function getTodayDateOnly(): DateOnly {
-  const now = new Date();
-
-  return {
-    year: now.getFullYear(),
-    monthIndex: now.getMonth(),
-    day: now.getDate(),
-  };
 }
 
 export default function PlaceFilterBottomSheet({
@@ -306,278 +258,6 @@ export default function PlaceFilterBottomSheet({
   );
 }
 
-function DateRangeBottomSheet({
-  visible,
-  value,
-  onApply,
-  onClose,
-}: {
-  visible: boolean;
-  value: DateRangeSelection;
-  onApply: (value: DateRangeSelection) => void;
-  onClose: () => void;
-}) {
-  const { height: windowHeight } = useWindowDimensions();
-  const [draft, setDraft] = useState<DateRangeSelection>(value);
-  const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
-  const today = useMemo(() => getTodayDateOnly(), []);
-
-  useEffect(() => {
-    const listenerId = sheetTranslateY.addListener(() => {});
-
-    return () => {
-      sheetTranslateY.removeListener(listenerId);
-    };
-  }, [sheetTranslateY]);
-
-  const monthStart = useMemo<YearMonth>(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), monthIndex: now.getMonth() };
-  }, []);
-  const visibleMonths = useMemo(() => {
-    return Array.from({ length: 12 }, (_, index) => shiftMonth(monthStart, index));
-  }, [monthStart]);
-
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-
-    sheetTranslateY.setValue(windowHeight);
-    Animated.timing(sheetTranslateY, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [sheetTranslateY, visible, windowHeight]);
-
-  const requestClose = useCallback(() => {
-    Animated.timing(sheetTranslateY, {
-      toValue: windowHeight,
-      duration: 220,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        onClose();
-      }
-    });
-  }, [onClose, sheetTranslateY, windowHeight]);
-
-  const handleApply = useCallback(() => {
-    onApply(draft);
-    requestClose();
-  }, [draft, onApply, requestClose]);
-
-  const resetDraft = () => {
-    setDraft(EMPTY_DATE_RANGE);
-  };
-
-  const handleDayPress = (date: DateOnly) => {
-    setDraft((current) => {
-      if (!current.start || (current.start && current.end)) {
-        return { start: date, end: null };
-      }
-
-      if (compareDateOnly(date, current.start) < 0) {
-        return { start: date, end: null };
-      }
-
-      return { start: current.start, end: date };
-    });
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          gestureState.dy > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
-        onPanResponderMove: (_, gestureState) => {
-          sheetTranslateY.setValue(Math.max(0, gestureState.dy));
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dy > 80 || gestureState.vy > 1.1) {
-            requestClose();
-            return;
-          }
-
-          Animated.spring(sheetTranslateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 20,
-            stiffness: 180,
-          }).start();
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(sheetTranslateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 20,
-            stiffness: 180,
-          }).start();
-        },
-      }),
-    [requestClose, sheetTranslateY],
-  );
-
-  if (!visible) {
-    return null;
-  }
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={requestClose}
-    >
-      <View style={styles.dateSheetOverlay} pointerEvents="box-none">
-        <Pressable style={styles.dateDismissArea} onPress={requestClose} />
-        <Animated.View
-          style={[
-            styles.sheet,
-            styles.dateSheet,
-            styles.dateSheetPosition,
-            { height: windowHeight * 0.78, transform: [{ translateY: sheetTranslateY }] },
-          ]}
-        >
-          <View style={styles.dateBody}>
-            <View style={styles.handleArea} {...panResponder.panHandlers}>
-              <View style={styles.handle} />
-            </View>
-
-            <View style={styles.dateHeaderRow}>
-              <CustomText style={styles.dateHeaderTitle}>날짜 선택</CustomText>
-              <Pressable hitSlop={8} onPress={resetDraft}>
-                <CustomText style={styles.resetText}>초기화</CustomText>
-              </Pressable>
-            </View>
-
-            <ScrollView
-              style={styles.calendarScroll}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.calendarContent}
-              bounces={false}
-              nestedScrollEnabled
-            >
-              {visibleMonths.map((month) => (
-                <CalendarMonth
-                  key={`${month.year}-${month.monthIndex}`}
-                  month={month}
-                  selection={draft}
-                  today={today}
-                  onDayPress={handleDayPress}
-                />
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.dateFooter}>
-            <Pressable style={styles.cancelButton} onPress={requestClose}>
-              <CustomText style={styles.cancelButtonText}>취소</CustomText>
-            </Pressable>
-            <Pressable style={styles.applyButton} onPress={handleApply}>
-              <CustomText style={styles.applyButtonText}>적용하기</CustomText>
-            </Pressable>
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-function CalendarMonth({
-  month,
-  selection,
-  today,
-  onDayPress,
-}: {
-  month: YearMonth;
-  selection: DateRangeSelection;
-  today: DateOnly;
-  onDayPress: (date: DateOnly) => void;
-}) {
-  const monthRows = useMemo(() => buildMonthRows(month), [month]);
-
-  return (
-    <View style={styles.monthBlock}>
-      <CustomText style={styles.monthLabel}>{formatMonthLabel(month)}</CustomText>
-
-      <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((weekday) => (
-          <View key={weekday.label} style={styles.weekdayCell}>
-            <CustomText style={[styles.weekdayLabel, { color: weekday.color }]}>{weekday.label}</CustomText>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.dateGrid}>
-        {monthRows.map((row, rowIndex) => (
-          <View key={`${month.year}-${month.monthIndex}-row-${rowIndex}`} style={styles.dateRow}>
-            {row.map((cell) => (
-              <CalendarDayCell
-                key={formatDateKey(cell.date)}
-                cell={cell}
-                selection={selection}
-                today={today}
-                onPress={() => onDayPress(cell.date)}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function CalendarDayCell({
-  cell,
-  selection,
-  today,
-  onPress,
-}: {
-  cell: MonthCell;
-  selection: DateRangeSelection;
-  today: DateOnly;
-  onPress: () => void;
-}) {
-  const isRangeStart = Boolean(selection.start && isSameDate(cell.date, selection.start));
-  const isRangeEnd = Boolean(selection.end && isSameDate(cell.date, selection.end));
-  const isSingleSelected = Boolean(selection.start && !selection.end && isRangeStart);
-  const isInRange =
-    Boolean(selection.start && selection.end) &&
-    isDateBetweenInclusive(cell.date, selection.start!, selection.end!);
-
-  const selected = isSingleSelected || isInRange;
-  const isPastDate = compareDateOnly(cell.date, today) < 0;
-
-  return (
-    <Pressable
-      disabled={isPastDate}
-      onPress={onPress}
-      style={[
-        styles.dayCell,
-        cell.inCurrentMonth ? styles.dayCellCurrentMonth : styles.dayCellOutsideMonth,
-        selected ? styles.dayCellSelected : null,
-        isSingleSelected ? styles.dayCellSelectedSingle : null,
-        isRangeStart && selection.end ? styles.dayCellSelectedStart : null,
-        isRangeEnd && selection.start ? styles.dayCellSelectedEnd : null,
-      ]}
-    >
-        <CustomText
-          style={[
-            styles.dayText,
-            { color: getDayTextColor(cell.date, cell.inCurrentMonth, selected, isPastDate) },
-            selected ? styles.dayTextSelected : null,
-          ]}
-        >
-          {cell.date.day}
-      </CustomText>
-    </Pressable>
-  );
-}
-
 function FilterChip({
   label,
   selected,
@@ -614,128 +294,11 @@ function CalendarIcon({ color = Palette.grey500 }: { color?: string }) {
   );
 }
 
-function buildMonthRows(month: YearMonth): MonthCell[][] {
-  const firstDay = new Date(month.year, month.monthIndex, 1).getDay();
-  const daysInMonth = new Date(month.year, month.monthIndex + 1, 0).getDate();
-  const daysInPrevMonth = new Date(month.year, month.monthIndex, 0).getDate();
-  const prevMonth = shiftMonth(month, -1);
-  const nextMonth = shiftMonth(month, 1);
-
-  const cells: MonthCell[] = [];
-
-  for (let index = firstDay - 1; index >= 0; index -= 1) {
-    cells.push({
-      date: {
-        year: prevMonth.year,
-        monthIndex: prevMonth.monthIndex,
-        day: daysInPrevMonth - index,
-      },
-      inCurrentMonth: false,
-    });
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push({
-      date: {
-        year: month.year,
-        monthIndex: month.monthIndex,
-        day,
-      },
-      inCurrentMonth: true,
-    });
-  }
-
-  let nextDay = 1;
-  while (cells.length % 7 !== 0) {
-    cells.push({
-      date: {
-        year: nextMonth.year,
-        monthIndex: nextMonth.monthIndex,
-        day: nextDay,
-      },
-      inCurrentMonth: false,
-    });
-    nextDay += 1;
-  }
-
-  const rows: MonthCell[][] = [];
-  for (let index = 0; index < cells.length; index += 7) {
-    rows.push(cells.slice(index, index + 7));
-  }
-
-  return rows;
-}
-
-function shiftMonth(month: YearMonth, offset: number): YearMonth {
-  const shifted = new Date(month.year, month.monthIndex + offset, 1);
-  return {
-    year: shifted.getFullYear(),
-    monthIndex: shifted.getMonth(),
-  };
-}
-
-function formatMonthLabel(month: YearMonth) {
-  return `${month.year}년 ${month.monthIndex + 1}월`;
-}
-
-function formatDateKey(date: DateOnly) {
-  return `${date.year}-${date.monthIndex + 1}-${date.day}`;
-}
-
-function compareDateOnly(left: DateOnly, right: DateOnly) {
-  return Date.UTC(left.year, left.monthIndex, left.day) - Date.UTC(right.year, right.monthIndex, right.day);
-}
-
-function isSameDate(left: DateOnly, right: DateOnly) {
-  return left.year === right.year && left.monthIndex === right.monthIndex && left.day === right.day;
-}
-
-function isDateBetweenInclusive(date: DateOnly, start: DateOnly, end: DateOnly) {
-  const current = Date.UTC(date.year, date.monthIndex, date.day);
-  const startTime = Date.UTC(start.year, start.monthIndex, start.day);
-  const endTime = Date.UTC(end.year, end.monthIndex, end.day);
-  return current >= startTime && current <= endTime;
-}
-
-function getDayTextColor(
-  date: DateOnly,
-  inCurrentMonth: boolean,
-  selected: boolean,
-  isPastDate: boolean,
-) {
-  if (selected) {
-    return Palette.white;
-  }
-
-  if (isPastDate) {
-    return Palette.grey400;
-  }
-
-  const weekday = new Date(date.year, date.monthIndex, date.day).getDay();
-  if (weekday === 0) {
-    return inCurrentMonth ? '#FD4C4D' : '#FFB6B8';
-  }
-
-  if (weekday === 6) {
-    return inCurrentMonth ? '#3B82F6' : '#A9C7FF';
-  }
-
-  return inCurrentMonth ? Palette.grey700 : Palette.grey400;
-}
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
-  },
-  dateSheetOverlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'flex-end',
-  },
-  dateDismissArea: {
-    ...StyleSheet.absoluteFill,
   },
   sheet: {
     alignSelf: 'stretch',
@@ -745,18 +308,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     gap: 16,
-  },
-  dateSheet: {
-    overflow: 'hidden',
-  },
-  dateSheetPosition: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dateBody: {
-    flex: 1,
   },
   handleArea: {
     alignItems: 'center',
@@ -787,20 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 25.2,
     color: Palette.text,
-  },
-  dateHeaderRow: {
-    minHeight: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateHeaderTitle: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 14,
-    lineHeight: 19.6,
-    marginTop:10,
-    marginBottom: 24,
-    color: Palette.grey600,
   },
   resetText: {
     fontFamily: FontFamily.pretendard.medium,
@@ -886,92 +423,11 @@ const styles = StyleSheet.create({
   dateSelectTextSelected: {
     color: Palette.white,
   },
-  calendarContent: {
-    gap: 24,
-    paddingBottom: 8,
-  },
-  calendarScroll: {
-    flex: 1,
-  },
-  monthBlock: {
-    gap: 16,
-  },
-  monthLabel: {
-    fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 14,
-    lineHeight: 19.6,
-    color: Palette.text,
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-  },
-  weekdayCell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weekdayLabel: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 19.6,
-  },
-  dateGrid: {
-    gap: 10,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  dayCell: {
-    flex: 1,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayCellCurrentMonth: {},
-  dayCellOutsideMonth: {},
-  dayCellSelected: {
-    backgroundColor: Palette.primary,
-  },
-  dayCellSelectedSingle: {
-    borderRadius: 999,
-  },
-  dayCellSelectedStart: {
-    borderTopLeftRadius: 999,
-    borderBottomLeftRadius: 999,
-  },
-  dayCellSelectedEnd: {
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-  },
-  dayText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 19.6,
-  },
-  dayTextCurrentMonth: {
-    color: Palette.grey700,
-  },
-  dayTextOutsideMonth: {
-    color: Palette.grey400,
-  },
-  dayTextSelected: {
-    color: Palette.white,
-  },
   filterFooter: {
     flexDirection: 'row',
     gap: 12,
     paddingTop: 8,
     paddingBottom: 32,
-  },
-  dateFooter: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 8,
-    paddingBottom: 32,
-    backgroundColor: Palette.white,
   },
   cancelButton: {
     flex: 1,

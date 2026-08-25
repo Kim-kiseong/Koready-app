@@ -190,13 +190,24 @@ export type EventDateFilterId = 'THIS_WEEK' | 'THIS_MONTH' | 'NEXT_MONTH';
 
 export const EVENT_DATE_FILTER_IDS: readonly EventDateFilterId[] = ['THIS_WEEK', 'THIS_MONTH', 'NEXT_MONTH'];
 
+export type EventDateRange = {
+  startDate: string | null;
+  endDate: string | null;
+};
+
 export type EventFilters = {
   region: EventRegionId | 'ALL';
   date: EventDateFilterId | 'ALL';
+  dateRange: EventDateRange;
   type: TravelStyleId | 'ALL';
 };
 
-export const DEFAULT_EVENT_FILTERS: EventFilters = { region: 'ALL', date: 'ALL', type: 'ALL' };
+export const DEFAULT_EVENT_FILTERS: EventFilters = {
+  region: 'ALL',
+  date: 'ALL',
+  dateRange: { startDate: null, endDate: null },
+  type: 'ALL',
+};
 
 // --- Real backend integration: GET /home, GET /monthly-recommendations ---
 // (see the staging Swagger spec — these are the only two home-area endpoints
@@ -534,12 +545,15 @@ export async function fetchEventListings(
   sort: EventSortOrder = 'RECOMMENDED',
   filters: EventFilters = DEFAULT_EVENT_FILTERS,
 ): Promise<EventListing[]> {
+  const hasCustomDateRange = Boolean(filters.dateRange.startDate && filters.dateRange.endDate);
   try {
     const result = await fetchMonthlyRecommendations({
       year: new Date().getFullYear(),
       month,
       serviceRegionCode: filters.region === 'ALL' ? undefined : filters.region,
-      dateFilterType: filters.date === 'ALL' ? undefined : filters.date,
+      dateFilterType: hasCustomDateRange ? 'CUSTOM' : filters.date === 'ALL' ? undefined : filters.date,
+      customStartDate: hasCustomDateRange ? filters.dateRange.startDate! : undefined,
+      customEndDate: hasCustomDateRange ? filters.dateRange.endDate! : undefined,
       travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
       sort,
     });

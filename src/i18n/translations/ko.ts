@@ -11,8 +11,6 @@ export interface Translations {
   location: {
     title: string;
     searchPlaceholder: string;
-    currentLocationButton: string;
-    currentLocationValue: string;
     roadAddressBadge: string;
     lotNumberBadge: string;
     next: string;
@@ -317,6 +315,12 @@ export interface Translations {
     cancel: string;
     apply: string;
   };
+  dateRangePicker: {
+    title: string;
+    reset: string;
+    cancel: string;
+    apply: string;
+  };
   saved: {
     title: string;
     loading: string;
@@ -414,8 +418,6 @@ export const ko: Translations = {
   location: {
     title: '위치 검색',
     searchPlaceholder: '도시 · 학교 · 동네를 검색해보세요',
-    currentLocationButton: '현재 위치로 찾기',
-    currentLocationValue: '현재 위치',
     roadAddressBadge: '도로명',
     lotNumberBadge: '지번',
     next: '다음',
@@ -797,6 +799,12 @@ export const ko: Translations = {
       EXHIBITION_MUSEUM: '전시/미술관',
       DRAMA_LOCATION: '드라마 촬영지',
     },
+    cancel: '취소',
+    apply: '적용하기',
+  },
+  dateRangePicker: {
+    title: '날짜 선택',
+    reset: '초기화',
     cancel: '취소',
     apply: '적용하기',
   },

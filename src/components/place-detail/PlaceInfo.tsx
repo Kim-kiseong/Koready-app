@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
+import HeartIcon from '@/components/HeartIcon';
 import DetailTag from '@/components/place-detail/DetailTag';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -22,12 +22,7 @@ export default function PlaceInfo({ title, address, tags, isSaved, onToggleSave 
       <View style={styles.titleRow}>
         <CustomText style={styles.title}>{title}</CustomText>
         <Pressable hitSlop={12} style={styles.saveButton} onPress={onToggleSave}>
-          <SymbolView
-            name={{ ios: isSaved ? 'heart.fill' : 'heart', android: isSaved ? 'favorite' : 'favorite_border', web: isSaved ? 'favorite' : 'favorite_border' }}
-            size={24}
-            weight="regular"
-            tintColor={isSaved ? Palette.red300 : Palette.grey400}
-          />
+          <HeartIcon filled={isSaved} color={isSaved ? Palette.red300 : Palette.grey400} size={24} />
         </Pressable>
       </View>
       <View style={styles.addressRow}>

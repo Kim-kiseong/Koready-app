@@ -173,7 +173,7 @@ export default function TermsScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.terms.headerTitle} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.terms.headerTitle} rightIcon={null} />
 
       <View style={styles.content}>
         <CustomText style={styles.title}>{t.terms.title}</CustomText>

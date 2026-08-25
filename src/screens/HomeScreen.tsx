@@ -354,14 +354,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#ffffff',
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
   languageTextInactive: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     color: Palette.grey600,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
   searchBar: {
     marginHorizontal: 16,
