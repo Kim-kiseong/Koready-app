@@ -9,13 +9,17 @@ import WarningBox from '@/components/guide-blocks/WarningBox';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { KTX_LIST_WARNING, KTX_STEPS } from '@/constants/ktx-content';
+import { KTX_LIST_WARNING, KTX_LIST_WARNING_EN, KTX_STEPS, KTX_STEPS_EN } from '@/constants/ktx-content';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
 export default function KtxStepListScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const steps = language === 'EN' ? KTX_STEPS_EN : KTX_STEPS;
+  const listWarning = language === 'EN' ? KTX_LIST_WARNING_EN : KTX_LIST_WARNING;
   const [currentStep, setCurrentStep] = useState(3);
 
   const handleStepPress = (stepId: number) => {
@@ -32,7 +36,7 @@ export default function KtxStepListScreen() {
           <View style={styles.progressLabelRow}>
             <CustomText style={styles.totalSteps}>
               {t.guideDetail.totalStepsPrefix}
-              {KTX_STEPS.length}
+              {steps.length}
               {t.guideDetail.totalStepsSuffix}
             </CustomText>
             <Pressable
@@ -53,14 +57,14 @@ export default function KtxStepListScreen() {
             </Pressable>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${(currentStep / KTX_STEPS.length) * 100}%` }]} />
+            <View style={[styles.progressFill, { width: `${(currentStep / steps.length) * 100}%` }]} />
           </View>
         </View>
 
         <View style={styles.stepList}>
-          {KTX_STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const active = step.id === currentStep;
-            const isLast = index === KTX_STEPS.length - 1;
+            const isLast = index === steps.length - 1;
             return (
               <Pressable
                 key={step.id}
@@ -86,7 +90,7 @@ export default function KtxStepListScreen() {
           })}
         </View>
 
-        <WarningBox text={KTX_LIST_WARNING} />
+        <WarningBox text={listWarning} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -239,6 +239,12 @@ export interface Translations {
     stepComingSoonTitle: string;
     stepComingSoonBody: string;
   };
+  languageGuide: {
+    relatedTitle: string;
+    previous: string;
+    next: string;
+    close: string;
+  };
   languageModal: {
     title: string;
     subtitle: Record<LanguageCode, string>;
@@ -667,6 +673,12 @@ export const ko: Translations = {
     resumeStepSuffix: ' 보러가기',
     stepComingSoonTitle: '준비 중이에요',
     stepComingSoonBody: '이 단계는 아직 준비 중이에요. 곧 만나보실 수 있어요!',
+  },
+  languageGuide: {
+    relatedTitle: '함께 알아두면 좋아요',
+    previous: '이전',
+    next: '다음',
+    close: '가이드 닫기',
   },
   languageModal: {
     title: '언어를 변경할까요?',

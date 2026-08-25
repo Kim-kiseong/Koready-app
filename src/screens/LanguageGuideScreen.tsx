@@ -10,14 +10,22 @@ import PhraseCards from '@/components/guide-blocks/PhraseCards';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { LANGUAGE_CARDS } from '@/constants/language-content';
+import { LANGUAGE_CARDS, LANGUAGE_CARDS_EN, type LanguageCard } from '@/constants/language-content';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
-function MascotCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[number], { kind: 'mascot' }> }) {
+function MascotCardView({
+  card,
+  badge,
+}: {
+  card: Extract<LanguageCard, { kind: 'mascot' }>;
+  badge: string;
+}) {
   return (
     <View style={styles.cardBody}>
       <View style={styles.mascotHeader}>
-        <CustomText style={styles.badge}>언어 가이드</CustomText>
+        <CustomText style={styles.badge}>{badge}</CustomText>
         <View style={styles.titleGroup}>
           <CustomText style={styles.title}>{card.title}</CustomText>
           <CustomText style={styles.subtitle}>{card.subtitle}</CustomText>
@@ -35,7 +43,13 @@ function MascotCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[number
   );
 }
 
-function QuestionCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[number], { kind: 'question' }> }) {
+function QuestionCardView({
+  card,
+  relatedTitle,
+}: {
+  card: Extract<LanguageCard, { kind: 'question' }>;
+  relatedTitle: string;
+}) {
   return (
     <View style={styles.cardBody}>
       <CustomText style={styles.questionTitle}>{card.title}</CustomText>
@@ -66,14 +80,14 @@ function QuestionCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[numb
 
       {card.related?.length ? (
         <View style={styles.relatedGroup}>
-          <PhraseCards title="함께 알아두면 좋아요" phrases={card.related} />
+          <PhraseCards title={relatedTitle} phrases={card.related} />
         </View>
       ) : null}
     </View>
   );
 }
 
-function SummaryCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[number], { kind: 'summary' }> }) {
+function SummaryCardView({ card }: { card: Extract<LanguageCard, { kind: 'summary' }> }) {
   return (
     <View style={styles.cardBody}>
       <View style={styles.summaryHeader}>
@@ -100,22 +114,25 @@ function SummaryCardView({ card }: { card: Extract<(typeof LANGUAGE_CARDS)[numbe
 
 export default function LanguageGuideScreen() {
   const router = useRouter();
+  const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const cards = language === 'EN' ? LANGUAGE_CARDS_EN : LANGUAGE_CARDS;
   const [index, setIndex] = useState(0);
-  const card = LANGUAGE_CARDS[index];
+  const card = cards[index];
   const isFirst = index === 0;
-  const isLast = index === LANGUAGE_CARDS.length - 1;
+  const isLast = index === cards.length - 1;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router)}
-        progress={{ currentStep: index + 1, totalSteps: LANGUAGE_CARDS.length }}
+        progress={{ currentStep: index + 1, totalSteps: cards.length }}
         rightIcon={null}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {card.kind === 'mascot' && <MascotCardView card={card} />}
-        {card.kind === 'question' && <QuestionCardView card={card} />}
+        {card.kind === 'mascot' && <MascotCardView card={card} badge={t.guideDetail.categoryBadge.LANGUAGE} />}
+        {card.kind === 'question' && <QuestionCardView card={card} relatedTitle={t.languageGuide.relatedTitle} />}
         {card.kind === 'summary' && <SummaryCardView card={card} />}
       </ScrollView>
 
@@ -123,13 +140,13 @@ export default function LanguageGuideScreen() {
         <View style={styles.buttonRow}>
           {!isFirst && (
             <Pressable style={styles.secondaryButton} onPress={() => setIndex((current) => current - 1)}>
-              <CustomText style={styles.secondaryButtonText}>이전</CustomText>
+              <CustomText style={styles.secondaryButtonText}>{t.languageGuide.previous}</CustomText>
             </Pressable>
           )}
           <Pressable
             style={styles.primaryButton}
             onPress={() => (isLast ? goBackOrRoot(router) : setIndex((current) => current + 1))}>
-            <CustomText style={styles.primaryButtonText}>{isLast ? '가이드 닫기' : '다음'}</CustomText>
+            <CustomText style={styles.primaryButtonText}>{isLast ? t.languageGuide.close : t.languageGuide.next}</CustomText>
           </Pressable>
         </View>
       </SafeAreaView>
