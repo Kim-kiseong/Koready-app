@@ -24,6 +24,7 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
+import { useTranslation } from '@/i18n/useTranslation';
 import { getCountryDisplayName, getCountryFlag, normalizeCountryCode } from '@/utils/country';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { resolveProfileImageUri } from '@/utils/profile-image';
@@ -141,23 +142,65 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
   unreadTotal: 3,
 };
 
-function cloneMockItems() {
+const ENGLISH_THREAD_SUMMARY_COPY: Record<
+  string,
+  {
+    title: string;
+    address: string;
+    preview: string;
+  }
+> = {
+  'mock-thread-emma': {
+    title: 'Gimcheon Gimbap Festival',
+    address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+    preview: 'Hi! Thanks for reaching out 😊 I’d love to join.',
+  },
+  'mock-thread-liam': {
+    title: 'Seongsan Ilchulbong',
+    address: '78 Seongsan-ri, Seongsan-eup, Seogwipo-si, Jeju-do',
+    preview: "Hi! I'm thinking of going there next weekend too.",
+  },
+  'mock-thread-sophie': {
+    title: 'Insadong',
+    address: 'Insadong-gil area, Jongno-gu, Seoul',
+    preview: 'Do you know any tea houses you would recommend?',
+  },
+  'mock-thread-yuki': {
+    title: 'N Seoul Tower',
+    address: '105 Namsan Park-gil, Yongsan-gu, Seoul',
+    preview: 'Sounds great! Please let me know how it was when you go.',
+  },
+};
+
+function cloneMockItems(language: 'KO' | 'EN' = useLanguageStore.getState().language) {
   return MOCK_THREAD_SUMMARY.items.map((item) => ({
     ...item,
-    place: { ...item.place },
+    place:
+      language === 'EN'
+        ? {
+            ...item.place,
+            title: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.title ?? item.place.title,
+            address: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.address ?? item.place.address,
+          }
+        : { ...item.place },
     otherProfile: { ...item.otherProfile },
+    preview:
+      language === 'EN'
+        ? ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.preview ?? item.preview
+        : item.preview,
   }));
 }
 
 export default function MessageThreadsScreen() {
   const router = useRouter();
   const language = useLanguageStore((state) => state.language);
+  const t = useTranslation();
   const storeThreads = useMessageThreadStore((state) => state.threads);
 
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [threadState, setThreadState] = useState<MessageThreadsScreenState>({
-    items: cloneMockItems(),
+    items: cloneMockItems(language),
     nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
     hasMore: MOCK_THREAD_SUMMARY.hasMore,
     unreadTotal: MOCK_THREAD_SUMMARY.unreadTotal,
@@ -165,7 +208,7 @@ export default function MessageThreadsScreen() {
   const countryOptions = profileOptions?.countries?.length ? profileOptions.countries : FALLBACK_COUNTRY_OPTIONS;
   const selectedProfileFallback = useMemo(
     () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
-    [selectedProfileId],
+    [language, selectedProfileId],
   );
 
   useEffect(() => {
@@ -184,7 +227,7 @@ export default function MessageThreadsScreen() {
 
         setProfileOptions(loadedOptions);
         setThreadState({
-          items: loadedThreads.items.length > 0 ? loadedThreads.items : cloneMockItems(),
+          items: loadedThreads.items.length > 0 ? loadedThreads.items : cloneMockItems(language),
           nextCursor: loadedThreads.nextCursor,
           hasMore: loadedThreads.hasMore,
           unreadTotal: loadedThreads.unreadTotal,
@@ -193,7 +236,7 @@ export default function MessageThreadsScreen() {
         if (!cancelled) {
           setProfileOptions(null);
           setThreadState({
-            items: cloneMockItems(),
+            items: cloneMockItems(language),
             nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
             hasMore: MOCK_THREAD_SUMMARY.hasMore,
             unreadTotal: MOCK_THREAD_SUMMARY.unreadTotal,
@@ -205,10 +248,10 @@ export default function MessageThreadsScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language]);
 
   const displayItems = useMemo(() => {
-    const baseItems = threadState.items.length > 0 ? threadState.items : cloneMockItems();
+    const baseItems = threadState.items.length > 0 ? threadState.items : cloneMockItems(language);
     const apiMap = new Map(baseItems.map((item) => [item.threadId, item]));
 
     const storeItems = Object.values(storeThreads)
@@ -226,7 +269,7 @@ export default function MessageThreadsScreen() {
     });
 
     return [...prependItems, ...Array.from(apiMap.values())];
-  }, [countryOptions, storeThreads, threadState.items]);
+  }, [countryOptions, language, storeThreads, threadState.items]);
 
   const unreadTotal = useMemo(
     () => displayItems.reduce((total, item) => total + item.unreadCount, 0),
@@ -265,7 +308,7 @@ export default function MessageThreadsScreen() {
         </Pressable>
 
         <View style={styles.headerTitleWrap}>
-          <CustomText style={styles.headerTitle}>쪽지함</CustomText>
+          <CustomText style={styles.headerTitle}>{t.messages.threads.title}</CustomText>
           {unreadTotal > 0 ? (
             <View style={styles.unreadBadge}>
               <CustomText style={styles.unreadBadgeText}>{unreadTotal}</CustomText>
@@ -501,6 +544,10 @@ function formatRelativeDate(value: string, language: 'KO' | 'EN') {
   }
 
   const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) {
+    return language === 'KO' ? '어제' : 'Yesterday';
+  }
+
   return language === 'KO' ? `${diffDays}일 전` : `${diffDays} days ago`;
 }
 

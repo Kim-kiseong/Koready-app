@@ -1,6 +1,7 @@
 import { getMockBuddyProfileById } from '@/api/mate';
 import type { BuddyProfile, BuddyProfileDetail } from '@/api/types';
 import { normalizeCountryCode } from '@/utils/country';
+import { useLanguageStore } from '@/store/language-store';
 
 const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
   501: {
@@ -104,6 +105,13 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
   },
 };
 
+const ENGLISH_BIOS: Partial<Record<number, string>> = {
+  501: 'I love Korean traditional culture and exploring local food spots :)',
+  502: 'I enjoy nature spots and exhibition spaces with a relaxed pace.',
+  503: 'Do you know any tea houses you would recommend?',
+  504: 'Sounds great! Please let me know how it goes when you visit.',
+};
+
 function cloneBuddyProfileDetail(profile: BuddyProfileDetail): BuddyProfileDetail {
   return {
     ...profile,
@@ -111,6 +119,17 @@ function cloneBuddyProfileDetail(profile: BuddyProfileDetail): BuddyProfileDetai
     travelStyles: [...profile.travelStyles],
     buddyStyles: [...profile.buddyStyles],
     socialLinks: profile.socialLinks.map((link) => ({ ...link })),
+  };
+}
+
+function localizeBuddyProfile(profile: BuddyProfileDetail): BuddyProfileDetail {
+  if (useLanguageStore.getState().language !== 'EN') {
+    return profile;
+  }
+
+  return {
+    ...profile,
+    bio: ENGLISH_BIOS[profile.profileId] ?? profile.bio,
   };
 }
 
@@ -123,7 +142,7 @@ function toBuddyProfileDetail(profile: BuddyProfile): BuddyProfileDetail {
 
 export function getInboxMockBuddyProfileById(profileId: number): BuddyProfileDetail | null {
   const profile = INBOX_MOCK_BUDDY_PROFILES[profileId];
-  return profile ? cloneBuddyProfileDetail(profile) : null;
+  return profile ? localizeBuddyProfile(cloneBuddyProfileDetail(profile)) : null;
 }
 
 export function getMockBuddyProfileDetailById(profileId: number): BuddyProfileDetail | null {
@@ -134,7 +153,7 @@ export function getMockBuddyProfileDetailById(profileId: number): BuddyProfileDe
 
   const mateProfile = getMockBuddyProfileById(profileId);
   if (mateProfile) {
-    return toBuddyProfileDetail(mateProfile);
+    return localizeBuddyProfile(toBuddyProfileDetail(mateProfile));
   }
 
   return null;

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchMockRouteDetail, type BuddyRoute, type DayTripStatus, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
+import { fetchMockRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Component13,
@@ -27,6 +27,7 @@ import {
 } from '@/components/place-detail/RouteIcons';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
@@ -49,13 +50,64 @@ const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; bor
   SHUTTLE: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
-const DAY_TRIP_TEXT: Record<DayTripStatus, string> = {
-  DAY_TRIP_AVAILABLE: '당일치기 가능',
-  DAY_TRIP_UNAVAILABLE: '숙박 권장',
-};
-
 const HANDLE_OVERLAP = 180;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
+
+function formatTemplate(template: string, values: Record<string, string>) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.split(`{${key}}`).join(value),
+    template,
+  );
+}
+
+function formatRouteDurationText(
+  minutes: number,
+  formats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  },
+) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours <= 0) {
+    return formatTemplate(formats.minuteOnly, { minutes: String(mins) });
+  }
+
+  if (mins <= 0) {
+    return formatTemplate(formats.hourOnly, { hours: String(hours) });
+  }
+
+  return formatTemplate(formats.hourMinute, { hours: String(hours), minutes: String(mins) });
+}
+
+function formatSummaryTimeLabel(
+  minutes: number,
+  formats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  },
+  language: 'KO' | 'EN',
+) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (language !== 'EN' || hours <= 0 || mins <= 0) {
+    return formatRouteDurationText(minutes, formats);
+  }
+
+  return `About ${hours} hr\n${mins} min`;
+}
+
+function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
+  if (language === 'EN' && label === 'Overnight Stay') {
+    return 'Overnight\nStay';
+  }
+
+  return label;
+}
 
 export default function RouteDetailScreen() {
   const router = useRouter();
@@ -66,30 +118,52 @@ export default function RouteDetailScreen() {
   }>();
   const [route, setRoute] = useState<BuddyRoute | null>(null);
   const language = useLanguageStore((state) => state.language);
+  const isEnglish = language === 'EN';
+  const t = useTranslation();
+  const routeCopy = t.placeDetail.routeTab;
+  const destination = useMemo(() => {
+    if (typeof placeName === 'string' && typeof placeAddress === 'string') {
+      return {
+        name: placeName,
+        address: placeAddress,
+      };
+    }
+
+    if (typeof placeName === 'string') {
+      return {
+        name: placeName,
+        address: placeName,
+      };
+    }
+
+    return {
+      name: isEnglish ? 'Destination' : '목적지',
+      address: isEnglish ? 'Destination' : '목적지',
+    };
+  }, [isEnglish, placeAddress, placeName]);
+
   const handleKtxCtaPress = useCallback(() => {
-    Alert.alert('준비 중', 'KTX 예매 안내는 추후 연결될 예정입니다.');
-  }, []);
+    Alert.alert(
+      isEnglish ? 'Coming soon' : '준비 중',
+      isEnglish
+        ? 'KTX booking information will be connected in a future step.'
+        : 'KTX 예매 안내는 추후 연결될 예정입니다.',
+    );
+  }, [isEnglish]);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const dayTripLabel =
-    route?.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
-      ? DAY_TRIP_TEXT.DAY_TRIP_AVAILABLE
-      : DAY_TRIP_TEXT.DAY_TRIP_UNAVAILABLE;
 
   useEffect(() => {
-    if (!routeId || typeof placeName !== 'string' || typeof placeAddress !== 'string') return;
+    if (!routeId) return;
     let active = true;
-    fetchMockRouteDetail(routeId, {
-      name: placeName,
-      address: placeAddress,
-    }).then((value) => {
+    fetchMockRouteDetail(routeId, destination).then((value) => {
       if (active) setRoute(value);
     });
     return () => {
       active = false;
     };
-  }, [language, routeId, placeName, placeAddress]);
+  }, [destination, language, routeId]);
 
   const snapPoints = useMemo(() => {
     if (!mapAreaHeight) return ['50%', '100%'];
@@ -99,6 +173,16 @@ export default function RouteDetailScreen() {
   const handleMapAreaLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
     setMapAreaHeight(e.nativeEvent.layout.height);
   }, []);
+
+  const summaryTimeLabel = route
+    ? formatSummaryTimeLabel(route.summary.estimatedOneWayMinutes, routeCopy.timeFormats, language)
+    : '';
+  const dayTripLabel = route
+    ? route.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
+      ? routeCopy.dayTripValues.available
+      : routeCopy.dayTripValues.unavailable
+    : '';
+  const summaryDayTripLabel = formatSummaryDayTripLabel(dayTripLabel, language);
 
   if (!route) {
     return (
@@ -114,7 +198,7 @@ export default function RouteDetailScreen() {
         <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
           <CustomText style={styles.back}>‹</CustomText>
         </Pressable>
-        <CustomText style={styles.headerTitle}>상세 이동 경로</CustomText>
+        <CustomText style={styles.headerTitle}>{isEnglish ? 'Detailed Route' : '상세 이동 경로'}</CustomText>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -149,9 +233,9 @@ export default function RouteDetailScreen() {
             contentContainerStyle={styles.sheetContent}
           >
             <View style={styles.summaryBox}>
-              <SummaryItem label="교통수단" value={route.summary.recommendedTransportText} />
-              <SummaryItem label="예상 시간" value={route.summary.estimatedOneWayTimeText} />
-              <SummaryItem label="여행 판단" value={dayTripLabel} highlight />
+              <SummaryItem label={routeCopy.summaryLabels.transport} value={route.summary.recommendedTransportText} />
+              <SummaryItem label={routeCopy.summaryLabels.time} value={summaryTimeLabel} />
+              <SummaryItem label={routeCopy.statLabels.dayTrip} value={summaryDayTripLabel} highlight />
             </View>
 
             {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} /> : null}
@@ -166,6 +250,8 @@ export default function RouteDetailScreen() {
                     tip={tip}
                     onCtaPress={handleKtxCtaPress}
                     language={language}
+                    timeFormats={routeCopy.timeFormats}
+                    isEnglish={isEnglish}
                   />
                 );
               })}
@@ -184,18 +270,28 @@ export default function RouteDetailScreen() {
               </View>
             </View>
 
-            <CustomText style={styles.sectionTitle}>예상 교통비</CustomText>
+            <CustomText style={styles.sectionTitle}>{routeCopy.fareTitle}</CustomText>
             <View style={styles.fareCard}>
               <View style={styles.fareRow}>
-                <CustomText style={styles.fareLabel}>KTX 편도</CustomText>
-                <CustomText style={styles.fareValue}>약 {route.summary.fare.oneWayEstimated.toLocaleString('ko-KR')}원</CustomText>
+                <CustomText style={styles.fareLabel}>{routeCopy.fareOneWay}</CustomText>
+                <CustomText style={styles.fareValue}>
+                  {routeCopy.farePrefix}{' '}
+                  {isEnglish
+                    ? `₩${route.summary.fare.oneWayEstimated.toLocaleString('en-US')}`
+                    : `${route.summary.fare.oneWayEstimated.toLocaleString('ko-KR')}원`}
+                </CustomText>
               </View>
               <View style={[styles.fareRow, styles.fareRowSpaced]}>
-                <CustomText style={styles.fareLabel}>KTX 왕복</CustomText>
-                <CustomText style={styles.fareValue}>약 {route.summary.fare.roundTripEstimated.toLocaleString('ko-KR')}원</CustomText>
+                <CustomText style={styles.fareLabel}>{routeCopy.fareRoundTrip}</CustomText>
+                <CustomText style={styles.fareValue}>
+                  {routeCopy.farePrefix}{' '}
+                  {isEnglish
+                    ? `₩${route.summary.fare.roundTripEstimated.toLocaleString('en-US')}`
+                    : `${route.summary.fare.roundTripEstimated.toLocaleString('ko-KR')}원`}
+                </CustomText>
               </View>
               <View style={styles.fareDivider} />
-              <CustomText style={styles.disclaimer}>* 전체 경비 기준으로 작성</CustomText>
+              <CustomText style={styles.disclaimer}>{route.summary.fare.disclaimer}</CustomText>
             </View>
           </BottomSheetScrollView>
         </BottomSheet>
@@ -259,10 +355,18 @@ function SegmentCardBody({
   segment,
   onCtaPress,
   language,
+  timeFormats,
+  isEnglish,
 }: {
   segment: RouteSegment;
   onCtaPress: () => void;
   language: 'KO' | 'EN';
+  timeFormats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  };
+  isEnglish: boolean;
 }) {
   return (
     <>
@@ -271,7 +375,7 @@ function SegmentCardBody({
         <RouteMetaIcon type={segment.mode} />
         <CustomText style={styles.segmentMeta}>{formatTransportModeLabel(segment.mode, language)}</CustomText>
         <RouteMetaClock />
-        <CustomText style={styles.segmentMeta}>약 {segment.durationMinutes}분</CustomText>
+        <CustomText style={styles.segmentMeta}>{formatRouteDurationText(segment.durationMinutes, timeFormats)}</CustomText>
       </View>
       {segment.instruction ? (
         <>
@@ -281,7 +385,7 @@ function SegmentCardBody({
       ) : null}
       {segment.mode === 'KTX' ? (
         <Pressable style={styles.ctaButton} onPress={onCtaPress}>
-          <CustomText style={styles.ctaButtonText}>KTX 예매하는 법 확인하기</CustomText>
+          <CustomText style={styles.ctaButtonText}>{isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}</CustomText>
         </Pressable>
       ) : null}
     </>
@@ -304,11 +408,19 @@ function TimelineItem({
   tip,
   onCtaPress,
   language,
+  timeFormats,
+  isEnglish,
 }: {
   segment: RouteSegment;
   tip?: RouteTip;
   onCtaPress: () => void;
   language: 'KO' | 'EN';
+  timeFormats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  };
+  isEnglish: boolean;
 }) {
   const Icon = SEGMENT_ICON[segment.mode].Icon;
 
@@ -324,7 +436,13 @@ function TimelineItem({
       <View style={styles.timelineContent}>
         {tip ? <SegmentTipContent tip={tip} /> : null}
         <View style={styles.segmentCard}>
-          <SegmentCardBody segment={segment} onCtaPress={onCtaPress} language={language} />
+          <SegmentCardBody
+            segment={segment}
+            onCtaPress={onCtaPress}
+            language={language}
+            timeFormats={timeFormats}
+            isEnglish={isEnglish}
+          />
         </View>
       </View>
     </View>
