@@ -19,11 +19,12 @@ import StatusTracker from '@/components/guide-blocks/StatusTracker';
 import SignCard from '@/components/guide-blocks/SignCard';
 import HoriTipCard from '@/components/HoriTipCard';
 import OnboardingHeader from '@/components/OnboardingHeader';
-import { GUIDE_CONTENT, type GuideBlock } from '@/constants/guide-content';
+import { GUIDE_CONTENT, GUIDE_CONTENT_EN, type GuideBlock } from '@/constants/guide-content';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
 function GuideBlockView({ block }: { block: GuideBlock }) {
   switch (block.type) {
@@ -82,7 +83,8 @@ export default function GuideDetailScreen() {
   const router = useRouter();
   const t = useTranslation();
   const { guideId } = useLocalSearchParams<{ guideId: string }>();
-  const content = guideId ? GUIDE_CONTENT[guideId] : undefined;
+  const language = useLanguageStore((state) => state.language);
+  const content = guideId ? (language === 'EN' ? GUIDE_CONTENT_EN : GUIDE_CONTENT)[guideId] : undefined;
 
   if (!content) {
     return (

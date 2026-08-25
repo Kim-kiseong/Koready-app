@@ -10,9 +10,10 @@ import HoriTipCard from '@/components/HoriTipCard';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { KTX_STEP3_DETAIL, KTX_STEPS } from '@/constants/ktx-content';
+import { KTX_STEP3_DETAIL, KTX_STEP3_DETAIL_EN, KTX_STEPS, KTX_STEPS_EN } from '@/constants/ktx-content';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
 function NoteBox({ text }: { text: string }) {
   const [first, ...rest] = text.split('\n');
@@ -57,7 +58,9 @@ export default function KtxStepDetailScreen() {
   const router = useRouter();
   const t = useTranslation();
   const { stepId } = useLocalSearchParams<{ stepId: string }>();
-  const step = KTX_STEPS.find((item) => String(item.id) === stepId);
+  const language = useLanguageStore((state) => state.language);
+  const steps = language === 'EN' ? KTX_STEPS_EN : KTX_STEPS;
+  const step = steps.find((item) => String(item.id) === stepId);
 
   if (!step || stepId !== '3') {
     return (
@@ -71,7 +74,7 @@ export default function KtxStepDetailScreen() {
     );
   }
 
-  const detail = KTX_STEP3_DETAIL;
+  const detail = language === 'EN' ? KTX_STEP3_DETAIL_EN : KTX_STEP3_DETAIL;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>

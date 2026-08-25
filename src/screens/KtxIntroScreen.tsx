@@ -9,9 +9,10 @@ import GuideDetailHero from '@/components/guide-blocks/GuideDetailHero';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { KTX_INTRO } from '@/constants/ktx-content';
+import { KTX_INTRO, KTX_INTRO_EN } from '@/constants/ktx-content';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 
 type SymbolName = ComponentProps<typeof SymbolView>['name'];
 
@@ -43,6 +44,8 @@ function InfoRow({
 export default function KtxIntroScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const intro = language === 'EN' ? KTX_INTRO_EN : KTX_INTRO;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -50,15 +53,15 @@ export default function KtxIntroScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <GuideDetailHero
-          image={KTX_INTRO.hero}
+          image={intro.hero}
           categoryBadge={t.guideDetail.categoryBadge.TRANSPORT}
-          title={KTX_INTRO.title}
-          description={KTX_INTRO.description}
+          title={intro.title}
+          description={intro.description}
         />
 
         <View style={styles.infoCard}>
-          {KTX_INTRO.infoRows.map((row, index) => (
-            <InfoRow key={row.label} {...row} showDivider={index < KTX_INTRO.infoRows.length - 1} />
+          {intro.infoRows.map((row, index) => (
+            <InfoRow key={row.label} {...row} showDivider={index < intro.infoRows.length - 1} />
           ))}
         </View>
       </ScrollView>

@@ -16,22 +16,47 @@ export interface Translations {
     roadAddressBadge: string;
     lotNumberBadge: string;
     next: string;
+    alerts: {
+      errorTitle: string;
+      mapServiceError: string;
+      searchResultExpired: string;
+      saveFailed: string;
+    };
   };
   travelStyle: {
     title: string;
     subtitle: string;
     next: string;
     options: Record<TravelStyleId, string>;
+    alerts: {
+      noticeTitle: string;
+      maxSelection: string;
+    };
   };
   destination: {
     title: string;
     subtitle: string;
     next: string;
+    loadingText: string;
+    errorText: string;
+    retryButton: string;
   };
   complete: {
     title: string;
     subtitle: string;
     next: string;
+    alerts: {
+      errorTitle: string;
+      noticeTitle: string;
+      genericFailed: string;
+      alreadyCompletedOther: string;
+      resumeCheckFailed: string;
+      invalidLocation: string;
+      invalidTravelStyles: string;
+      invalidCandidateSet: string;
+      invalidSelection: string;
+      incompleteSelection: string;
+    };
   };
   home: {
     locationPlaceholder: string;
@@ -251,6 +276,12 @@ export interface Translations {
     stepComingSoonTitle: string;
     stepComingSoonBody: string;
   };
+  languageGuide: {
+    relatedTitle: string;
+    previous: string;
+    next: string;
+    close: string;
+  };
   languageModal: {
     title: string;
     subtitle: Record<LanguageCode, string>;
@@ -400,6 +431,12 @@ export const ko: Translations = {
     roadAddressBadge: '도로명',
     lotNumberBadge: '지번',
     next: '다음',
+    alerts: {
+      errorTitle: '오류',
+      mapServiceError: '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.',
+      searchResultExpired: '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.',
+      saveFailed: '위치 저장에 실패했습니다.',
+    },
   },
   travelStyle: {
     title: '어떤 여행을 즐기고 싶으신가요?',
@@ -414,16 +451,35 @@ export const ko: Translations = {
       EXHIBITION_MUSEUM: '전시/미술관',
       DRAMA_LOCATION: '드라마 촬영지',
     },
+    alerts: {
+      noticeTitle: '안내',
+      maxSelection: '여행 스타일은 최대 4개까지 선택할 수 있어요.',
+    },
   },
   destination: {
     title: '관심 있는 여행지를 \n3개까지 선택해 주세요',
     subtitle: '여행 취향을 반영해 더 알맞은 여행지를 추천해 드릴게요.',
     next: '다음',
+    loadingText: '여행지 후보를 불러오는 중이에요.',
+    errorText: '여행지 후보를 불러오지 못했어요.',
+    retryButton: '다시 시도',
   },
   complete: {
     title: '취향 설정이 완료되었어요',
     subtitle: '선택한 여행지를 바탕으로\n맞춤 여행지를 추천해드릴게요!',
     next: '다음',
+    alerts: {
+      errorTitle: '오류',
+      noticeTitle: '알림',
+      genericFailed: '온보딩 완료에 실패했습니다.',
+      alreadyCompletedOther: '이미 다른 선택으로 완료된 온보딩이에요.',
+      resumeCheckFailed: '저장된 온보딩 상태를 확인하지 못했어요. 다시 시도해 주세요.',
+      invalidLocation: '위치 정보가 유효하지 않아요. 위치를 다시 선택해 주세요.',
+      invalidTravelStyles: '여행 스타일을 1~4개, 중복 없이 다시 선택해 주세요.',
+      invalidCandidateSet: '여행지 후보가 갱신됐어요. 다시 선택해 주세요.',
+      invalidSelection: '선택한 여행지를 확인해 주세요 (1~3개, 같은 후보 세트).',
+      incompleteSelection: '위치와 여행지를 모두 선택해야 완료할 수 있어요.',
+    },
   },
   home: {
     locationPlaceholder: '위치 정보 없음',
@@ -699,6 +755,12 @@ export const ko: Translations = {
     resumeStepSuffix: ' 보러가기',
     stepComingSoonTitle: '준비 중이에요',
     stepComingSoonBody: '이 단계는 아직 준비 중이에요. 곧 만나보실 수 있어요!',
+  },
+  languageGuide: {
+    relatedTitle: '함께 알아두면 좋아요',
+    previous: '이전',
+    next: '다음',
+    close: '가이드 닫기',
   },
   languageModal: {
     title: '언어를 변경할까요?',

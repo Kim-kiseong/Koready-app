@@ -5,6 +5,81 @@ import type { Translations } from './ko';
 // translated — any key left out falls back to the Korean value (see
 // `../index.ts`), so partially-translated screens keep working.
 export const en: DeepPartial<Translations> = {
+  language: {
+    title: 'Select Your Language',
+    subtitle: 'Choose your language',
+    next: 'Next',
+  },
+  location: {
+    title: 'Search Location',
+    searchPlaceholder: 'Search for a city, school, or neighborhood',
+    currentLocationButton: 'Use Current Location',
+    currentLocationValue: 'Current Location',
+    roadAddressBadge: 'Road',
+    lotNumberBadge: 'Lot',
+    next: 'Next',
+    alerts: {
+      errorTitle: 'Error',
+      mapServiceError: 'The map service is having a temporary issue. Please try again shortly.',
+      searchResultExpired: 'This search result has expired. Please search again with the same term.',
+      saveFailed: 'Failed to save your location.',
+    },
+  },
+  travelStyle: {
+    title: 'What kind of trips do you enjoy?',
+    subtitle: 'Choose the travel styles you’re interested in.',
+    next: 'Next',
+    options: {
+      LOCAL_FOOD: 'Local Food',
+      LOCAL_FESTIVAL: 'Local Festivals',
+      TRADITIONAL_MARKET: 'Traditional Markets',
+      CULTURE_EXPERIENCE: 'Culture Experiences',
+      NATURE: 'Nature Spots',
+      EXHIBITION_MUSEUM: 'Exhibitions & Museums',
+      DRAMA_LOCATION: 'Drama Filming Locations',
+    },
+    alerts: {
+      noticeTitle: 'Notice',
+      maxSelection: 'You can select up to 4 travel styles.',
+    },
+  },
+  destination: {
+    title: 'Choose up to 3\ndestinations you’re interested in',
+    subtitle: 'We’ll recommend destinations tailored to your travel style.',
+    next: 'Next',
+    loadingText: 'Loading destination picks...',
+    errorText: "Couldn't load destination picks.",
+    retryButton: 'Try again',
+  },
+  complete: {
+    title: 'Your preferences are all set',
+    subtitle: 'We’ll recommend destinations\nbased on what you picked!',
+    next: 'Next',
+    alerts: {
+      errorTitle: 'Error',
+      noticeTitle: 'Notice',
+      genericFailed: 'Failed to complete onboarding.',
+      alreadyCompletedOther: 'Onboarding was already completed with different choices.',
+      resumeCheckFailed: "Couldn't check your saved onboarding status. Please try again.",
+      invalidLocation: 'Your location is no longer valid. Please choose your location again.',
+      invalidTravelStyles: 'Please choose 1–4 travel styles again, with no duplicates.',
+      invalidCandidateSet: 'The destination picks have been refreshed. Please choose again.',
+      invalidSelection: 'Please check your selected destinations (1–3, from the same picks).',
+      incompleteSelection: 'Please choose both a location and destinations to finish.',
+    },
+  },
+  terms: {
+    headerTitle: 'Terms & Conditions',
+    title: 'Please agree to the terms\nbefore you start your trip!',
+    agreeAll: 'Agree to All',
+    connector: ' and ',
+    requiredSuffix: ' Agreement',
+    optionalSuffix: ' (Optional)',
+    next: 'Next',
+    loadError: "Couldn't load the terms.",
+    submitError: 'Failed to submit your agreement.',
+    linkOpenError: "Couldn't open the link.",
+  },
   nav: {
     home: 'Home',
     map: 'Map',
@@ -301,14 +376,14 @@ export const en: DeepPartial<Translations> = {
   guideList: {
     title: 'Korea Travel Guide',
     description: {
-      TRANSPORT: 'Watch videos on everything you need for getting around, payments, safety, and language.',
-      ORDER: 'Watch videos on everything you need for ordering at restaurants, waitlists, delivery, and kiosks.',
-      SAFETY: 'Watch videos on essential safety info for emergencies, lost items, hospitals, and hiking.',
+      TRANSPORT: 'Find essential travel tips on transportation, payments, safety, and language through easy video guides.',
+      ORDER: 'Find essential tips on restaurant ordering, waitlists, delivery, and kiosks through easy video guides.',
+      SAFETY: 'Find essential safety tips for emergencies, lost items, hospitals, and hiking through easy video guides.',
       LANGUAGE: 'Learn Korean phrases you’ll actually use while traveling, organized by situation.',
     },
     categories: {
       TRANSPORT: 'Transport',
-      ORDER: 'Order',
+      ORDER: 'Ordering',
       SAFETY: 'Safety',
       LANGUAGE: 'Language',
     },
@@ -328,6 +403,12 @@ export const en: DeepPartial<Translations> = {
     resumeStepSuffix: '',
     stepComingSoonTitle: 'Coming Soon',
     stepComingSoonBody: "This step isn't ready yet. Check back soon!",
+  },
+  languageGuide: {
+    relatedTitle: 'You might also need',
+    previous: 'Previous',
+    next: 'Next',
+    close: 'Close Guide',
   },
   saved: {
     title: 'Saved',
