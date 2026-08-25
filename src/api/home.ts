@@ -132,10 +132,32 @@ const MOCK_GUIDE_VIDEOS: Record<GuideCategoryId, GuideVideo[]> = {
   LANGUAGE: [],
 };
 
+const MOCK_GUIDE_VIDEOS_EN: Record<GuideCategoryId, GuideVideo[]> = {
+  TRANSPORT: [
+    { id: 'ktx-booking', title: 'Easily Book\nKTX Tickets', tags: ['Transport', 'Payment'], imageKey: 'KTX_GUIDE', category: 'TRANSPORT' },
+    { id: 'subway-transfer', title: 'How to Transfer\nSubway Lines', tags: ['Transport', 'Payment'], imageKey: 'SUBWAY_TRANSFER', category: 'TRANSPORT' },
+    { id: 'taxi-call', title: 'How to Call\na Taxi', tags: ['Transport', 'Payment'], imageKey: 'TAXI_CALL', category: 'TRANSPORT' },
+    { id: 'intercity-bus', title: 'Book Intercity\nBus Tickets', tags: ['Transport', 'Payment'], imageKey: 'INTERCITY_BUS', category: 'TRANSPORT' },
+  ],
+  ORDER: [
+    { id: 'order-restaurant', title: 'How to Order at a\nKorean Restaurant', tags: ['Order', 'Dining'], imageKey: 'ORDER_RESTAURANT', category: 'ORDER' },
+    { id: 'order-waiting', title: 'How to Wait or\nReserve a Table', tags: ['Order', 'Reservation'], imageKey: 'ORDER_WAITING', category: 'ORDER' },
+    { id: 'order-delivery', title: 'How to Order\nFood Delivery', tags: ['Order', 'Delivery'], imageKey: 'ORDER_DELIVERY', category: 'ORDER' },
+    { id: 'order-kiosk', title: 'How to Order\nat a Kiosk', tags: ['Order', 'Payment'], imageKey: 'ORDER_KIOSK', category: 'ORDER' },
+  ],
+  SAFETY: [
+    { id: 'safety-emergency', title: 'How to Get Help\nin an Emergency', tags: ['Safety', 'Emergency'], imageKey: 'SAFETY_EMERGENCY', category: 'SAFETY' },
+    { id: 'safety-lost', title: 'If You Lose Your\nPassport or Phone', tags: ['Safety', 'Lost & Found'], imageKey: 'SAFETY_LOST', category: 'SAFETY' },
+    { id: 'safety-hospital', title: 'How to See a Doctor\nWhen You Get Sick', tags: ['Safety', 'Hospital'], imageKey: 'SAFETY_HOSPITAL', category: 'SAFETY' },
+    { id: 'safety-hiking', title: 'Safety Tips for\nHiking in Korea', tags: ['Safety', 'Hiking'], imageKey: 'SAFETY_HIKING', category: 'SAFETY' },
+  ],
+  LANGUAGE: [],
+};
+
 // Same as fetchTravelGuides above — no /home/guide-videos-shaped endpoint exists
 // on the backend. Stays mock until one does.
-export async function fetchGuideVideos(category: GuideCategoryId): Promise<GuideVideo[]> {
-  return MOCK_GUIDE_VIDEOS[category];
+export async function fetchGuideVideos(category: GuideCategoryId, language: LanguageCode): Promise<GuideVideo[]> {
+  return (language === 'EN' ? MOCK_GUIDE_VIDEOS_EN : MOCK_GUIDE_VIDEOS)[category];
 }
 
 export type EventSortOrder = 'RECOMMENDED' | 'DEADLINE';

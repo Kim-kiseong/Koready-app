@@ -75,7 +75,7 @@ export default function LocationScreen() {
           if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
           setResults([]);
           if (isAxiosError(error) && error.response?.status === 503) {
-            Alert.alert('오류', '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.');
+            Alert.alert(t.location.alerts.errorTitle, t.location.alerts.mapServiceError);
           }
         });
     }, SEARCH_DEBOUNCE_MS);
@@ -83,6 +83,7 @@ export default function LocationScreen() {
       clearTimeout(timer);
       controller.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, isDevMockSession]);
 
   const handleSelectResult = async (item: LocationSearchItem) => {
@@ -120,9 +121,9 @@ export default function LocationScreen() {
       setResults([]);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 410) {
-        Alert.alert('오류', '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.');
+        Alert.alert(t.location.alerts.errorTitle, t.location.alerts.searchResultExpired);
       } else {
-        Alert.alert('오류', '위치 저장에 실패했습니다.');
+        Alert.alert(t.location.alerts.errorTitle, t.location.alerts.saveFailed);
       }
     } finally {
       setIsSaving(false);
@@ -143,7 +144,7 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.location.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.location.title} rightIcon={null} />
 
       <View style={styles.content}>
         <View

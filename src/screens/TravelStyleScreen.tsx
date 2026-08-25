@@ -25,7 +25,7 @@ export default function TravelStyleScreen() {
   // here with a notice instead of letting it no-op with no feedback.
   const handleToggle = (style: TravelStyleId) => {
     if (!travelStyles.includes(style) && travelStyles.length >= MAX_TRAVEL_STYLES) {
-      Alert.alert('안내', '여행 스타일은 최대 4개까지 선택할 수 있어요.');
+      Alert.alert(t.travelStyle.alerts.noticeTitle, t.travelStyle.alerts.maxSelection);
       return;
     }
     toggleTravelStyle(style);

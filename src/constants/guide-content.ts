@@ -1110,3 +1110,1008 @@ export const GUIDE_CONTENT: Record<string, GuideContent> = {
     },
   },
 };
+
+export const GUIDE_CONTENT_EN: Record<string, GuideContent> = {
+  'subway-transfer': {
+    id: 'subway-transfer',
+    category: 'TRANSPORT',
+    hero: require('@/assets/images/guides/subway-hero.jpg'),
+    title: 'How to Transfer Subway Lines',
+    description: "It's easy if you just follow the signs.\nLearn how to check your line and direction when transferring.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Find the transfer point',
+        description:
+          "After getting off the train, look for a '갈아타는 곳 / Transfer' sign. Just follow Transfer, not the exit.",
+      },
+      {
+        type: 'signCard',
+        icon: { ios: 'arrow.triangle.2.circlepath', android: 'sync_alt', web: 'sync_alt' },
+        title: '갈아타는 곳',
+        translations: ['換乗', '乗り換え'],
+        caption: "Example of a '갈아타는 곳 / Transfer' sign",
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Follow the line number and color',
+        description:
+          'Check the number and color of the line you need on signs and floor markings. Transfer passages can be long at some stations.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/subway-step2-signage.jpg') },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Check the direction before boarding',
+        description:
+          'Even on the right line, you could board a train going the wrong way. Check the platform for your direction and the next station.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/subway-step3-platform.jpg') },
+      {
+        type: 'phraseTable',
+        title: 'Common Subway Terms',
+        phrases: [
+          { ko: '갈아타는 곳', en: 'Transfer' },
+          { ko: '나가는 곳', en: 'Way Out' },
+          { ko: '○○ 방면', en: 'Towards ○○' },
+        ],
+      },
+    ],
+    tip: {
+      title: 'Just remember this when transferring!',
+      checklist: ['Find the Transfer sign', 'Follow your transfer line', 'Check the direction before boarding'],
+    },
+  },
+
+  'taxi-call': {
+    id: 'taxi-call',
+    category: 'TRANSPORT',
+    hero: require('@/assets/images/guides/taxi-hero.jpg'),
+    title: 'How to Take a Taxi',
+    description: "Booking through an app is easiest.\nEnter your destination in advance so you don't have to explain it to the driver.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Book through an app',
+        description:
+          'Enter your pickup and drop-off locations and choose a car type. When the car arrives, check the license plate before getting in.',
+      },
+      {
+        type: 'iconFlow',
+        steps: [
+          { icon: { ios: 'mappin.circle', android: 'trip_origin', web: 'trip_origin' }, label: 'Choose pickup' },
+          { icon: { ios: 'flag', android: 'flag', web: 'flag' }, label: 'Enter destination' },
+          { icon: { ios: 'car.fill', android: 'directions_car', web: 'directions_car' }, label: 'Choose a car' },
+          { icon: { ios: 'iphone', android: 'smartphone', web: 'smartphone' }, label: 'Request ride' },
+        ],
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          {
+            image: require('@/assets/images/guides/taxi-uber-icon.png'),
+            title: 'Uber Taxi',
+            description: 'Existing Uber users can\nbook with the same app',
+          },
+          {
+            image: require('@/assets/images/guides/taxi-kride-icon.png'),
+            title: 'k.ride',
+            description: 'An app for foreign travelers,\nsupports overseas cards and multiple languages',
+          },
+        ],
+      },
+      { type: 'image', source: require('@/assets/images/guides/taxi-step1-hail.jpg') },
+      { type: 'warning', text: 'Car types and estimated fares can differ by app. Check before you book.' },
+      {
+        type: 'step',
+        number: 2,
+        title: 'If hailing on the street',
+        description: "Hail a taxi with the '빈차 (Vacant)' sign lit on the windshield. Use a safe curb or a taxi stand.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/taxi-step2-street.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: '빈차', description: 'Available to ride' },
+          { title: '예약', description: 'Reserved by another passenger' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Tell the driver your destination',
+        description: 'If you hailed on the street, showing the Korean place name or address is the easiest way.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/taxi-step3-phone.jpg') },
+      { type: 'warning', text: 'If you booked through an app, your destination is already shared with the driver.' },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Check the fare',
+        description: 'In a regular street taxi, the fare shows on the meter as you ride.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/taxi-step4-phone.jpg') },
+      { type: 'warning', text: 'The actual fare can vary depending on traffic, distance, time, and surcharges.' },
+      { type: 'step', number: 5, title: 'Pay the fare', description: '' },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            title: 'Credit Card',
+            description: 'Visa, Mastercard, and other overseas cards accepted',
+          },
+          {
+            icon: { ios: 'wonsign.circle.fill', android: 'payments', web: 'payments' },
+            title: 'Cash',
+            description: 'Korean won (KRW) only',
+          },
+          {
+            icon: { ios: 'tram.fill', android: 'directions_bus', web: 'directions_bus' },
+            title: 'Transit Card',
+            description: 'Pay with a T-money card',
+          },
+        ],
+      },
+      { type: 'warning', text: "If you paid automatically through the app, don't pay the driver again." },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            title: 'Had a problem?',
+            description: 'Keeping this info makes it easier to report or get help.\n· License plate  · Receipt  · Time of ride',
+          },
+          {
+            icon: { ios: 'phone.fill', android: 'call', web: 'call' },
+            title: 'Seoul 120 Dasan Call Center',
+            description: 'Support available in foreign languages',
+          },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Late-night rides may have a surcharge.',
+        'If you have a lot of luggage, check for a larger car or van option.',
+        'You open and close the taxi door yourself.',
+      ],
+    },
+  },
+
+  'order-restaurant': {
+    id: 'order-restaurant',
+    category: 'ORDER',
+    hero: require('@/assets/images/guides/order-restaurant-hero.jpg'),
+    title: 'How to Order at a Korean Restaurant',
+    description: 'Ordering methods vary a bit by restaurant in Korea.\nLearn the process step by step, from getting seated to ordering and paying.',
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Tell them your party size and get seated',
+        description: 'When you enter, tell the staff how many people are in your group first. They may seat you or let you choose your own seat.',
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: '한 명이에요', description: "I'm alone." },
+          { title: '두 명이에요', description: 'There are two of us.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Check how to order',
+        description: 'Korean restaurants use various methods — ordering with staff, a call bell, tablet ordering, or ordering at the counter. Check the signs around your table and at the entrance first.',
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { emoji: '🗣️', title: 'Order with Staff', description: 'Tell the staff your order' },
+          { emoji: '🔔', title: 'Call Bell', description: 'Press the bell to call staff' },
+        ],
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { emoji: '📱', title: 'Tablet Ordering', description: 'Order from a screen at your table' },
+          { emoji: '🏪', title: 'Order Counter', description: 'Order first, then take a seat' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Check the menu and order quantity',
+        description: 'Check the menu and prices, then choose your quantity. Some dishes can only be ordered for two or more people.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-restaurant-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: '1 Serving', description: 'A portion for one person.' },
+          { title: '2+ Servings', description: 'Must be ordered for at least two people.' },
+          { title: 'One Dish per Person', description: 'Each person must order at least one dish.' },
+        ],
+      },
+      { type: 'warning', text: 'Dishes like meat, hot pots, and dakgalbi may require a minimum order of two servings.' },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Check spice level and ingredients',
+        description: "It can be hard to tell how spicy a dish is or what's in it just from the name. Ask the staff before you order.",
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: '이거 매워요?', description: 'Is this spicy?' },
+          { title: '안 맵게 해 주세요', description: 'Please make it less spicy.' },
+          { title: '이 재료를 빼 주세요', description: 'Please leave this ingredient out.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 5,
+        title: 'Check the self-service corner',
+        description: "Some restaurants require you to get your own water, utensils, or side dishes. Look for a '셀프 (Self)' sign around your table or in the store.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-restaurant-step5.jpg') },
+      { type: 'warning', text: 'At some restaurants, utensils and tissues are in a drawer next to the table.' },
+      {
+        type: 'step',
+        number: 6,
+        title: 'Call staff if you need to order more',
+        description: 'To order more food or drinks, press the call bell or speak to a staff member.',
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: '여기요', description: 'Excuse me.' },
+          { title: '이거 하나 더 주세요', description: 'One more, please.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 7,
+        title: 'Pay when you finish your meal',
+        description: 'At most Korean restaurants, you pay at the counter after eating. Check first whether it uses table payment or requires payment in advance.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-restaurant-step7.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            title: 'Card Payment',
+            description: 'Pay with a domestic or international credit card',
+          },
+          {
+            icon: { ios: 'wonsign.circle.fill', android: 'payments', web: 'payments' },
+            title: 'Cash Payment',
+            description: 'Pay directly with cash',
+          },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Tell them your party size first and get seated.',
+        'Check how to order around your table.',
+        'Check the minimum order quantity and spice level.',
+        'Where you pay can vary by restaurant.',
+      ],
+    },
+  },
+
+  'order-waiting': {
+    id: 'order-waiting',
+    category: 'ORDER',
+    hero: require('@/assets/images/guides/order-waiting-hero.jpg'),
+    title: 'How to Wait for a Table or Make a Reservation',
+    description: "Popular restaurants may require a reservation or a wait-list registration.\nCheck how it works before you visit, and learn how to wait.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Check the reservation method first',
+        description: "Reservation and wait-list methods vary by restaurant. Check how it works on maps, the restaurant's official account, or a reservation service.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-waiting-step1.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { emoji: '📅', title: 'Advance Reservation', description: 'Choose your visit date and time ahead of time' },
+          { emoji: '🔢', title: 'Walk-in Wait List', description: 'Register for the wait list after arriving' },
+        ],
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { emoji: '📲', title: 'Remote Wait List', description: 'Join the wait list in advance through an app' },
+          { emoji: '🚶', title: 'Just Walk In', description: 'Seated in order of arrival' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Reserve a date and time',
+        description: 'If the restaurant takes reservations, choose your date, time, and party size. Some restaurants may require you to pre-select a menu or seat.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: 'Date', description: 'Choose the date you want to visit.' },
+          { title: 'Time', description: 'Choose an available entry time.' },
+          { title: 'Party Size', description: 'Enter the total number of people, including children.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Join the wait list if reservations are unavailable',
+        description: 'If reservations are full or unavailable, you can register for the wait list in person.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-waiting-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Waiting Number', description: 'Check your position and the teams ahead of you' },
+          { title: 'Estimated Time', description: 'Check your estimated wait time' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Watch for your call notification',
+        description: "When your turn is near, you may be notified by text, app alert, or an in-store screen. Keep an eye on your phone so you don't miss the call.",
+      },
+      {
+        type: 'notificationCard',
+        emoji: '🔔',
+        title: 'Wait List Alert',
+        timestamp: 'Just now',
+        body: 'Your table is almost ready.',
+        bodySub: 'Please return to the restaurant.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: 'Text Alert', description: "You'll get a message when it's your turn." },
+          { title: 'App Notification', description: 'The reservation or wait-list app notifies you.' },
+          { title: 'Number Called', description: 'Staff will call your number or name.' },
+        ],
+      },
+      { type: 'warning', text: "If you don't arrive within the given time after being called, your turn may be canceled." },
+      {
+        type: 'step',
+        number: 5,
+        title: 'Show your screen when you arrive',
+        description: 'Arrive a little before your reservation time and show the staff your reservation or wait-list screen.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-waiting-step5.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: '예약했어요', description: 'I have a reservation.' },
+          { title: '웨이팅 등록했어요', description: 'I joined the waitlist.' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Check whether reservations or a wait list are available first.',
+        'Enter the date, time, and party size accurately.',
+        "Make sure you don't miss your call notification.",
+        "Cancel in advance if you're running late or can't make it.",
+      ],
+    },
+  },
+
+  'order-delivery': {
+    id: 'order-delivery',
+    category: 'ORDER',
+    hero: require('@/assets/images/guides/order-delivery-hero.jpg'),
+    title: 'How to Order Food Delivery',
+    description: 'With the right address and delivery spot, you can order Korean food straight to your accommodation. Learn the process from choosing an app to receiving your food.',
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Choose a delivery app',
+        description: 'In Korea, you can order food through apps like Baemin and Shuttle. Check for English support and available payment methods first.',
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          {
+            image: require('@/assets/images/guides/order-delivery-baemin-icon.png'),
+            title: 'Baemin',
+            description: 'Multilingual support, a wide range of restaurants, Kakao Pay and card payment',
+          },
+          {
+            image: require('@/assets/images/guides/order-delivery-shuttle-icon.png'),
+            title: 'Shuttle Delivery',
+            description: 'English support, overseas card payment, foreigner-friendly UI',
+          },
+        ],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Enter your address',
+        description: 'Set your current location in the app or enter your address manually. Be sure to include details like your building, unit number, or room number.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: 'Home / Dorm', description: 'Enter the building name and unit number accurately.' },
+          { title: 'Hotel / Guesthouse', description: 'Provide the accommodation name, room number, and whether to pick up at the lobby.' },
+          { title: 'Park / Outdoors', description: 'Choose an entrance or a designated delivery zone.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Choose your menu',
+        description: 'Pick a restaurant and menu items, then check the quantity and options.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-delivery-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: 'Minimum Order', description: 'Your order must meet this amount.' },
+          { title: 'Delivery Fee', description: 'The fee can vary by distance.' },
+          { title: 'Estimated Time', description: 'How long delivery will take.' },
+          { title: 'Menu Options', description: 'Check details like spice level and toppings.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Add a delivery request',
+        description: 'Choose your delivery method and add any requests. If a Korean phone call would be difficult, note that in advance in the memo field.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: '문 앞에 놓아 주세요', description: 'Please leave it at the door.' },
+          { title: '로비에서 받을게요', description: "I'll receive it in the lobby." },
+          { title: '도착하면 메시지 주세요', description: 'Please message me when you arrive.' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 5,
+        title: 'Confirm payment',
+        description: 'Choose a payment method, confirm the final amount, and complete your order.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            title: 'International Credit Card',
+            description: 'Pay with an international card like Visa or Mastercard.',
+          },
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            title: 'Domestic Card',
+            description: 'Pay with a Korean credit or debit card.',
+          },
+          {
+            icon: { ios: 'bolt.fill', android: 'bolt', web: 'bolt' },
+            title: 'Simple Pay',
+            description: 'Use services like Kakao Pay or Naver Pay.',
+          },
+        ],
+      },
+      {
+        type: 'step',
+        number: 6,
+        title: 'Track your order status',
+        description: "You can track the driver's location and estimated arrival time in real time in the app.",
+      },
+      {
+        type: 'statusTracker',
+        steps: ['Order Received', 'Preparing Food', 'Out for Delivery', 'Almost There', 'Delivered'],
+        activeIndex: 2,
+      },
+      { type: 'warning', text: "Keep app notifications on so you don't miss a message or call from the driver." },
+      {
+        type: 'step',
+        number: 7,
+        title: 'Receive your food',
+        description: 'When the driver arrives, receive it in person or from the designated spot. Check that the food and quantity are correct right away.',
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          { title: '지금 로비에 있어요', description: "I'm in the lobby now." },
+          { title: '입구 앞에서 기다리고 있어요', description: "I'm waiting at the entrance." },
+          { title: '제가 주문한 사람이에요', description: "I'm the person who placed the order." },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Check whether the app is available to you.',
+        'Enter your address and details accurately.',
+        'Check the minimum order amount and delivery fee.',
+        'Keep an eye on notifications until your food arrives.',
+      ],
+    },
+  },
+
+  'order-kiosk': {
+    id: 'order-kiosk',
+    category: 'ORDER',
+    hero: require('@/assets/images/guides/order-kiosk-hero.jpg'),
+    title: 'How to Order at a Kiosk',
+    description: "At cafes, fast food restaurants, and food courts in Korea,\nyou'll often order at a kiosk instead of with staff.",
+    blocks: [
+      { type: 'step', number: 1, title: 'Check the language first', description: '' },
+      {
+        type: 'iconFlowCard',
+        title: 'Order Flow',
+        description: '',
+        steps: [
+          { icon: { ios: 'globe', android: 'language', web: 'language' }, label: 'Choose Language' },
+          { icon: { ios: 'bag.fill', android: 'shopping_bag', web: 'shopping_bag' }, label: 'Dine In / Take Out' },
+          { icon: { ios: 'list.bullet', android: 'menu_book', web: 'menu_book' }, label: 'Choose Menu' },
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            label: 'Pay',
+          },
+        ],
+      },
+      {
+        type: 'warning',
+        text: 'Check whether the kiosk screen has a language button first. Some stores support English, Chinese, and Japanese.',
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Choose your menu',
+        description: 'Pick what you want and check the quantity. Menus are often organized by category.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-kiosk-step2.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Set Menu', description: 'Includes a drink or side' },
+          { title: 'À La Carte', description: 'Order just the main item' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Review your order before paying',
+        description: 'Check that the items and quantities in your cart are correct, then pay.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/order-kiosk-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+            title: 'Card Payment',
+            description: 'Insert or tap your card to pay',
+          },
+          {
+            icon: { ios: 'iphone', android: 'smartphone', web: 'smartphone' },
+            title: 'Mobile Payment',
+            description: 'Pay with your phone if supported',
+          },
+        ],
+      },
+      { type: 'warning', text: "Many kiosks don't accept cash. Card payment is the most common option." },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Check your order number and wait',
+        description: "After paying, you'll get an order number, and you'll usually be called by screen, receipt, or a buzzer.",
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Check Order Number', description: 'Screen / Receipt / Buzzer' },
+          { title: 'Pick Up at the Counter', description: 'Check the pickup area' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        "Check whether there's a language button first",
+        'Decide dine-in or takeout first',
+        'Check the menu, options, and extra charges',
+        'Check your order number after paying',
+        'Watch for the screen or buzzer call',
+      ],
+    },
+  },
+
+  'intercity-bus': {
+    id: 'intercity-bus',
+    category: 'TRANSPORT',
+    hero: require('@/assets/images/guides/bus-hero.jpg'),
+    title: 'How to Take an Intercity Bus',
+    description: "You can reach places trains don't go by bus.\nIt's easy as long as you check the right terminal and boarding gate.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Buy a ticket',
+        description: 'Enter your departure and destination, then choose your preferred bus. When it arrives, check the bus number before boarding.',
+      },
+      {
+        type: 'iconFlowCard',
+        title: 'Buying at the Terminal',
+        description: 'You can buy a ticket at the ticket window or a self-service kiosk. Follow the steps below.',
+        steps: [
+          { icon: { ios: 'mappin.circle', android: 'trip_origin', web: 'trip_origin' }, label: 'Choose Departure' },
+          { icon: { ios: 'flag', android: 'flag', web: 'flag' }, label: 'Choose Destination' },
+          { icon: { ios: 'clock', android: 'schedule', web: 'schedule' }, label: 'Choose Time' },
+          { icon: { ios: 'figure.seated.side', android: 'event_seat', web: 'event_seat' }, label: 'Choose Seat' },
+        ],
+      },
+      { type: 'image', source: require('@/assets/images/guides/bus-step1-terminal.jpg') },
+      {
+        type: 'checklistCard',
+        title: 'If you want to book in advance',
+        description:
+          'You can also book online in advance. Available services vary by route and payment method, so check whether overseas card payment and mobile tickets are supported.',
+        items: ['Book online (e.g. GoHanpass)', 'Check whether overseas cards are accepted', 'Check whether mobile tickets are supported'],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Check the exact terminal',
+        description: "A city can have more than one bus terminal. Don't just look at the city name — check the exact terminal name.",
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { emoji: '📍', title: 'Dong Seoul Terminal', description: 'Near Gangbyeon Station' },
+          { emoji: '📍', title: 'Seoul Express Bus Terminal', description: 'Near Express Bus Terminal Station' },
+        ],
+      },
+      { type: 'warning', text: 'Be sure to check the departure and arrival terminals printed on your ticket!' },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Find your boarding gate',
+        description: 'Check the departure time, destination, and gate number on your ticket, then find your bus on the display board.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/bus-step3-board.jpg') },
+      { type: 'warning', text: 'Arrive near your boarding gate 10–15 minutes before departure.' },
+      {
+        type: 'step',
+        number: 4,
+        title: 'Show your ticket and board',
+        description: 'If you have a mobile ticket, board after your QR code is scanned.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/bus-step4-ticket.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            icon: { ios: 'iphone', android: 'smartphone', web: 'smartphone' },
+            title: 'Mobile Ticket',
+            description: 'Scan your QR code at the ticket reader',
+          },
+          {
+            icon: { ios: 'ticket.fill', android: 'confirmation_number', web: 'confirmation_number' },
+            title: 'Paper Ticket',
+            description: 'Bring your ticket to board the bus',
+          },
+        ],
+      },
+      { type: 'warning', text: 'Depending on how you booked, you may need to pick up a paper ticket at the terminal.' },
+      {
+        type: 'step',
+        number: 5,
+        title: 'Check where to get off',
+        description: 'Intercity buses may stop at other terminals or stations on the way to your destination.',
+      },
+      {
+        type: 'routeStops',
+        caption: 'Example route',
+        stops: [
+          { badge: 'A', label: 'Stop A', sublabel: 'Regular stop' },
+          { badge: 'B', label: 'Stop B', sublabel: 'Intermediate stop' },
+          { badge: 'C', label: 'Stop C', sublabel: 'Your destination', highlighted: true },
+        ],
+      },
+      {
+        type: 'warning',
+        text: "Don't get off just because the bus stops — check that it's your booked destination first.",
+      },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [
+          {
+            emoji: '🧳',
+            title: 'Have luggage?',
+            description: 'Large suitcases or bags can go in the storage compartment under the bus. Be sure not to forget them when you get off.',
+          },
+        ],
+      },
+    ],
+    tip: {
+      checklist: ['Check the exact terminal', 'Check your boarding gate and departure time', 'Check your stop'],
+    },
+  },
+
+  'safety-emergency': {
+    id: 'safety-emergency',
+    category: 'SAFETY',
+    hero: require('@/assets/images/guides/safety-emergency-hero.jpg'),
+    title: 'How to Get Help in an Emergency',
+    description: 'In an emergency, knowing which number to call matters most. Learn the difference between 112 and 119, and what information you need to give.',
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Know the difference between 112 and 119',
+        description: 'Call 112 for crimes or threats that need police help. Call 119 for injuries, someone collapsing, or a fire.',
+      },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { color: '#154FA9', title: '112 | Police', description: 'Crime, threats, theft' },
+          { color: '#E23A29', title: '119 | Fire & Ambulance', description: 'Injury, fire, emergencies' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Give your location first',
+        description: 'Give a location that can be found right away — a station name, exit number, or a nearby building or shop name.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-emergency-step2.jpg') },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Briefly explain the situation',
+        description: 'Briefly say what happened, whether anyone is hurt, and what kind of help you need.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-emergency-step3.jpg') },
+      {
+        type: 'phraseCards',
+        title: 'Useful Phrases',
+        phrases: [
+          { ko: '도와주세요', romanized: 'Do-wa-ju-se-yo', en: 'Please help me' },
+          { ko: '경찰을 불러주세요', romanized: 'Gyeong-cha-reul bul-leo-ju-se-yo', en: 'Please call the police' },
+          { ko: '구급차를 불러주세요', romanized: 'Gu-geup-cha-reul bul-leo-ju-se-yo', en: 'Please call an ambulance' },
+          { ko: '사람이 다쳤어요', romanized: 'Sa-ra-mi da-chyeo-sseo-yo', en: 'Someone is hurt' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: ['Call 112 for police help', 'Call 119 for fire, ambulance, or emergencies', 'Give your location first when you call'],
+    },
+  },
+
+  'safety-lost': {
+    id: 'safety-lost',
+    category: 'SAFETY',
+    hero: require('@/assets/images/guides/safety-lost-hero.jpg'),
+    title: 'If You Lose Your Passport or Phone',
+    description: "If you lose something important while traveling, stay calm and check things step by step. Here's what to do, from checking where you lost it to reporting the loss.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Check the Last Place You Used It',
+        description: 'Start by checking the last place you used it, such as a café, restaurant, subway, or bus. Remembering when and where you last used it can help you find it.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-lost-step1.jpg') },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Ask Nearby Staff First',
+        description: 'Ask station staff, tourist information staff, or store employees if they have found it. Describe details such as its color, shape, or brand to help identify it.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-lost-step2.jpg') },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Report a Lost Passport Immediately',
+        description: "If you lose your passport, you should act quickly. Report the loss to the police, then contact your country's embassy or consulate for the next steps.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-lost-step3.jpg') },
+      {
+        type: 'iconFlow',
+        steps: [
+          { icon: { ios: 'doc.viewfinder', android: 'document_scanner', web: 'document_scanner' }, label: 'Lost Passport' },
+          { icon: { ios: 'phone.fill', android: 'call', web: 'call' }, label: 'Report to Police (112)' },
+          { icon: { ios: 'building.columns.fill', android: 'account_balance', web: 'account_balance' }, label: 'Contact Your Embassy' },
+        ],
+      },
+      {
+        type: 'phraseCards',
+        title: 'Useful Phrases',
+        phrases: [
+          { ko: '물건을 잃어버렸어요', romanized: 'Mul-geon-eul il-eo-beo-ryeo-sseo-yo', en: 'I lost something' },
+          { ko: '휴대폰을 잃어버렸어요', romanized: 'Hyu-dae-pon-eul il-eo-beo-ryeo-sseo-yo', en: 'I lost my phone' },
+          { ko: '여권을 잃어버렸어요', romanized: 'Yeo-gwon-eul il-eo-beo-ryeo-sseo-yo', en: 'I lost my passport' },
+          { ko: '분실물 센터가 어디예요?', romanized: 'Bun-sil-mul sen-teo-ga eo-di-ye-yo?', en: 'Where is the lost and found?' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Check the last place you used it.',
+        'Ask station staff, store employees, or tourist information staff first.',
+        'If you lose your passport, report it to the police and contact your embassy.',
+      ],
+    },
+  },
+
+  'safety-hospital': {
+    id: 'safety-hospital',
+    category: 'SAFETY',
+    hero: require('@/assets/images/guides/safety-hospital-hero.jpg'),
+    title: 'How to See a Doctor If You Get Sick While Traveling',
+    description: "Don't panic if you suddenly get sick while traveling in Korea. Here's the process, from finding a clinic to check-in, treatment, and getting medicine.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Find a nearby clinic',
+        description: "Look for a hospital or clinic near your current location. It's easier if you check the hours and whether it's open before you go.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hospital-step1.jpg') },
+      {
+        type: 'cardList',
+        layout: 'column',
+        cards: [{ title: 'Search Examples', description: 'Internal medicine · Hospital · Clinic' }],
+      },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Check in and describe your symptoms',
+        description: 'When you arrive, check in at the front desk first. Briefly explain what hurts and since when.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hospital-step2.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Check-in', description: 'Register at the desk' },
+          { title: 'Wait', description: 'Wait your turn' },
+          { title: 'Consultation', description: 'See the doctor' },
+        ],
+      },
+      {
+        type: 'step',
+        number: 3,
+        title: 'Get a prescription and go to the pharmacy',
+        description: 'After the consultation, you can get a prescription if you need medicine. Take it to a nearby pharmacy, get your medicine, and check how to take it.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hospital-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Clinic', description: 'Consultation complete' },
+          { title: 'Prescription', description: 'Given by the doctor' },
+          { title: 'Pharmacy', description: 'Visit a nearby pharmacy' },
+        ],
+      },
+      { type: 'warning', text: 'Hospitals and pharmacies are separate in Korea. Be sure to keep your prescription!' },
+      {
+        type: 'phraseCards',
+        title: 'Useful Phrases',
+        phrases: [
+          { ko: '배가 아파요', romanized: 'Bae-ga a-pa-yo', en: 'My stomach hurts' },
+          { ko: '머리가 아파요', romanized: 'Meo-ri-ga a-pa-yo', en: 'I have a headache' },
+          { ko: '열이 나요', romanized: 'Yeol-i na-yo', en: 'I have a fever' },
+          { ko: '약국이 어디예요?', romanized: 'Yak-guk-i eo-di-ye-yo?', en: 'Where is the pharmacy?' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'For mild symptoms, look for a nearby hospital or clinic',
+        'It helps to check the hours before you visit',
+        'For serious injuries or emergencies, call 119',
+      ],
+    },
+  },
+
+  'safety-hiking': {
+    id: 'safety-hiking',
+    category: 'SAFETY',
+    hero: require('@/assets/images/guides/safety-hiking-hero.jpg'),
+    title: 'Safety Tips for Hiking in Korea',
+    description: "Korea has many mountains you can easily visit while traveling, but skipping the course and weather check can make the hike harder than expected. Here's what to know, from preparing beforehand to what to do if you get lost.",
+    blocks: [
+      {
+        type: 'step',
+        number: 1,
+        title: 'Check the course and weather before you go',
+        description: "Before setting out, check today's weather, the course difficulty, and the estimated time. It also helps to check whether the trail is closed and whether you can get back down before dark.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hiking-step1.jpg') },
+      {
+        type: 'step',
+        number: 2,
+        title: 'Follow marked trails and check signposts',
+        description: 'Never take an unmarked path, even if it looks like a shortcut. As you hike, keep checking signposts marked with the summit, descent direction, and visitor center.',
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hiking-step2.jpg') },
+      { type: 'warning', text: 'Unmarked side trails and shortcuts are dangerous. Always stick to designated trails.' },
+      {
+        type: 'step',
+        number: 3,
+        title: 'If lost or injured, check your location and call for help',
+        description: "If you're lost or hurt, don't push forward — check your current location first. If you can't get down on your own, call 119 and give them the nearby mountain location marker number.",
+      },
+      { type: 'image', source: require('@/assets/images/guides/safety-hiking-step3.jpg') },
+      {
+        type: 'cardList',
+        layout: 'row',
+        cards: [
+          { title: 'Location Marker', description: 'Check the nearby green marker number' },
+          { title: 'Know Your Location', description: 'Remember the marker number' },
+          { title: 'Call 119', description: 'Give the number and describe the situation' },
+        ],
+      },
+      {
+        type: 'horiTipInline',
+        title: 'Example of a mountain location marker',
+        body: 'e.g. Bukhansan 12-Na-07\nGive this number when you call 119.',
+      },
+      {
+        type: 'phraseCards',
+        title: 'Useful Phrases',
+        phrases: [
+          { ko: '길을 잃었어요', romanized: 'Gi-reul il-eo-sseo-yo', en: "I'm lost" },
+          { ko: '발목을 다쳤어요', romanized: 'Bal-mok-eul da-chyeo-sseo-yo', en: 'I hurt my ankle' },
+          { ko: '내려가는 길이 어디예요?', romanized: 'Nae-ryeo-ga-neun gi-ri eo-di-ye-yo?', en: 'Which way is down?' },
+          { ko: '119를 불러주세요', romanized: 'Il-il-gu-reul bul-leo-ju-se-yo', en: 'Please call 119' },
+        ],
+      },
+    ],
+    tip: {
+      checklist: [
+        'Check the course difficulty and estimated time first',
+        'Bring water and a portable charger, and stick to designated trails',
+        'If lost or hurt, check the mountain location marker and call 119 for help',
+      ],
+    },
+  },
+};
