@@ -5,10 +5,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import type { Translations } from '@/i18n';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type KoreaMapProps = {
   width: number;
 };
+
+type MapRegionKey = keyof Translations['map']['regionLabels'];
 
 const MAP_CANVAS_BASE_WIDTH = 372;
 const MAP_CANVAS_BASE_HEIGHT = 558;
@@ -157,7 +161,6 @@ const MAP_PIECES = [
 const REGION_ARTS = [
   {
     key: 'seoul',
-    label: '서울',
     source: require('@/assets/images/korea-map/seoul.png'),
     href: '/seoul',
     left: 50,
@@ -227,19 +230,21 @@ const GYEONGSANG_WINDOW = {
 } as const;
 
 const REGION_LABELS = [
-  { key: 'seoul', label: '서울', left: 104, top: 93 },
-  { key: 'gyeonggi', label: '경기도', left: 120, top: 135 },
-  { key: 'chungnam', label: '충청도', left: 117, top: 206 },
-  { key: 'jeonnam', label: '전라도', left: 101, top: 318 },
-  { key: 'gyeongnam', label: '경상도', left: 234, top: 259 },
-  { key: 'jeju', label: '제주도', left: 73, top: 473 },
-  { key: 'gangwon', label: '강원도', left: 201, top: 82 },
+  { key: 'seoul', left: 104, top: 93 },
+  { key: 'gyeonggi', left: 120, top: 135 },
+  { key: 'chungcheong', left: 117, top: 206 },
+  { key: 'jeolla', left: 101, top: 318 },
+  { key: 'gyeongsang', left: 234, top: 259 },
+  { key: 'jeju', left: 73, top: 473 },
+  { key: 'gangwon', left: 201, top: 82 },
 ] as const;
 
 export default function KoreaMap({ width }: KoreaMapProps) {
   const router = useRouter();
+  const t = useTranslation();
   const scale = width / MAP_CANVAS_BASE_WIDTH;
   const sceneHeight = MAP_CANVAS_BASE_HEIGHT * scale;
+  const regionLabels = t.map.regionLabels;
 
   return (
     <View style={[styles.scene, { width, height: sceneHeight }]}>
@@ -289,7 +294,7 @@ export default function KoreaMap({ width }: KoreaMapProps) {
           <Pressable
             key={region.key}
             accessibilityRole="link"
-            accessibilityLabel={`${region.label} 상세 페이지로 이동`}
+            accessibilityLabel={`${regionLabels[region.key as MapRegionKey]} 상세 페이지로 이동`}
             onPress={() => router.push(region.href)}
             style={regionStyle}
           >
@@ -310,7 +315,7 @@ export default function KoreaMap({ width }: KoreaMapProps) {
             },
           ]}
         >
-          <CustomText style={styles.regionText}>{region.label}</CustomText>
+          <CustomText style={styles.regionText}>{regionLabels[region.key as MapRegionKey]}</CustomText>
         </View>
       ))}
     </View>
