@@ -384,6 +384,47 @@ export interface Translations {
     guideTapText: string;
     guideSwipeText: string;
   };
+  messages: {
+    threads: {
+      title: string;
+    };
+    compose: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      retry: string;
+      title: string;
+      sectionMessage: string;
+      placeholder: string;
+      safetyNotice: string;
+      delayNotice: string;
+      send: string;
+      sentTitle: string;
+      sentDescription: string;
+      viewMessages: string;
+      sendAgain: string;
+      unsavedMessage: string;
+      unsavedCancel: string;
+      unsavedLeave: string;
+      bioFallback: string;
+      sendFailedTitle: string;
+    };
+    thread: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      note: string;
+      viewDestination: string;
+      loadMore: string;
+      replySection: string;
+      replyPlaceholder: string;
+      replyPlaceholderDisabled: string;
+      send: string;
+      me: string;
+    };
+  };
 }
 
 export const ko: Translations = {
@@ -855,5 +896,46 @@ export const ko: Translations = {
     detailButton: '여행 코스 확인하기',
     guideTapText: '이미지를 터치하여\n여행 정보를 확인하세요',
     guideSwipeText: '카드를 옆으로 밀어\n다른 여행지를 구경해보세요',
+  },
+  messages: {
+    threads: {
+      title: '쪽지함',
+    },
+    compose: {
+      loading: '쪽지 화면을 불러오는 중이에요',
+      errorTitle: '쪽지 화면을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      retry: '다시 시도',
+      title: '쪽지 보내기',
+      sectionMessage: '메시지',
+      placeholder: '전하고 싶은 내용을 작성해보세요.',
+      safetyNotice: '안전을 위해 전화번호, 주소, 금융정보 등 민감한 개인정보는 공유하지 마세요.',
+      delayNotice: '실시간 채팅이 아니라 답장이 조금 늦을 수 있어요.',
+      send: '쪽지 보내기',
+      sentTitle: '쪽지를 보냈어요!',
+      sentDescription: '답장은 바로 오지 않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.',
+      viewMessages: '쪽지함 보기',
+      sendAgain: '쪽지 보내기',
+      unsavedMessage: '아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?',
+      unsavedCancel: '취소',
+      unsavedLeave: '나가기',
+      bioFallback: '소개가 아직 없어요.',
+      sendFailedTitle: '쪽지를 보내지 못했어요',
+    },
+    thread: {
+      loading: '쪽지 내용을 불러오는 중이에요',
+      errorTitle: '쪽지 내용을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      note: '이메일처럼 주고받는 쪽지예요. 답장이 늦을 수 있어요.',
+      viewDestination: '여행지 보기',
+      loadMore: '이전 메시지 더보기',
+      replySection: '답변 작성하기',
+      replyPlaceholder: '전하고 싶은 내용을 작성해보세요.',
+      replyPlaceholderDisabled: '답장을 보낼 수 없는 쪽지예요.',
+      send: '쪽지 보내기',
+      me: '나',
+    },
   },
 };
