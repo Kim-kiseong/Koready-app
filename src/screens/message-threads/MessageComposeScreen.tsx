@@ -31,8 +31,10 @@ import type {
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { goBackOrRoot } from '@/navigation/safe-back';
+import { useTranslation } from '@/i18n/useTranslation';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
+import { goBackOrRoot } from '@/navigation/safe-back';
+import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import { formatCountryDisplay, normalizeCountryCode } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
@@ -96,7 +98,6 @@ const MOCK_MESSAGE_COMPOSE_PROFILE: BuddyProfileDetail = {
   koreanLevel: 'BEGINNER',
   travelStyles: ['LOCAL_FOOD', 'NATURE'],
   bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-  buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
   socialLinks: [
     {
       type: 'INSTAGRAM',
@@ -117,7 +118,7 @@ const MOCK_MESSAGE_COMPOSE_PROFILE: BuddyProfileDetail = {
   updatedAt: '2026-08-06T00:00:00.000Z',
 };
 
-function buildMockComposeProfile(profileId: number | null): BuddyProfileDetail {
+function buildMockComposeProfile(profileId: number | null, language: 'KO' | 'EN'): BuddyProfileDetail {
   if (profileId != null) {
     const mockProfile = getMockBuddyProfileDetailById(profileId);
     if (mockProfile) {
@@ -128,12 +129,20 @@ function buildMockComposeProfile(profileId: number | null): BuddyProfileDetail {
     }
   }
 
-  return MOCK_MESSAGE_COMPOSE_PROFILE;
+  return {
+    ...MOCK_MESSAGE_COMPOSE_PROFILE,
+    bio:
+      language === 'EN'
+        ? 'I love Korean traditional culture and exploring local food spots :)'
+        : MOCK_MESSAGE_COMPOSE_PROFILE.bio,
+  };
 }
 
 export default function MessageComposeScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const language = useLanguageStore((state) => state.language);
+  const t = useTranslation();
   const {
     receiverProfileId,
     placeId,
@@ -178,7 +187,7 @@ export default function MessageComposeScreen() {
   }, [normalizedReceiverProfileId]);
 
   const [profile, setProfile] = useState<BuddyProfileDetail | null>(() =>
-    buildMockComposeProfile(parsedReceiverProfileId),
+    buildMockComposeProfile(parsedReceiverProfileId, useLanguageStore.getState().language),
   );
   const [options, setOptions] = useState<Pick<
     ProfileOptionsResponse,
@@ -196,14 +205,13 @@ export default function MessageComposeScreen() {
   const [successVisible, setSuccessVisible] = useState(false);
   const [sentThread, setSentThread] = useState<MessageThreadResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [isLeaving, setIsLeaving] = useState(false);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
 
   const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const sendDisabled = !content.trim() || isSending;
   const contentLength = content.length;
-  const hasUnsavedChanges = content.trim().length > 0 && !successVisible && !isLeaving;
+  const hasUnsavedChanges = content.trim().length > 0 && !successVisible;
 
   const openUnsavedChangesModal = useCallback(
     (action?: any) => {
@@ -225,17 +233,9 @@ export default function MessageComposeScreen() {
   });
 
   useEffect(() => {
-    if (!isLeaving) {
-      return;
-    }
-
-    goBackOrRoot(router);
-  }, [isLeaving, router]);
-
-  useEffect(() => {
     let cancelled = false;
     setLoadError(null);
-    setProfile(buildMockComposeProfile(parsedReceiverProfileId));
+    setProfile(buildMockComposeProfile(parsedReceiverProfileId, language));
     setOptions({
       ...FALLBACK_PROFILE_OPTIONS,
       countries: [...FALLBACK_PROFILE_OPTIONS.countries],
@@ -278,7 +278,7 @@ export default function MessageComposeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [parsedPlaceId, parsedPlaceNumericId, parsedReceiverProfileId, reloadKey, router]);
+  }, [language, parsedPlaceId, parsedPlaceNumericId, parsedReceiverProfileId, reloadKey, router]);
 
   const languageChips = useMemo(() => {
     if (!profile) {
@@ -291,6 +291,8 @@ export default function MessageComposeScreen() {
       profile.koreanLevel,
       (code) => getLabel(code, resolvedOptions.languages),
       (level) => getLabel(level, resolvedOptions.koreanLevels),
+      '',
+      { koreanLevelPlacement: 'append' },
     );
   }, [profile, resolvedOptions.koreanLevels, resolvedOptions.languages]);
 
@@ -340,12 +342,13 @@ export default function MessageComposeScreen() {
       setSentThread(nextThread);
       setSuccessVisible(true);
     } catch (error) {
-      Alert.alert('쪽지를 보내지 못했어요', extractErrorMessage(error));
+      Alert.alert(t.messages.compose.sendFailedTitle, extractErrorMessage(error, t.messages.compose.errorDescriptionFallback));
     } finally {
       setIsSending(false);
     }
   }, [
     content,
+    t,
     normalizedPlaceAddress,
     normalizedPlaceImageUrl,
     normalizedPlaceId,
@@ -373,8 +376,7 @@ export default function MessageComposeScreen() {
     setSuccessVisible(false);
     setContent('');
     setSentThread(null);
-    setIsLeaving(true);
-  }, [router]);
+  }, []);
 
   const requestLeaveScreen = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -416,7 +418,7 @@ export default function MessageComposeScreen() {
       <ScreenShell>
         <View style={styles.loadingState}>
           <ActivityIndicator color={Palette.primary} />
-          <CustomText style={styles.loadingText}>쪽지 화면을 불러오는 중이에요</CustomText>
+          <CustomText style={styles.loadingText}>{t.messages.compose.loading}</CustomText>
         </View>
       </ScreenShell>
     );
@@ -426,17 +428,17 @@ export default function MessageComposeScreen() {
     return (
       <ScreenShell>
         <View style={styles.errorState}>
-          <CustomText style={styles.errorTitle}>쪽지 화면을 불러오지 못했어요</CustomText>
+          <CustomText style={styles.errorTitle}>{t.messages.compose.errorTitle}</CustomText>
           <CustomText style={styles.errorDescription}>
-            {loadError ?? '잠시 후 다시 시도해 주세요.'}
+            {loadError ?? t.messages.compose.errorDescriptionFallback}
           </CustomText>
 
           <View style={styles.errorActions}>
             <Pressable style={[styles.secondaryButton, styles.errorSecondaryButton]} onPress={() => goBackOrRoot(router)}>
-              <CustomText style={styles.secondaryButtonText}>돌아가기</CustomText>
+              <CustomText style={styles.secondaryButtonText}>{t.messages.compose.back}</CustomText>
             </Pressable>
             <Pressable style={styles.primaryButton} onPress={() => setReloadKey((value) => value + 1)}>
-              <CustomText style={styles.primaryButtonText}>다시 시도</CustomText>
+              <CustomText style={styles.primaryButtonText}>{t.messages.compose.retry}</CustomText>
             </Pressable>
           </View>
         </View>
@@ -460,7 +462,7 @@ export default function MessageComposeScreen() {
               />
             </Pressable>
 
-            <CustomText style={styles.headerTitle}>쪽지 보내기</CustomText>
+            <CustomText style={styles.headerTitle}>{t.messages.compose.title}</CustomText>
 
             <View style={styles.headerSpacer} />
           </View>
@@ -490,18 +492,18 @@ export default function MessageComposeScreen() {
                   ))}
                 </View>
 
-                <CustomText style={styles.bio}>{profile.bio || '소개가 아직 없어요.'}</CustomText>
+                <CustomText style={styles.bio}>{profile.bio || t.messages.compose.bioFallback}</CustomText>
               </View>
             </View>
 
             <View style={styles.messageSection}>
-              <CustomText style={styles.sectionTitle}>메시지</CustomText>
+              <CustomText style={styles.sectionTitle}>{t.messages.compose.sectionMessage}</CustomText>
 
               <View style={styles.messageBox}>
                 <TextInput
                   value={content}
                   onChangeText={setContent}
-                  placeholder="전하고 싶은 내용을 작성해보세요."
+                  placeholder={t.messages.compose.placeholder}
                   placeholderTextColor={Palette.grey500}
                   cursorColor={Palette.primary}
                   selectionColor={Palette.primary}
@@ -519,13 +521,17 @@ export default function MessageComposeScreen() {
               </View>
             </View>
 
-            <View style={styles.noticeCard}>
+            <View
+              style={[
+                styles.noticeCard,
+                language === 'EN' && styles.noticeCardEnglish,
+              ]}>
               <CustomText style={styles.noticeText}>
-                안전을 위해 전화번호, 주소, 금융정보 등 민감한 개인정보는 공유하지 마세요.
+                {t.messages.compose.safetyNotice}
               </CustomText>
               <View style={styles.noticeDivider} />
               <CustomText style={styles.noticeText}>
-                실시간 채팅이 아니라 답장이 조금 늦을 수 있어요
+                {t.messages.compose.delayNotice}
               </CustomText>
             </View>
           </ScrollView>
@@ -548,7 +554,7 @@ export default function MessageComposeScreen() {
                       styles.sendButtonText,
                       sendDisabled && styles.sendButtonTextDisabled,
                     ]}>
-                    쪽지 보내기
+                    {t.messages.compose.send}
                   </CustomText>
                 )}
               </Pressable>
@@ -568,19 +574,19 @@ export default function MessageComposeScreen() {
 
             <View style={styles.successContent}>
               <View style={styles.successTextGroup}>
-                <CustomText style={styles.successTitle}>쪽지를 보냈어요!</CustomText>
+                <CustomText style={styles.successTitle}>{t.messages.compose.sentTitle}</CustomText>
                 <CustomText style={styles.successDescription}>
-                  {`답장은 바로 오지않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.`}
+                  {t.messages.compose.sentDescription}
                 </CustomText>
               </View>
 
               <View style={styles.successActions}>
                 <Pressable style={styles.successPrimaryButton} onPress={handleViewThread}>
-                  <CustomText style={styles.successPrimaryButtonText}>쪽지함 보기</CustomText>
+                  <CustomText style={styles.successPrimaryButtonText}>{t.messages.compose.viewMessages}</CustomText>
                 </Pressable>
 
                 <Pressable style={styles.successSecondaryButton} onPress={handleContinueBrowsing}>
-                  <CustomText style={styles.successSecondaryButtonText}>계속 둘러보기</CustomText>
+                  <CustomText style={styles.successSecondaryButtonText}>{t.messages.compose.sendAgain}</CustomText>
                 </Pressable>
               </View>
             </View>
@@ -592,15 +598,15 @@ export default function MessageComposeScreen() {
         <Pressable style={styles.unsavedChangesOverlay} onPress={cancelLeaveScreen}>
           <Pressable style={styles.unsavedChangesSheet} onPress={() => {}}>
             <CustomText style={styles.unsavedChangesMessage}>
-              {`아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?`}
+              {t.messages.compose.unsavedMessage}
             </CustomText>
 
             <View style={styles.unsavedChangesButtonRow}>
               <Pressable style={styles.unsavedChangesCancelButton} onPress={cancelLeaveScreen}>
-                <CustomText style={styles.unsavedChangesCancelText}>취소</CustomText>
+                <CustomText style={styles.unsavedChangesCancelText}>{t.messages.compose.unsavedCancel}</CustomText>
               </Pressable>
               <Pressable style={styles.unsavedChangesConfirmButton} onPress={confirmLeaveScreen}>
-                <CustomText style={styles.unsavedChangesConfirmText}>나가기</CustomText>
+                <CustomText style={styles.unsavedChangesConfirmText}>{t.messages.compose.unsavedLeave}</CustomText>
               </Pressable>
             </View>
           </Pressable>
@@ -688,8 +694,8 @@ function getLabel(code: string, options: ProfileOptionItem[]) {
   return options.find((option) => option.code === code)?.labelKo ?? code;
 }
 
-function extractErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '잠시 후 다시 시도해 주세요.';
+function extractErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 const styles = StyleSheet.create({
@@ -798,7 +804,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 24,
-    paddingBottom: 180,
+    paddingBottom: 18,
   },
   profileCard: {
     flexDirection: 'row',
@@ -934,25 +940,28 @@ const styles = StyleSheet.create({
     letterSpacing: -0.26,
   },
   counterSlash: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey500,
     letterSpacing: -0.26,
   },
   counterTotal: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey500,
     letterSpacing: -0.26,
   },
   noticeCard: {
-    marginTop: 170,
+    marginTop: 180,
     borderRadius: 12,
     backgroundColor: '#F6F9FB',
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  noticeCardEnglish: {
+    marginTop: 130,
   },
   noticeText: {
     fontFamily: FontFamily.pretendard.regular,

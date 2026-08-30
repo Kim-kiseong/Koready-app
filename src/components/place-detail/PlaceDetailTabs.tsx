@@ -6,17 +6,25 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 
-type Props = { activeTab: PlaceDetailTab; onChange: (tab: PlaceDetailTab) => void };
-const TABS: PlaceDetailTab[] = ['DESCRIPTION', 'ROUTE', 'MATE'];
+type Props = {
+  activeTab: PlaceDetailTab;
+  tabs?: PlaceDetailTab[];
+  onChange: (tab: PlaceDetailTab) => void;
+};
 
-export default function PlaceDetailTabs({ activeTab, onChange }: Props) {
+const DEFAULT_TABS: PlaceDetailTab[] = ['DESCRIPTION', 'ROUTE', 'MATES'];
+
+export default function PlaceDetailTabs({ activeTab, tabs = DEFAULT_TABS, onChange }: Props) {
   const t = useTranslation();
   const labels: Record<PlaceDetailTab, string> = {
     DESCRIPTION: t.placeDetail.tabs.description,
     ROUTE: t.placeDetail.tabs.route,
-    MATE: t.placeDetail.tabs.mate,
+    MATES: t.placeDetail.tabs.mates,
   };
-  return <View style={styles.wrapper}>{TABS.map((tab) => {
+
+  const visibleTabs = tabs.length > 0 ? tabs : DEFAULT_TABS;
+
+  return <View style={styles.wrapper}>{visibleTabs.map((tab) => {
     const active = tab === activeTab;
     return <Pressable key={tab} style={styles.tab} onPress={() => onChange(tab)}><CustomText style={[styles.label, active ? styles.activeLabel : styles.inactiveLabel]}>{labels[tab]}</CustomText><View style={[styles.line, active && styles.activeLine]} /></Pressable>;
   })}</View>;

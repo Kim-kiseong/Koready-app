@@ -1,6 +1,7 @@
 import { Asset } from 'expo-asset';
 
 import { client } from './client';
+import { formatPlaceRegionName } from '@/utils/place-i18n';
 import { API_BASE_URL } from '@/constants/env';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
@@ -233,6 +234,7 @@ export type PlaceCard = {
   // expected to substitute its own default (see api-docs' imageUrl description).
   imageUrl: string | null;
   festivalOccurrence: FestivalOccurrence | null;
+  operatingHours?: string | null;
   travelStyle: TravelStyleId;
   tags: string[];
   shortDescription: string;
@@ -253,6 +255,7 @@ export type HomeResponse = {
     totalCount: number;
     items: PlaceCard[];
   };
+  unreadMessageCount?: number;
 };
 
 type HomeEnvelope = {
@@ -268,7 +271,7 @@ const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
     placeId: 9001,
     title: '[전주] 이팝나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전북특별자치도 전주시 완산구 일대',
     imageUrl: 'https://picsum.photos/seed/jeonju-ipap/800/1000',
     festivalOccurrence: {
@@ -288,7 +291,7 @@ const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
     placeId: 9002,
     title: '[담양] 대나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전라남도 담양군 담양읍 죽녹원로 119',
     imageUrl: 'https://picsum.photos/seed/damyang-bamboo/800/1000',
     festivalOccurrence: {
@@ -390,6 +393,7 @@ export async function fetchHome(): Promise<HomeResponse> {
         totalCount: items.length,
         items,
       },
+      unreadMessageCount: useAuthStore.getState().unreadMessageCount,
     };
   }
   const response = await client.get<HomeEnvelope>('/home');
@@ -484,7 +488,7 @@ function toEventListing(card: PlaceCard): EventListing {
   return {
     id: String(card.placeId),
     title: card.title,
-    location: card.serviceRegionName,
+    location: formatPlaceRegionName(card.serviceRegionCode, useLanguageStore.getState().language),
     dateRangeLabel: card.festivalOccurrence?.dateRangeText ?? '',
     category: card.travelStyle,
     imageUrl: normalizeImageUrl(card.imageUrl, DEFAULT_FEATURED_EVENT_IMAGE_URI),

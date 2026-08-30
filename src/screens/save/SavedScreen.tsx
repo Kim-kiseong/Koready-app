@@ -172,11 +172,13 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['대나무', 'Bamboo'],
   ['도심', 'Urban'],
   ['동굴', 'Cave'],
+  ['드라마 촬영지', 'Drama Filming Sites'],
   ['드라이브', 'Drive'],
   ['디저트', 'Dessert'],
   ['랜드마크', 'Landmark'],
   ['로컬', 'Local'],
-  ['로컬맛집', 'Local Eats'],
+  ['로컬맛집', 'Local Food'],
+  ['로컬 맛집', 'Local Food'],
   ['막국수', 'Makguksu'],
   ['매화', 'Plum Blossom'],
   ['먹거리', 'Food'],
@@ -185,6 +187,8 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['모노레일', 'Monorail'],
   ['목장', 'Ranch'],
   ['문화', 'Culture'],
+  ['문화 체험', 'Cultural Experience'],
+  ['문화체험', 'Cultural Experience'],
   ['미술관', 'Art'],
   ['미식', 'Gourmet'],
   ['바다', 'Ocean'],
@@ -222,13 +226,18 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['일몰', 'Sunset'],
   ['일출', 'Sunrise'],
   ['자연', 'Nature'],
-  ['자연명소', 'Natural Spot'],
+  ['자연 명소', 'Nature'],
+  ['자연명소', 'Nature'],
   ['전망', 'View'],
+  ['전시 / 미술관', 'Exhibitions & Museums'],
+  ['전시/미술관', 'Exhibitions & Museums'],
   ['전시', 'Exhibition'],
   ['전통', 'Tradition'],
   ['전통마을', 'Traditional Village'],
+  ['전통시장', 'Traditional Market'],
   ['절경', 'Scenic View'],
   ['정원', 'Garden'],
+  ['지역 축제', 'Local Festival'],
   ['지역축제', 'Local Festival'],
   ['체험', 'Experience'],
   ['축제', 'Festival'],
@@ -418,7 +427,13 @@ export default function SavedScreen() {
       return;
     }
 
-    void loadSavedPlaces(null, false);
+    const timeout = setTimeout(() => {
+      void loadSavedPlaces(null, false);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeout);
+    };
   }, [language, hasAuthHydrated, loadSavedPlaces, savedStoreHydrated]);
 
   const savedPlaces = useMemo(() => {
@@ -736,13 +751,13 @@ function applyPhraseMap(title: string, replacements: Array<[RegExp, string]>) {
 const EN_TO_KO_TITLE_PREFIXES: Array<[string, string]> = [
   ['Daegwallyeong', '대관령'],
   ['Gimcheon', '김천'],
-  ['Gyeonggi', '경기'],
-  ['Gangwon', '강원'],
-  ['Chungcheong', '충청'],
-  ['Gyeongsang', '경상'],
-  ['Jeolla', '전라'],
+  ['Gyeonggi', '경기도'],
+  ['Gangwon', '강원도'],
+  ['Chungcheong', '충청도'],
+  ['Gyeongsang', '경상도'],
+  ['Jeolla', '전라도'],
   ['Seoul', '서울'],
-  ['Jeju', '제주'],
+  ['Jeju', '제주도'],
   ['Jeonju', '전주'],
   ['Damyang', '담양'],
   ['Gwangju', '광주'],
@@ -821,12 +836,12 @@ function preserveParentheticalSegments(sourceTitle: string, translatedTitle: str
 function translateRegionName(value: string) {
   const regionMap: Record<string, string> = {
     서울: 'Seoul',
-    경기: 'Gyeonggi',
-    강원: 'Gangwon',
-    충청: 'Chungcheong',
-    전라: 'Jeolla',
-    경상: 'Gyeongsang',
-    제주: 'Jeju',
+    경기도: 'Gyeonggi',
+    강원도: 'Gangwon',
+    충청도: 'Chungcheong',
+    전라도: 'Jeolla',
+    경상도: 'Gyeongsang',
+    제주도: 'Jeju',
     전주: 'Jeonju',
     담양: 'Damyang',
     김천: 'Gimcheon',
@@ -838,12 +853,12 @@ function translateRegionName(value: string) {
 function translateRegionNameToKorean(value: string) {
   const regionMap: Record<string, string> = {
     Seoul: '서울',
-    Gyeonggi: '경기',
-    Gangwon: '강원',
-    Chungcheong: '충청',
-    Jeolla: '전라',
-    Gyeongsang: '경상',
-    Jeju: '제주',
+    Gyeonggi: '경기도',
+    Gangwon: '강원도',
+    Chungcheong: '충청도',
+    Jeolla: '전라도',
+    Gyeongsang: '경상도',
+    Jeju: '제주도',
     Jeonju: '전주',
     Damyang: '담양',
     Gimcheon: '김천',

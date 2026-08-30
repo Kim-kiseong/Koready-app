@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
+import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
@@ -154,6 +155,7 @@ export default function MateTab({
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const selectedProfileFallback = selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId);
   const isPreviewBefore = previewMode === 'before';
   const isPreviewAfter = previewMode === 'after';
   const isPreviewList = previewMode === 'list';
@@ -385,6 +387,7 @@ export default function MateTab({
         visible={selectedProfileId !== null}
         profileId={selectedProfileId}
         options={profileOptions}
+        fallbackProfile={selectedProfileFallback}
         onPressMessage={(profileId) => {
           setSelectedProfileId(null);
           if (!buddyProfileExists) {
@@ -579,6 +582,8 @@ function buildLanguageChips(
     mate.koreanLevel,
     (code) => getLabel(code, languageOptions, language, languageFallbacks),
     (level) => getLabel(level, koreanLevelOptions, language, levelFallbacks),
+    '',
+    { koreanLevelPlacement: 'append' },
   );
 }
 

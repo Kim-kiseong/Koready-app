@@ -6,6 +6,8 @@ import type { PlaceListItem } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { formatPlaceRegionName, formatPlaceTitle, formatPlaceTravelStyle } from '@/utils/place-i18n';
+import { useLanguageStore } from '@/store/language-store';
 
 export type PlaceGridCardProps = {
   place: PlaceListItem;
@@ -13,43 +15,34 @@ export type PlaceGridCardProps = {
   onPress?: () => void;
 };
 
-const TRAVEL_STYLE_LABELS: Record<string, string> = {
-  LOCAL_FOOD: '로컬 맛집',
-  LOCAL_FESTIVAL: '지역 축제',
-  TRADITIONAL_MARKET: '전통 시장',
-  CULTURE_EXPERIENCE: '문화 체험',
-  NATURE: '자연 명소',
-  EXHIBITION_MUSEUM: '전시/미술관',
-  DRAMA_LOCATION: '드라마 촬영지',
-};
-
 export default function PlaceGridCard({ place, width, onPress }: PlaceGridCardProps) {
+  const language = useLanguageStore((state) => state.language);
+  const travelStyleText = formatPlaceTravelStyle(place.travelStyle, language);
+  const regionText = formatPlaceRegionName(place.serviceRegionCode, language);
+  const titleText = formatPlaceTitle(place.title, language);
+
   return (
     <Pressable style={[styles.card, { width }]} onPress={onPress}>
       <View style={styles.photoSection}>
         <Image source={{ uri: place.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
 
         <View style={styles.badge}>
-          <CustomText style={styles.badgeText}>{formatTravelStyle(place.travelStyle)}</CustomText>
+          <CustomText style={styles.badgeText}>{travelStyleText}</CustomText>
         </View>
       </View>
 
       <View style={styles.content}>
         <View style={styles.locationRow}>
           <LocationPinIcon />
-          <CustomText style={styles.locationText}>{place.serviceRegionName}</CustomText>
+          <CustomText style={styles.locationText}>{regionText}</CustomText>
         </View>
 
         <CustomText numberOfLines={2} style={styles.title}>
-          {place.title}
+          {titleText}
         </CustomText>
       </View>
     </Pressable>
   );
-}
-
-function formatTravelStyle(value: string) {
-  return TRAVEL_STYLE_LABELS[value] ?? value;
 }
 
 function LocationPinIcon() {

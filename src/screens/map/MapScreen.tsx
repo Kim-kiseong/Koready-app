@@ -6,11 +6,13 @@ import CustomText from '@/components/CustomText';
 import KoreaMap from '@/components/KoreaMap';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const BASE_WIDTH = 375;
 
 export default function MapScreen() {
   const { width } = useWindowDimensions();
+  const t = useTranslation();
   const screenScale = width / BASE_WIDTH;
 
   return (
@@ -19,10 +21,10 @@ export default function MapScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 * screenScale}]}
         showsVerticalScrollIndicator={false}
       >
-        <CustomText style={styles.title}>대한민국 지도</CustomText>
+        <CustomText style={styles.title}>{t.map.title}</CustomText>
 
         <View style={[styles.instructionCard, { width: width - 48, marginTop: 28 * screenScale }]}>
-          <CustomText style={styles.instructionText}>원하는 지역을 선택해 추천 여행지를 둘러보세요.</CustomText>
+          <CustomText style={styles.instructionText}>{t.map.instruction}</CustomText>
         </View>
 
         <KoreaMap width={width} />

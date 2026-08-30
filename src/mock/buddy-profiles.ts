@@ -1,6 +1,7 @@
 import { getMockBuddyProfileById } from '@/api/mate';
 import type { BuddyProfile, BuddyProfileDetail } from '@/api/types';
 import { normalizeCountryCode } from '@/utils/country';
+import { useLanguageStore } from '@/store/language-store';
 
 const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
   501: {
@@ -13,7 +14,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['LOCAL_FOOD', 'TRADITIONAL_MARKET'],
     bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-    buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
     socialLinks: [
       {
         type: 'INSTAGRAM',
@@ -43,7 +43,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'INTERMEDIATE',
     travelStyles: ['NATURE', 'EXHIBITION_MUSEUM'],
     bio: '자연 풍경과 전시 관람을 함께 즐기는 여행을 좋아해요.',
-    buddyStyles: ['PHOTOGRAPHY', 'QUIET_TRAVEL'],
     socialLinks: [
       {
         type: 'INSTAGRAM',
@@ -68,7 +67,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['CULTURE_EXPERIENCE', 'TRADITIONAL_MARKET'],
     bio: '추천해주실 만한 찻집이 있을까요?',
-    buddyStyles: ['TRADITIONAL_CULTURE', 'QUIET_TRAVEL'],
     socialLinks: [
       {
         type: 'LINE',
@@ -93,7 +91,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['DRAMA_LOCATION', 'LOCAL_FOOD'],
     bio: '좋네요! 다녀오면 어땠는지 알려주세요.',
-    buddyStyles: ['QUIET_TRAVEL', 'FOODIE'],
     socialLinks: [],
     profilePublic: true,
     snsPublic: false,
@@ -104,13 +101,30 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
   },
 };
 
+const ENGLISH_BIOS: Partial<Record<number, string>> = {
+  501: 'I love Korean traditional culture and exploring local food spots :)',
+  502: 'I enjoy nature spots and exhibition spaces with a relaxed pace.',
+  503: 'Do you know any tea houses you would recommend?',
+  504: 'Sounds great! Please let me know how it goes when you visit.',
+};
+
 function cloneBuddyProfileDetail(profile: BuddyProfileDetail): BuddyProfileDetail {
   return {
     ...profile,
     availableLanguages: [...profile.availableLanguages],
     travelStyles: [...profile.travelStyles],
-    buddyStyles: [...profile.buddyStyles],
     socialLinks: profile.socialLinks.map((link) => ({ ...link })),
+  };
+}
+
+function localizeBuddyProfile(profile: BuddyProfileDetail): BuddyProfileDetail {
+  if (useLanguageStore.getState().language !== 'EN') {
+    return profile;
+  }
+
+  return {
+    ...profile,
+    bio: ENGLISH_BIOS[profile.profileId] ?? profile.bio,
   };
 }
 
@@ -123,7 +137,7 @@ function toBuddyProfileDetail(profile: BuddyProfile): BuddyProfileDetail {
 
 export function getInboxMockBuddyProfileById(profileId: number): BuddyProfileDetail | null {
   const profile = INBOX_MOCK_BUDDY_PROFILES[profileId];
-  return profile ? cloneBuddyProfileDetail(profile) : null;
+  return profile ? localizeBuddyProfile(cloneBuddyProfileDetail(profile)) : null;
 }
 
 export function getMockBuddyProfileDetailById(profileId: number): BuddyProfileDetail | null {
@@ -134,7 +148,7 @@ export function getMockBuddyProfileDetailById(profileId: number): BuddyProfileDe
 
   const mateProfile = getMockBuddyProfileById(profileId);
   if (mateProfile) {
-    return toBuddyProfileDetail(mateProfile);
+    return localizeBuddyProfile(toBuddyProfileDetail(mateProfile));
   }
 
   return null;

@@ -74,6 +74,18 @@ export interface Translations {
     languageEn: string;
     categories: Record<FeaturedEventCategory, string>;
   };
+  map: {
+    title: string;
+    instruction: string;
+    regionLabels: Record<'seoul' | 'gyeonggi' | 'gangwon' | 'chungcheong' | 'jeolla' | 'gyeongsang' | 'jeju', string>;
+    countPrefix: string;
+    countSuffix: string;
+    sortRecommended: string;
+    sortDeadline: string;
+    loading: string;
+    emptyTitle: string;
+    emptyDescription: string;
+  };
   nav: {
     home: string;
     map: string;
@@ -186,10 +198,6 @@ export interface Translations {
       koreanLevel: string;
       bio: string;
       travelStyles: {
-        title: string;
-        subtitle: string;
-      };
-      buddyStyles: {
         title: string;
         subtitle: string;
       };
@@ -343,7 +351,7 @@ export interface Translations {
     tabs: {
       description: string;
       route: string;
-      mate: string;
+      mates: string;
     };
     enjoyTitle: string;
     nearbyTitle: string;
@@ -376,7 +384,7 @@ export interface Translations {
       };
       dayTripValues: {
         available: string;
-        unavailable: string;
+        stayRecommended: string;
       };
       fareTitle: string;
       fareOneWay: string;
@@ -412,6 +420,53 @@ export interface Translations {
     detailButton: string;
     guideTapText: string;
     guideSwipeText: string;
+  };
+  messages: {
+    threads: {
+      title: string;
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      retry: string;
+      emptyTitle: string;
+      emptyDescription: string;
+    };
+    compose: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      retry: string;
+      title: string;
+      sectionMessage: string;
+      placeholder: string;
+      safetyNotice: string;
+      delayNotice: string;
+      send: string;
+      sentTitle: string;
+      sentDescription: string;
+      viewMessages: string;
+      sendAgain: string;
+      unsavedMessage: string;
+      unsavedCancel: string;
+      unsavedLeave: string;
+      bioFallback: string;
+      sendFailedTitle: string;
+    };
+    thread: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      note: string;
+      viewDestination: string;
+      loadMore: string;
+      replySection: string;
+      replyPlaceholder: string;
+      replyPlaceholderDisabled: string;
+      send: string;
+      me: string;
+    };
   };
 }
 
@@ -499,6 +554,26 @@ export const ko: Translations = {
       EXHIBITION_MUSEUM: '전시/미술관',
       NATURE: '자연 명소',
     },
+  },
+  map: {
+    title: '대한민국 지도',
+    instruction: '원하는 지역을 선택해 추천 여행지를 둘러보세요.',
+    regionLabels: {
+      seoul: '서울',
+      gyeonggi: '경기도',
+      gangwon: '강원도',
+      chungcheong: '충청도',
+      jeolla: '전라도',
+      gyeongsang: '경상도',
+      jeju: '제주도',
+    },
+    countPrefix: '전체',
+    countSuffix: '개',
+    sortRecommended: '추천순',
+    sortDeadline: '마감순',
+    loading: '{region} 장소를 불러오는 중이에요.',
+    emptyTitle: '조건에 맞는 장소가 없어요.',
+    emptyDescription: '다른 날짜나 관광 유형을 선택해보세요.',
   },
   nav: {
     home: '홈',
@@ -644,10 +719,6 @@ export const ko: Translations = {
         title: '관심 여행 스타일',
         subtitle: '중복 선택이 가능해요',
       },
-      buddyStyles: {
-        title: '동행 스타일',
-        subtitle: '중복 선택이 가능해요',
-      },
       socialAccounts: {
         title: '공개 SNS',
         subtitle: '최대 2개까지 공개할 수 있어요.',
@@ -786,12 +857,12 @@ export const ko: Translations = {
     regionAll: '전체',
     regionOptions: {
       SEOUL: '서울',
-      GYEONGGI: '경기',
-      GANGWON: '강원',
-      CHUNGCHEONG: '충청',
-      JEOLLA: '전라',
-      GYEONGSANG: '경상',
-      JEJU: '제주',
+      GYEONGGI: '경기도',
+      GANGWON: '강원도',
+      CHUNGCHEONG: '충청도',
+      JEOLLA: '전라도',
+      GYEONGSANG: '경상도',
+      JEJU: '제주도',
     },
     dateLabel: '날짜',
     dateAll: '전체',
@@ -836,7 +907,7 @@ export const ko: Translations = {
     tabs: {
       description: '설명',
       route: '이동',
-      mate: '메이트',
+      mates: '메이트',
     },
     enjoyTitle: '이렇게 즐겨보세요',
     nearbyTitle: '같이 가보면 좋은 명소',
@@ -869,7 +940,7 @@ export const ko: Translations = {
       },
       dayTripValues: {
         available: '당일치기 가능',
-        unavailable: '숙박 권장',
+        stayRecommended: '숙박 권장',
       },
       fareTitle: '예상 교통비',
       fareOneWay: 'KTX 편도',
@@ -905,5 +976,52 @@ export const ko: Translations = {
     detailButton: '여행 코스 확인하기',
     guideTapText: '이미지를 터치하여\n여행 정보를 확인하세요',
     guideSwipeText: '카드를 옆으로 밀어\n다른 여행지를 구경해보세요',
+  },
+  messages: {
+    threads: {
+      title: '쪽지함',
+      loading: '쪽지함을 불러오는 중이에요',
+      errorTitle: '쪽지함을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      retry: '다시 시도',
+      emptyTitle: '쪽지함이 비어 있어요',
+      emptyDescription: '아직 받은 쪽지가 없어요. 여행지에서 쪽지를 보내면 여기에서 확인할 수 있어요.',
+    },
+    compose: {
+      loading: '쪽지 화면을 불러오는 중이에요',
+      errorTitle: '쪽지 화면을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      retry: '다시 시도',
+      title: '쪽지 보내기',
+      sectionMessage: '메시지',
+      placeholder: '전하고 싶은 내용을 작성해보세요.',
+      safetyNotice: '안전을 위해 전화번호, 주소, 금융정보 등 민감한 개인정보는 공유하지 마세요.',
+      delayNotice: '실시간 채팅이 아니라 답장이 조금 늦을 수 있어요.',
+      send: '쪽지 보내기',
+      sentTitle: '쪽지를 보냈어요!',
+      sentDescription: '답장은 바로 오지 않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.',
+      viewMessages: '쪽지함 보기',
+      sendAgain: '쪽지 보내기',
+      unsavedMessage: '아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?',
+      unsavedCancel: '취소',
+      unsavedLeave: '나가기',
+      bioFallback: '소개가 아직 없어요.',
+      sendFailedTitle: '쪽지를 보내지 못했어요',
+    },
+    thread: {
+      loading: '쪽지 내용을 불러오는 중이에요',
+      errorTitle: '쪽지 내용을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      note: '이메일처럼 주고받는 쪽지예요. 답장이 늦을 수 있어요.',
+      viewDestination: '여행지 보기',
+      loadMore: '이전 메시지 더보기',
+      replySection: '답변 작성하기',
+      replyPlaceholder: '전하고 싶은 내용을 작성해보세요.',
+      replyPlaceholderDisabled: '답장을 보낼 수 없는 쪽지예요.',
+      send: '쪽지 보내기',
+      me: '나',
+    },
   },
 };

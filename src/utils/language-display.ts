@@ -67,27 +67,36 @@ export function buildLanguageDisplayLabels(
   resolveLanguageLabel: (code: string) => string,
   resolveKoreanLevelLabel: (level: string) => string,
   fallbackText = '',
+  options?: {
+    koreanLevelPlacement?: 'replace' | 'append';
+  },
 ) {
   const levelLabel = resolveKoreanLevelLabel(koreanLevel).trim();
   const normalizedLanguages = languages
     .map(normalizeLanguageCode)
     .filter((code): code is string => typeof code === 'string' && code.length > 0);
   const displayLabels = normalizedLanguages
+    .filter((code) => options?.koreanLevelPlacement === 'append' ? code !== 'KO' : true)
     .map((code) => resolveLanguageLabel(code).trim())
     .filter((label) => label.length > 0);
 
   const koreanLabel = resolveLanguageLabel('KO').trim() || 'Korean';
   const koreanDisplay = levelLabel ? `${koreanLabel} (${levelLabel})` : koreanLabel;
+  const placement = options?.koreanLevelPlacement ?? 'replace';
   const koreanIndex = normalizedLanguages.findIndex((code) => code === 'KO');
 
-  if (koreanIndex >= 0) {
-    if (koreanIndex < displayLabels.length) {
-      displayLabels[koreanIndex] = koreanDisplay;
+  if (koreanDisplay.length > 0) {
+    if (placement === 'append') {
+      displayLabels.push(koreanDisplay);
+    } else if (koreanIndex >= 0) {
+      if (koreanIndex < displayLabels.length) {
+        displayLabels[koreanIndex] = koreanDisplay;
+      } else {
+        displayLabels.push(koreanDisplay);
+      }
     } else {
       displayLabels.push(koreanDisplay);
     }
-  } else if (koreanDisplay.length > 0) {
-    displayLabels.push(koreanDisplay);
   }
 
   if (displayLabels.length > 0) {
