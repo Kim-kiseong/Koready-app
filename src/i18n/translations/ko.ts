@@ -3,6 +3,10 @@ import type { TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 
 export interface Translations {
+  login: {
+    googleButton: string;
+    appleButton: string;
+  };
   language: {
     title: string;
     subtitle: string;
@@ -412,6 +416,10 @@ export interface Translations {
 }
 
 export const ko: Translations = {
+  login: {
+    googleButton: 'Google로 시작하기',
+    appleButton: 'Apple로 시작하기',
+  },
   language: {
     title: '언어를 선택해주세요',
     subtitle: 'Choose your language',

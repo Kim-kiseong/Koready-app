@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { DEV_TEST_ACCESS_TOKEN, DEV_TEST_REFRESH_TOKEN } from '@/constants/env';
+import { useTranslation } from '@/i18n/useTranslation';
 import { resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -57,6 +58,7 @@ const BOTTOM_FADE_HEIGHT = 187;
 const BOTTOM_FADE_WHITE_STOP = 0.22722;
 
 export default function LoginScreen() {
+  const t = useTranslation();
   const { width } = useWindowDimensions();
   const scale = width / FRAME_WIDTH;
   const router = useRouter();
@@ -162,7 +164,7 @@ export default function LoginScreen() {
       <View style={[styles.buttonSection, { top: BUTTON_GROUP_TOP * scale }]}>
         <SafeAreaView edges={['bottom']} style={styles.buttonGroup}>
           <SocialButton
-            label="Google로 시작하기"
+            label={t.login.googleButton}
             icon={require('@/assets/images/google.svg')}
             iconSize={{ width: 18, height: 18 }}
             backgroundColor="#ffffff"
@@ -172,7 +174,7 @@ export default function LoginScreen() {
             onPress={() => handleSocialLogin('GOOGLE')}
           />
           <SocialButton
-            label="Apple로 시작하기"
+            label={t.login.appleButton}
             icon={require('@/assets/images/apple.svg')}
             iconSize={{ width: 16, height: 20 }}
             backgroundColor={Palette.appleBlack}
