@@ -3,12 +3,12 @@ import type { LanguageCode } from '@/api/types';
 const REGION_LABELS: Record<LanguageCode, Record<string, string>> = {
   KO: {
     SEOUL: '서울',
-    GYEONGGI: '경기',
-    GANGWON: '강원',
-    CHUNGCHEONG: '충청',
-    JEOLLA: '전라',
-    GYEONGSANG: '경상',
-    JEJU: '제주',
+    GYEONGGI: '경기도',
+    GANGWON: '강원도',
+    CHUNGCHEONG: '충청도',
+    JEOLLA: '전라도',
+    GYEONGSANG: '경상도',
+    JEJU: '제주도',
   },
   EN: {
     SEOUL: 'Seoul',

@@ -197,10 +197,6 @@ export interface Translations {
         title: string;
         subtitle: string;
       };
-      buddyStyles: {
-        title: string;
-        subtitle: string;
-      };
       socialAccounts: {
         title: string;
         subtitle: string;
@@ -345,7 +341,7 @@ export interface Translations {
     tabs: {
       description: string;
       route: string;
-      mate: string;
+      mates: string;
     };
     enjoyTitle: string;
     nearbyTitle: string;
@@ -378,7 +374,7 @@ export interface Translations {
       };
       dayTripValues: {
         available: string;
-        unavailable: string;
+        stayRecommended: string;
       };
       fareTitle: string;
       fareOneWay: string;
@@ -418,6 +414,12 @@ export interface Translations {
   messages: {
     threads: {
       title: string;
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      retry: string;
+      emptyTitle: string;
+      emptyDescription: string;
     };
     compose: {
       loading: string;
@@ -544,12 +546,12 @@ export const ko: Translations = {
     instruction: '원하는 지역을 선택해 추천 여행지를 둘러보세요.',
     regionLabels: {
       seoul: '서울',
-      gyeonggi: '경기',
-      gangwon: '강원',
-      chungcheong: '충청',
-      jeolla: '전라',
-      gyeongsang: '경상',
-      jeju: '제주',
+      gyeonggi: '경기도',
+      gangwon: '강원도',
+      chungcheong: '충청도',
+      jeolla: '전라도',
+      gyeongsang: '경상도',
+      jeju: '제주도',
     },
     countPrefix: '전체',
     countSuffix: '개',
@@ -703,10 +705,6 @@ export const ko: Translations = {
         title: '관심 여행 스타일',
         subtitle: '중복 선택이 가능해요',
       },
-      buddyStyles: {
-        title: '동행 스타일',
-        subtitle: '중복 선택이 가능해요',
-      },
       socialAccounts: {
         title: '공개 SNS',
         subtitle: '최대 2개까지 공개할 수 있어요.',
@@ -845,12 +843,12 @@ export const ko: Translations = {
     regionAll: '전체',
     regionOptions: {
       SEOUL: '서울',
-      GYEONGGI: '경기',
-      GANGWON: '강원',
-      CHUNGCHEONG: '충청',
-      JEOLLA: '전라',
-      GYEONGSANG: '경상',
-      JEJU: '제주',
+      GYEONGGI: '경기도',
+      GANGWON: '강원도',
+      CHUNGCHEONG: '충청도',
+      JEOLLA: '전라도',
+      GYEONGSANG: '경상도',
+      JEJU: '제주도',
     },
     dateLabel: '날짜',
     dateAll: '전체',
@@ -889,7 +887,7 @@ export const ko: Translations = {
     tabs: {
       description: '설명',
       route: '이동',
-      mate: '메이트',
+      mates: '메이트',
     },
     enjoyTitle: '이렇게 즐겨보세요',
     nearbyTitle: '같이 가보면 좋은 명소',
@@ -922,7 +920,7 @@ export const ko: Translations = {
       },
       dayTripValues: {
         available: '당일치기 가능',
-        unavailable: '숙박 권장',
+        stayRecommended: '숙박 권장',
       },
       fareTitle: '예상 교통비',
       fareOneWay: 'KTX 편도',
@@ -962,6 +960,12 @@ export const ko: Translations = {
   messages: {
     threads: {
       title: '쪽지함',
+      loading: '쪽지함을 불러오는 중이에요',
+      errorTitle: '쪽지함을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      retry: '다시 시도',
+      emptyTitle: '쪽지함이 비어 있어요',
+      emptyDescription: '아직 받은 쪽지가 없어요. 여행지에서 쪽지를 보내면 여기에서 확인할 수 있어요.',
     },
     compose: {
       loading: '쪽지 화면을 불러오는 중이에요',

@@ -98,7 +98,6 @@ const MOCK_MESSAGE_COMPOSE_PROFILE: BuddyProfileDetail = {
   koreanLevel: 'BEGINNER',
   travelStyles: ['LOCAL_FOOD', 'NATURE'],
   bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-  buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
   socialLinks: [
     {
       type: 'INSTAGRAM',

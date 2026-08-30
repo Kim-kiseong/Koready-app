@@ -74,7 +74,6 @@ const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
     { code: 'EXHIBITION_MUSEUM', labelKo: '전시/미술관', labelEn: 'Exhibition / Museum', displayOrder: 6 },
     { code: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'Drama Location', displayOrder: 7 },
   ],
-  buddyStyles: [],
   socialPlatforms: [
     { code: 'INSTAGRAM', labelKo: 'Instagram', labelEn: 'Instagram', displayOrder: 1 },
     { code: 'TIKTOK', labelKo: 'TikTok', labelEn: 'TikTok', displayOrder: 2 },

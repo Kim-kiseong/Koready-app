@@ -279,7 +279,7 @@ export default function MessageThreadScreen() {
       pathname: '/places/[placeId]',
       params: {
         placeId: visibleThread.place.routeId ?? String(visibleThread.place.placeId),
-        tab: 'MATE',
+        tab: 'MATES',
       },
     } as never);
   }, [router, visibleThread]);

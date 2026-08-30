@@ -224,10 +224,6 @@ export const en: DeepPartial<Translations> = {
         title: 'Travel Interests',
         subtitle: 'Select all that apply.',
       },
-      buddyStyles: {
-        title: 'Buddy Styles',
-        subtitle: 'Select all that apply.',
-      },
       socialAccounts: {
         title: 'Social Accounts',
         subtitle: 'You can add up to 2 accounts.',
@@ -334,6 +330,12 @@ export const en: DeepPartial<Translations> = {
   messages: {
     threads: {
       title: 'Messages',
+      loading: 'Loading messages...',
+      errorTitle: "Couldn't load messages.",
+      errorDescriptionFallback: 'Please try again in a moment.',
+      retry: 'Try again',
+      emptyTitle: 'No messages yet.',
+      emptyDescription: 'Once someone messages you about a trip, it will show up here.',
     },
     compose: {
       loading: 'Loading message screen...',
@@ -468,7 +470,7 @@ export const en: DeepPartial<Translations> = {
     tabs: {
       description: 'Overview',
       route: 'Route',
-      mate: 'Mate',
+      mates: 'Mates',
     },
     enjoyTitle: 'Things to Do',
     nearbyTitle: 'Nearby Places to Visit',
@@ -501,7 +503,7 @@ export const en: DeepPartial<Translations> = {
       },
       dayTripValues: {
         available: 'Day Trip',
-        unavailable: 'Overnight Stay',
+        stayRecommended: 'Overnight Stay',
       },
       fareTitle: 'Estimated Transportation Cost',
       fareOneWay: 'KTX One-way',

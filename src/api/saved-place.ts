@@ -1,14 +1,19 @@
-import axios from 'axios';
+import { create } from 'axios';
 import { Asset } from 'expo-asset';
 
 import { HomeImages } from '@/constants/home-images';
-import { API_BASE_URL } from '@/constants/env';
+import { API_V1_BASE_URL } from '@/constants/env';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
-import { DEFAULT_PLACE_DESCRIPTION, getMockPlaceTitleById, type PlaceDetail } from './place';
+import {
+  DEFAULT_PLACE_DESCRIPTION,
+  getMockPlaceTitleById,
+  normalizePlaceDescription,
+  type PlaceDetail,
+} from './place';
 import type { PicksCard } from './picks';
 import type {
   SavedPlaceFestivalOccurrence,
@@ -17,6 +22,10 @@ import type {
   SavedPlacesResponse,
   SavedPlaceToggleResponse,
 } from './types';
+import {
+  normalizePlaceTags,
+  normalizeTaggedPlace,
+} from '@/utils/place-tags';
 
 type SavedPlacesEnvelope = {
   success: true;
@@ -34,8 +43,8 @@ type SavedPlaceToggleEnvelope = {
   traceId: string;
 };
 
-const savedClient = axios.create({
-  baseURL: API_BASE_URL,
+const savedClient = create({
+  baseURL: API_V1_BASE_URL,
 });
 
 savedClient.interceptors.request.use((config) => {
@@ -49,12 +58,12 @@ savedClient.interceptors.request.use((config) => {
 
 const SERVICE_REGION_NAME_BY_CODE: Record<string, string> = {
   SEOUL: '서울',
-  GYEONGGI: '경기',
-  GANGWON: '강원',
-  CHUNGCHEONG: '충청',
-  JEOLLA: '전라',
-  GYEONGSANG: '경상',
-  JEJU: '제주',
+  GYEONGGI: '경기도',
+  GANGWON: '강원도',
+  CHUNGCHEONG: '충청도',
+  JEOLLA: '전라도',
+  GYEONGSANG: '경상도',
+  JEJU: '제주도',
 };
 
 const PLACE_METADATA_BY_ID: Record<
@@ -69,7 +78,7 @@ const PLACE_METADATA_BY_ID: Record<
 > = {
   1101: {
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     travelStyle: 'LOCAL_FESTIVAL',
     festivalOccurrence: {
       occurrenceId: 1101001,
@@ -83,7 +92,7 @@ const PLACE_METADATA_BY_ID: Record<
   },
   1102: {
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     travelStyle: 'LOCAL_FESTIVAL',
     festivalOccurrence: {
       occurrenceId: 1102001,
@@ -97,7 +106,7 @@ const PLACE_METADATA_BY_ID: Record<
   },
   1103: {
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     travelStyle: 'LOCAL_FESTIVAL',
     festivalOccurrence: {
       occurrenceId: 1103001,
@@ -111,21 +120,21 @@ const PLACE_METADATA_BY_ID: Record<
   },
   1104: {
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     travelStyle: 'CULTURE_EXPERIENCE',
     festivalOccurrence: null,
     scheduleText: '09:00 ~ 18:00',
   },
   1105: {
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     travelStyle: 'NATURE',
     festivalOccurrence: null,
     scheduleText: '09:00 ~ 18:00',
   },
   1106: {
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     travelStyle: 'EXHIBITION_MUSEUM',
     festivalOccurrence: null,
     scheduleText: '09:30 ~ 17:30',
@@ -137,7 +146,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1102,
     title: '[전주] 이팝나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전북특별자치도 전주시',
     imageUrl: Asset.fromModule(HomeImages.JEONJU_IPAP_FESTIVAL).uri,
     festivalOccurrence: PLACE_METADATA_BY_ID[1102].festivalOccurrence,
@@ -153,7 +162,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1103,
     title: '[담양] 대나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전라남도 담양군',
     imageUrl: Asset.fromModule(HomeImages.DAMYANG_BAMBOO_FESTIVAL).uri,
     festivalOccurrence: PLACE_METADATA_BY_ID[1103].festivalOccurrence,
@@ -169,7 +178,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1101,
     title: '김천 김밥축제',
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     addressSummary: '경상북도 김천시',
     imageUrl: 'https://picsum.photos/id/1050/800/800',
     festivalOccurrence: PLACE_METADATA_BY_ID[1101].festivalOccurrence,
@@ -185,7 +194,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1104,
     title: '직지사',
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     addressSummary: '경상북도 김천시',
     imageUrl: 'https://picsum.photos/id/1036/800/800',
     festivalOccurrence: null,
@@ -201,7 +210,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1105,
     title: '사명대사공원',
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     addressSummary: '경상북도 김천시',
     imageUrl: 'https://picsum.photos/id/1041/800/800',
     festivalOccurrence: null,
@@ -217,7 +226,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     placeId: 1106,
     title: '김천시립박물관',
     serviceRegionCode: 'GYEONGSANG',
-    serviceRegionName: '경상',
+    serviceRegionName: '경상도',
     addressSummary: '경상북도 김천시',
     imageUrl: 'https://picsum.photos/id/1057/800/800',
     festivalOccurrence: null,
@@ -236,18 +245,19 @@ let savedPlaceCache: SavedPlaceItem[] = sortSavedPlaces(
 );
 
 function cloneSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
-  return {
+  return normalizeTaggedPlace({
     ...place,
     festivalOccurrence: place.festivalOccurrence
       ? { ...place.festivalOccurrence }
       : null,
     tags: [...place.tags],
-  };
+  });
 }
 
 function localizeSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
   return {
     ...cloneSavedPlaceItem(place),
+    serviceRegionName: getDefaultRegionName(place.serviceRegionCode),
     title: getMockPlaceTitleById(place.placeId) ?? place.title,
   };
 }
@@ -393,6 +403,7 @@ export function buildSavedPlaceFromPickCard(
   source: SavedPlaceSource,
 ): SavedPlaceItem {
   const metadata = PLACE_METADATA_BY_ID[card.placeId];
+  const tags = normalizePlaceTags(card.tags, card.travelStyle, card.title);
   return {
     placeId: card.placeId,
     title: card.title,
@@ -402,7 +413,7 @@ export function buildSavedPlaceFromPickCard(
     imageUrl: card.imageUrl,
     festivalOccurrence: metadata?.festivalOccurrence ?? null,
     travelStyle: card.travelStyle,
-    tags: [...card.tags],
+    tags,
     shortDescription: card.shortDescription,
     scheduleText: metadata?.scheduleText ?? metadata?.festivalOccurrence?.dateRangeText ?? null,
     saved: true,
@@ -419,14 +430,16 @@ export function buildSavedPlaceFromPlaceDetail(
   const imageUrl = getSavedPlaceImageUriFromDetail(place) || getAssetUri(HomeImages.JEONJU_IPAP_FESTIVAL);
   const numericPlaceId = place.numericId ?? Number(place.id);
   const safeTags = Array.isArray(place.tags)
-    ? place.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
-    : [];
-  const safeDescription = {
-    ...DEFAULT_PLACE_DESCRIPTION,
-    ...(place.description ?? {}),
-  };
+    ? normalizePlaceTags(
+        place.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0),
+        metadata.travelStyle,
+        place.title,
+      )
+    : normalizePlaceTags([], metadata.travelStyle, place.title);
+  const safeDescription = normalizePlaceDescription(place.description ?? DEFAULT_PLACE_DESCRIPTION);
   const shortDescription =
-    safeDescription.impactSubtitle?.trim() ||
+    safeDescription.oneLineDescription ||
+    safeDescription.shortIntroduction ||
     safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ||
     null;
 
@@ -434,7 +447,7 @@ export function buildSavedPlaceFromPlaceDetail(
     placeId: Number.isFinite(numericPlaceId) ? numericPlaceId : 0,
     title: place.title,
     serviceRegionCode: metadata.serviceRegionCode,
-    serviceRegionName: metadata.serviceRegionName,
+    serviceRegionName: getDefaultRegionName(metadata.serviceRegionCode),
     addressSummary: buildAddressSummary(place.address),
     imageUrl,
     festivalOccurrence: metadata.festivalOccurrence,
@@ -442,7 +455,7 @@ export function buildSavedPlaceFromPlaceDetail(
     tags: safeTags,
     scheduleText: metadata.scheduleText ?? metadata.festivalOccurrence?.dateRangeText ?? null,
     shortDescription,
-    overview: safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ?? null,
+    overview: safeDescription.shortIntroduction ?? safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ?? null,
     saved: true,
     savedAt: new Date().toISOString(),
     source,
@@ -469,8 +482,12 @@ export async function fetchSavedPlaces(
     const response = await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
       params: { size, ...(cursor ? { cursor } : {}) },
     });
-    mergeSavedPlacesIntoCache(response.data.data.items);
-    return response.data.data;
+    const normalizedItems = response.data.data.items.map(cloneSavedPlaceItem);
+    mergeSavedPlacesIntoCache(normalizedItems);
+    return {
+      ...response.data.data,
+      items: normalizedItems,
+    };
   } catch {
     return paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
   }

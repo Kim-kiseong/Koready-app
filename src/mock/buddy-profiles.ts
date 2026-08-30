@@ -14,7 +14,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['LOCAL_FOOD', 'TRADITIONAL_MARKET'],
     bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-    buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
     socialLinks: [
       {
         type: 'INSTAGRAM',
@@ -44,7 +43,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'INTERMEDIATE',
     travelStyles: ['NATURE', 'EXHIBITION_MUSEUM'],
     bio: '자연 풍경과 전시 관람을 함께 즐기는 여행을 좋아해요.',
-    buddyStyles: ['PHOTOGRAPHY', 'QUIET_TRAVEL'],
     socialLinks: [
       {
         type: 'INSTAGRAM',
@@ -69,7 +67,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['CULTURE_EXPERIENCE', 'TRADITIONAL_MARKET'],
     bio: '추천해주실 만한 찻집이 있을까요?',
-    buddyStyles: ['TRADITIONAL_CULTURE', 'QUIET_TRAVEL'],
     socialLinks: [
       {
         type: 'LINE',
@@ -94,7 +91,6 @@ const INBOX_MOCK_BUDDY_PROFILES: Record<number, BuddyProfileDetail> = {
     koreanLevel: 'BEGINNER',
     travelStyles: ['DRAMA_LOCATION', 'LOCAL_FOOD'],
     bio: '좋네요! 다녀오면 어땠는지 알려주세요.',
-    buddyStyles: ['QUIET_TRAVEL', 'FOODIE'],
     socialLinks: [],
     profilePublic: true,
     snsPublic: false,
@@ -117,7 +113,6 @@ function cloneBuddyProfileDetail(profile: BuddyProfileDetail): BuddyProfileDetai
     ...profile,
     availableLanguages: [...profile.availableLanguages],
     travelStyles: [...profile.travelStyles],
-    buddyStyles: [...profile.buddyStyles],
     socialLinks: profile.socialLinks.map((link) => ({ ...link })),
   };
 }

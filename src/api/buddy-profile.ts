@@ -64,14 +64,6 @@ const DEV_PROFILE_OPTIONS: ProfileOptionsResponse = {
     { code: 'EXHIBITION_MUSEUM', labelKo: '전시/미술관', labelEn: 'Exhibition / Museum', displayOrder: 6 },
     { code: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'Drama Location', displayOrder: 7 },
   ]),
-  buddyStyles: sortOptions([
-    { code: 'TRADITIONAL_CULTURE', labelKo: '전통문화', labelEn: 'Traditional culture', displayOrder: 1 },
-    { code: 'CAFE_TOUR', labelKo: '카페 투어', labelEn: 'Cafe tour', displayOrder: 2 },
-    { code: 'FOODIE', labelKo: '맛집 탐방', labelEn: 'Foodie', displayOrder: 3 },
-    { code: 'PHOTOGRAPHY', labelKo: '사진', labelEn: 'Photography', displayOrder: 4 },
-    { code: 'HANOK_EXPERIENCE', labelKo: '한옥 체험', labelEn: 'Hanok experience', displayOrder: 5 },
-    { code: 'QUIET_TRAVEL', labelKo: '조용한 여행', labelEn: 'Quiet travel', displayOrder: 6 },
-  ]),
   socialPlatforms: sortOptions([
     { code: 'INSTAGRAM', labelKo: 'Instagram', labelEn: 'Instagram', displayOrder: 1 },
     { code: 'TIKTOK', labelKo: 'TikTok', labelEn: 'TikTok', displayOrder: 2 },
@@ -84,20 +76,19 @@ const DEV_PROFILE_OPTIONS: ProfileOptionsResponse = {
 
 const DEV_BUDDY_PROFILE_RESPONSE: BuddyProfileResponse = {
   exists: true,
-  profile: {
-    profileId: 501,
-    profileImageUrl: 'https://picsum.photos/id/1027/300/300',
-    nickname: 'Luna',
-    nationality: 'France',
-    nationalityCode: 'FR',
-    availableLanguages: ['EN', 'KO'],
-    koreanLevel: 'BEGINNER',
-    travelStyles: ['LOCAL_FOOD', 'NATURE'],
-    bio: '분위기 좋은 카페와 한옥, 산책을 좋아해요.',
-    buddyStyles: ['TRADITIONAL_CULTURE', 'FOODIE'],
-    socialLinks: [
-      {
-        type: 'INSTAGRAM',
+    profile: {
+      profileId: 501,
+      profileImageUrl: 'https://picsum.photos/id/1027/300/300',
+      nickname: 'Luna',
+      nationality: 'France',
+      nationalityCode: 'FR',
+      availableLanguages: ['EN', 'KO'],
+      koreanLevel: 'BEGINNER',
+      travelStyles: ['LOCAL_FOOD', 'NATURE'],
+      bio: '분위기 좋은 카페와 한옥, 산책을 좋아해요.',
+      socialLinks: [
+        {
+          type: 'INSTAGRAM',
         displayValue: '@luna002',
         url: 'https://instagram.com/luna002',
       },
@@ -165,12 +156,11 @@ function cloneBuddyProfileResponse(response: BuddyProfileResponse): BuddyProfile
     exists: response.exists,
     profile: response.profile
       ? {
-          ...response.profile,
-          availableLanguages: [...response.profile.availableLanguages],
-          travelStyles: [...response.profile.travelStyles],
-          buddyStyles: [...response.profile.buddyStyles],
-          socialLinks: response.profile.socialLinks.map((link) => ({ ...link })),
-        }
+        ...response.profile,
+        availableLanguages: [...response.profile.availableLanguages],
+        travelStyles: [...response.profile.travelStyles],
+        socialLinks: response.profile.socialLinks.map((link) => ({ ...link })),
+      }
       : null,
   };
 }
@@ -180,7 +170,6 @@ function cloneBuddyProfile(profile: BuddyProfile | BuddyProfileDetail): BuddyPro
     ...profile,
     availableLanguages: [...profile.availableLanguages],
     travelStyles: [...profile.travelStyles],
-    buddyStyles: [...profile.buddyStyles],
     socialLinks: profile.socialLinks.map((link) => ({ ...link })),
   };
 }
@@ -198,7 +187,6 @@ function sortProfileOptions(response: ProfileOptionsResponse): ProfileOptionsRes
     languages: sortOptions(response.languages),
     koreanLevels: sortOptions(response.koreanLevels),
     travelStyles: sortOptions(response.travelStyles),
-    buddyStyles: sortOptions(response.buddyStyles),
     socialPlatforms: sortOptions(response.socialPlatforms),
   };
 }
@@ -214,7 +202,6 @@ function getDefaultProfile(): BuddyProfile {
     koreanLevel: '',
     travelStyles: [],
     bio: '',
-    buddyStyles: [],
     socialLinks: [],
     profilePublic: true,
     snsPublic: true,
@@ -257,7 +244,6 @@ export async function updateMyBuddyProfile(
       koreanLevel: payload.koreanLevel,
       bio: payload.bio,
       travelStyles: [...payload.travelStyles],
-      buddyStyles: [...payload.buddyStyles],
       socialLinks: payload.socialLinks.map((link) => ({
         type: link.type,
         displayValue: link.value,

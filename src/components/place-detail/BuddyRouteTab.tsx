@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { fetchBuddyRoute, type BuddyRoute } from '@/api/route';
+import { createBuddyRoute, type BuddyRoute } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Directions_subway,
@@ -14,10 +14,13 @@ import {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 
 type Props = {
   placeId: string;
+  destinationPlaceId?: number | null;
   destination: { name: string; address: string };
   onViewDetail: (routeId: string) => void;
 };
@@ -29,39 +32,13 @@ function formatTemplate(template: string, values: Record<string, string>) {
   );
 }
 
-function formatTransportSummary(text: string) {
-  return text
-    .split(/[,\n]+/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join(' + ');
-}
+function formatFareValue(amount: number | null, language: 'KO' | 'EN') {
+  if (amount == null) {
+    return '-';
+  }
 
-function formatFareValue(amount: number, language: 'KO' | 'EN') {
   const formatted = amount.toLocaleString(language === 'EN' ? 'en-US' : 'ko-KR');
   return language === 'EN' ? `₩${formatted}` : `${formatted}원`;
-}
-
-function formatOneWayTime(
-  minutes: number,
-  formats: {
-    minuteOnly: string;
-    hourOnly: string;
-    hourMinute: string;
-  },
-) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (hours <= 0) {
-    return formatTemplate(formats.minuteOnly, { minutes: String(mins) });
-  }
-
-  if (mins <= 0) {
-    return formatTemplate(formats.hourOnly, { hours: String(hours) });
-  }
-
-  return formatTemplate(formats.hourMinute, { hours: String(hours), minutes: String(mins) });
 }
 
 function getDifficultyLabel(
@@ -81,26 +58,48 @@ function getDayTripLabel(
   dayTripStatus: BuddyRoute['summary']['dayTripStatus'],
   labels: {
     available: string;
-    unavailable: string;
+    stayRecommended: string;
   },
 ) {
   if (dayTripStatus === 'DAY_TRIP_AVAILABLE') return labels.available;
-  return labels.unavailable;
+  return labels.stayRecommended;
 }
 
-export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Props) {
+export default function BuddyRouteTab({ placeId, destinationPlaceId, destination, onViewDetail }: Props) {
   const [route, setRoute] = useState<BuddyRoute | null>(null);
   const [hasError, setHasError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
+  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const routeCopy = t.placeDetail.routeTab;
+  const resolvedDestinationPlaceId =
+    destinationPlaceId ?? (Number.isFinite(Number(placeId)) ? Number(placeId) : null);
 
-  const loadRoute = () => {
+  const handleRetry = () => {
+    setReloadToken((current) => current + 1);
+  };
+
+  useEffect(() => {
+    if (!authHasHydrated || !onboardingHasHydrated) {
+      return undefined;
+    }
+
     let cancelled = false;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setHasError(false);
     setRoute(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
-    fetchBuddyRoute(placeId, destination)
+    createBuddyRoute(
+      {
+        originLocationId: currentLocationId ?? resolvedDestinationPlaceId,
+        destinationPlaceId: resolvedDestinationPlaceId,
+      },
+      destination,
+    )
       .then((value) => {
         if (!cancelled) {
           setRoute(value);
@@ -115,31 +114,38 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
     return () => {
       cancelled = true;
     };
-  };
-
-  useEffect(() => loadRoute(), [placeId, destination.name, destination.address, language]);
+  }, [authHasHydrated, currentLocationId, destination, destinationPlaceId, language, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error]);
 
   if (!route && !hasError) {
     return (
-      <View style={styles.state}>
-        <ActivityIndicator color={Palette.primary} />
-        <CustomText style={styles.stateText}>{routeCopy.loading}</CustomText>
+      <View style={styles.container}>
+        <View style={styles.state}>
+          <ActivityIndicator color={Palette.primary} />
+          <CustomText style={styles.stateText}>{routeCopy.loading}</CustomText>
+        </View>
       </View>
     );
   }
 
   if (hasError) {
     return (
-      <View style={styles.state}>
-        <CustomText style={styles.stateText}>{routeCopy.error}</CustomText>
-        <Pressable style={styles.retryButton} onPress={loadRoute}>
-          <CustomText style={styles.retryText}>{routeCopy.retry}</CustomText>
-        </Pressable>
+      <View style={styles.container}>
+        <View style={styles.state}>
+          <CustomText style={styles.stateText}>{routeCopy.error}</CustomText>
+          <Pressable style={styles.retryButton} onPress={handleRetry}>
+            <CustomText style={styles.retryText}>{routeCopy.retry}</CustomText>
+          </Pressable>
+        </View>
       </View>
     );
   }
 
-  const { origin, destination: routeDestination, summary } = route!;
+  const loadedRoute = route;
+  if (!loadedRoute) {
+    return null;
+  }
+
+  const { origin, destination: routeDestination, summary } = loadedRoute;
   const sectionTitle = formatTemplate(routeCopy.routeBetween, {
     origin: origin.name,
     destination: routeDestination.name,
@@ -147,7 +153,7 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
   const statCards = [
     {
       label: routeCopy.statLabels.estimatedTime,
-      value: formatOneWayTime(summary.estimatedOneWayMinutes, routeCopy.timeFormats),
+      value: summary.estimatedOneWayTimeText,
       Icon: Schedule,
       iconWidth: 50,
       iconHeight: 50,
@@ -156,7 +162,7 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
     },
     {
       label: routeCopy.statLabels.transport,
-      value: formatTransportSummary(summary.recommendedTransportText),
+      value: summary.recommendedTransportText,
       Icon: Directions_subway,
       iconWidth: 42,
       iconHeight: 50,
@@ -244,10 +250,10 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
           </CustomText>
         </View>
         <View style={styles.fareDivider} />
-        <CustomText style={styles.disclaimer}>{routeCopy.fareDisclaimer}</CustomText>
+        <CustomText style={styles.disclaimer}>{summary.fare.disclaimer}</CustomText>
       </View>
 
-      <Pressable style={styles.detailButton} onPress={() => onViewDetail(route!.routeId)}>
+      <Pressable style={styles.detailButton} onPress={() => onViewDetail(loadedRoute.routeId)}>
         <CustomText style={styles.detailButtonText}>{routeCopy.detailButton}</CustomText>
       </Pressable>
     </View>
@@ -255,13 +261,13 @@ export default function BuddyRouteTab({ placeId, destination, onViewDetail }: Pr
 }
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: 16, paddingTop: 24},
+  container: { paddingHorizontal: 16, paddingTop: 24 },
   title: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text, paddingBottom: 4 },
-  subtitle: { marginTop: 6, fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: Palette.grey600},
+  subtitle: { marginTop: 6, fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: Palette.grey600 },
   locationCard: { marginTop: 16, paddingHorizontal: 16, backgroundColor: Palette.grey100, borderRadius: 12 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginTop:4 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginTop: 4 },
   locationText: { marginLeft: 8, fontFamily: FontFamily.pretendard.medium, fontSize: 14, color: Palette.text },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: Palette.grey200, marginVertical:2 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: Palette.grey200, marginVertical: 2 },
   sectionTitle: { marginTop: 32, marginBottom: 16, fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text, lineHeight: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statCard: {
@@ -287,7 +293,13 @@ const styles = StyleSheet.create({
   detailButton: { marginTop: 24, alignItems: 'center', borderRadius: 12, paddingVertical: 17, backgroundColor: Palette.primary },
   detailButtonText: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: '#FFFFFF' },
   state: { alignItems: 'center', gap: 12, paddingVertical: 52 },
-  stateText: { fontFamily: FontFamily.pretendard.medium, fontSize: 14, color: Palette.grey600 },
+  stateText: {
+    alignSelf: 'stretch',
+    textAlign: 'left',
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
+  },
   retryButton: { borderRadius: 10, paddingHorizontal: 18, paddingVertical: 10, backgroundColor: Palette.primary },
   retryText: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 13, color: '#FFFFFF' },
 });

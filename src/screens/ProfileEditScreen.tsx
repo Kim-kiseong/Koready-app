@@ -65,7 +65,6 @@ type BuddyProfileFormState = {
   koreanLevel: string;
   bio: string;
   travelStyles: string[];
-  buddyStyles: string[];
   socialLinks: BuddyProfileSocialLinkInput[];
   profilePublic: boolean;
   snsPublic: boolean;
@@ -105,7 +104,6 @@ const EMPTY_FORM: BuddyProfileFormState = {
   koreanLevel: '',
   bio: '',
   travelStyles: [],
-  buddyStyles: [],
   socialLinks: [],
   profilePublic: true,
   snsPublic: true,
@@ -123,9 +121,6 @@ const ALLOWED_PROFILE_IMAGE_MIME_TYPES = new Set<ProfileImageContentType>([
   'image/png',
   'image/webp',
 ]);
-const BUDDY_STYLE_ALIASES: Record<string, string> = {
-  SLOW_TRAVEL: 'QUIET_TRAVEL',
-};
 
 const SOCIAL_PLATFORM_ICON_URIS = {
   INSTAGRAM: Asset.fromModule(require('../assets/images/social/instagram.svg')).uri,
@@ -272,20 +267,6 @@ export default function ProfileEditScreen() {
     () => chunkItems(options?.travelStyles ?? [], travelStyleColumnCount),
     [options, travelStyleColumnCount],
   );
-  const buddyStyleRows = useMemo(
-    () => chunkItems(options?.buddyStyles ?? [], travelStyleColumnCount),
-    [options, travelStyleColumnCount],
-  );
-
-  const sortedBuddyStyles = useMemo(
-    () =>
-      sortCodesByOptionOrder(
-        form.buddyStyles,
-        options?.buddyStyles ?? [],
-        BUDDY_STYLE_ALIASES,
-      ),
-    [form.buddyStyles, options],
-  );
 
   const sortedSocialLinks = useMemo(
     () => sortSocialLinks(form.socialLinks, options?.socialPlatforms ?? []),
@@ -376,7 +357,6 @@ export default function ProfileEditScreen() {
         koreanLevel: form.koreanLevel,
         bio: form.bio.trim(),
         travelStyles: sortedTravelStyles,
-        buddyStyles: sortedBuddyStyles,
         socialLinks: normalizedSocialLinks,
         profilePublic: form.profilePublic,
         snsPublic: nextSnsPublic,
@@ -391,7 +371,6 @@ export default function ProfileEditScreen() {
         koreanLevel: nextForm.koreanLevel,
         bio: nextForm.bio,
         travelStyles: nextForm.travelStyles,
-        buddyStyles: nextForm.buddyStyles,
         socialLinks: socialLinkRequests,
         profilePublic: nextForm.profilePublic,
         snsPublic: nextForm.snsPublic,
@@ -462,27 +441,24 @@ export default function ProfileEditScreen() {
     setProfileImagePreviewUri(null);
   };
 
-  const handleToggleStyle = (key: 'travelStyles' | 'buddyStyles', code: string) => {
-    if (key === 'travelStyles') {
-      const currentTravelStyles = form.travelStyles;
-      const exists = currentTravelStyles.includes(code);
+  const handleToggleTravelStyle = (code: string) => {
+    const currentTravelStyles = form.travelStyles;
+    const exists = currentTravelStyles.includes(code);
 
-      if (exists && currentTravelStyles.length <= 1) {
-        Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMin);
-        return;
-      }
+    if (exists && currentTravelStyles.length <= 1) {
+      Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMin);
+      return;
+    }
 
-      if (!exists && currentTravelStyles.length >= MAX_TRAVEL_STYLES) {
-        Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMax);
-        return;
-      }
+    if (!exists && currentTravelStyles.length >= MAX_TRAVEL_STYLES) {
+      Alert.alert(copy.alerts.infoTitle, copy.alerts.travelStyleMax);
+      return;
     }
 
     setForm((prev) => {
-      const current = prev[key];
-      const exists = current.includes(code);
+      const current = prev.travelStyles;
       const nextValues = exists ? current.filter((item) => item !== code) : [...current, code];
-      return { ...prev, [key]: nextValues };
+      return { ...prev, travelStyles: nextValues };
     });
   };
 
@@ -708,7 +684,7 @@ export default function ProfileEditScreen() {
           </View>
 
           <View style={[styles.section, styles.sectionLanguage]}>
-              <FieldLabel label={copy.sections.languages} />
+            <FieldLabel label={copy.sections.languages} />
             <View style={styles.chipWrap}>
               {sortedLanguageCodes.map((code) => {
                 const option = normalizedLanguageOptions.find((item) => item.code === code);
@@ -783,34 +759,12 @@ export default function ProfileEditScreen() {
             <View style={styles.travelStyleRows}>
               {travelStyleRows.map((row, rowIndex) => (
                 <View key={`travel-row-${rowIndex}`} style={styles.travelStyleRow}>
-                {row.map((option) => (
-                    <ChoiceChip
-                      key={option.code}
-                      label={getOptionLabel(option, language)}
-                      selected={form.travelStyles.includes(option.code)}
-                      onPress={() => handleToggleStyle('travelStyles', option.code)}
-                      variant="travelStyle"
-                    />
-                  ))}
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={[styles.section, styles.sectionBuddyStyles]}>
-            <SectionHeading
-              title={copy.sections.buddyStyles.title}
-              subtitle={copy.sections.buddyStyles.subtitle}
-            />
-            <View style={styles.travelStyleRows}>
-              {buddyStyleRows.map((row, rowIndex) => (
-                <View key={`buddy-row-${rowIndex}`} style={styles.travelStyleRow}>
                   {row.map((option) => (
                     <ChoiceChip
                       key={option.code}
                       label={getOptionLabel(option, language)}
-                      selected={form.buddyStyles.includes(option.code)}
-                      onPress={() => handleToggleStyle('buddyStyles', option.code)}
+                      selected={form.travelStyles.includes(option.code)}
+                      onPress={() => handleToggleTravelStyle(option.code)}
                       variant="travelStyle"
                     />
                   ))}
@@ -832,8 +786,8 @@ export default function ProfileEditScreen() {
               <View style={styles.snsList}>
                 {sortedSocialLinks.map((link) => {
                   const option = options.socialPlatforms.find((item) => item.code === link.type);
-                return (
-                  <SocialLinkRow
+                  return (
+                    <SocialLinkRow
                       key={link.type}
                       code={link.type}
                       label={option ? getOptionLabel(option, language) : link.type}
@@ -905,7 +859,7 @@ export default function ProfileEditScreen() {
         }}
       />
 
-          <SelectionModal
+      <SelectionModal
         visible={languagePickerOpen}
         title={copy.modals.language.title}
         subtitle={copy.modals.language.subtitle}
@@ -988,11 +942,6 @@ function buildInitialForm(
     bio: profile.bio ?? '',
     // Keep the onboarding travel styles as the initial profile draft.
     travelStyles: sortCodesByOptionOrder(profile.travelStyles, options.travelStyles),
-    buddyStyles: sortCodesByOptionOrder(
-      profile.buddyStyles,
-      options.buddyStyles,
-      BUDDY_STYLE_ALIASES,
-    ),
     socialLinks: profile.socialLinks
       .map((link) => ({
         type: resolveProfileOptionCode(link.type, options.socialPlatforms),
@@ -1031,7 +980,6 @@ function areBuddyProfileFormsEqual(
     left.koreanLevel === right.koreanLevel &&
     left.bio === right.bio &&
     arraysEqual(left.travelStyles, right.travelStyles) &&
-    arraysEqual(left.buddyStyles, right.buddyStyles) &&
     socialLinksEqual(left.socialLinks, right.socialLinks) &&
     left.profilePublic === right.profilePublic &&
     left.snsPublic === right.snsPublic &&
@@ -1142,8 +1090,7 @@ function isFormComplete(form: BuddyProfileFormState) {
     form.koreanLevel.trim().length > 0 &&
     form.bio.trim().length > 0 &&
     form.travelStyles.length >= 1 &&
-    form.travelStyles.length <= MAX_TRAVEL_STYLES &&
-    form.buddyStyles.length >= 1
+    form.travelStyles.length <= MAX_TRAVEL_STYLES
   );
 }
 
