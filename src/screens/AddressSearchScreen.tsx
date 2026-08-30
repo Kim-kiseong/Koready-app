@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -85,22 +84,11 @@ export default function AddressSearchScreen() {
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    setLocation({
-      displayAddress: t.location.currentLocationValue,
-      latitude: null,
-      longitude: null,
-      source: 'current',
-    });
-    setCurrentLocationId(null);
-    goBackOrRoot(router);
-  };
-
   const showResults = query.length > 0 && results.length > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} rightIcon={null} />
 
       <View style={styles.content}>
         <View
@@ -123,7 +111,7 @@ export default function AddressSearchScreen() {
           />
         </View>
 
-        {showResults ? (
+        {showResults && (
           <View style={styles.resultList}>
             {results.map((result) => (
               <View key={result.searchResultToken} style={styles.resultGroup}>
@@ -152,13 +140,6 @@ export default function AddressSearchScreen() {
               </View>
             ))}
           </View>
-        ) : (
-          <Pressable style={styles.currentLocationButton} onPress={handleUseCurrentLocation}>
-            <Image source={require('@/assets/images/my_location.svg')} style={styles.myLocationIcon} />
-            <CustomText style={styles.currentLocationText}>
-              {t.location.currentLocationButton}
-            </CustomText>
-          </Pressable>
         )}
       </View>
     </SafeAreaView>
@@ -198,26 +179,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Palette.text,
     padding: 0,
-  },
-  currentLocationButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Palette.grey200,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  currentLocationText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.text,
-  },
-  myLocationIcon: {
-    width: 18,
-    height: 18,
   },
   resultList: {
     gap: 8,

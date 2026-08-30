@@ -7,13 +7,59 @@ import {
   DEFAULT_EVENT_FILTERS,
   EVENT_DATE_FILTER_IDS,
   EVENT_REGION_IDS,
+  type EventDateRange,
   type EventFilters,
 } from '@/api/home';
 import { TRAVEL_STYLE_IDS } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
+import DateRangeBottomSheet, {
+  EMPTY_DATE_RANGE,
+  type DateOnly,
+  type DateRangeSelection,
+} from '@/components/DateRangeBottomSheet';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+
+function parseDateOnly(value: string): DateOnly {
+  const [year, month, day] = value.split('-').map((part) => Number(part));
+  return { year, monthIndex: month - 1, day };
+}
+
+function formatDateOnly(date: DateOnly) {
+  return `${date.year}-${String(date.monthIndex + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+}
+
+function toDateRangeSelection(range: EventDateRange): DateRangeSelection {
+  if (!range.startDate || !range.endDate) {
+    return EMPTY_DATE_RANGE;
+  }
+  return { start: parseDateOnly(range.startDate), end: parseDateOnly(range.endDate) };
+}
+
+function toEventDateRange(selection: DateRangeSelection): EventDateRange {
+  if (!selection.start) {
+    return { startDate: null, endDate: null };
+  }
+  const startDate = formatDateOnly(selection.start);
+  return {
+    startDate,
+    endDate: selection.end ? formatDateOnly(selection.end) : startDate,
+  };
+}
+
+function formatEventDateRangeLabel(range: EventDateRange) {
+  if (!range.startDate || !range.endDate) return null;
+  const start = formatShortDate(range.startDate);
+  return range.startDate === range.endDate ? start : `${start} ~ ${formatShortDate(range.endDate)}`;
+}
+
+function formatShortDate(value: string) {
+  const [year, month, day] = value.split('-');
+  return `${year}.${month}.${day}`;
+}
+
+const EMPTY_EVENT_DATE_RANGE: EventDateRange = { startDate: null, endDate: null };
 
 export type FilterBottomSheetProps = {
   visible: boolean;
@@ -26,6 +72,7 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
   const t = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const [draft, setDraft] = useState<EventFilters>(value);
+  const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
   useEffect(() => {
     if (visible) setDraft(value);
@@ -34,6 +81,13 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
   const handleApply = () => {
     onApply(draft);
     onClose();
+  };
+
+  const hasCustomDateRange = Boolean(draft.dateRange.startDate && draft.dateRange.endDate);
+  const customDateRangeLabel = formatEventDateRangeLabel(draft.dateRange);
+
+  const handleDateRangeApply = (selection: DateRangeSelection) => {
+    setDraft((d) => ({ ...d, date: 'ALL', dateRange: toEventDateRange(selection) }));
   };
 
   return (
@@ -46,7 +100,12 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
 
           <View style={styles.headerRow}>
             <CustomText style={styles.headerTitle}>{t.eventFilter.title}</CustomText>
-            <Pressable hitSlop={8} onPress={() => setDraft(DEFAULT_EVENT_FILTERS)}>
+            <Pressable
+              hitSlop={8}
+              onPress={() => {
+                setDraft(DEFAULT_EVENT_FILTERS);
+                setIsDateSheetOpen(false);
+              }}>
               <CustomText style={styles.resetText}>{t.eventFilter.reset}</CustomText>
             </Pressable>
           </View>
@@ -76,27 +135,32 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
               <View style={styles.chipWrap}>
                 <FilterChip
                   label={t.eventFilter.dateAll}
-                  selected={draft.date === 'ALL'}
-                  onPress={() => setDraft((d) => ({ ...d, date: 'ALL' }))}
+                  selected={!hasCustomDateRange && draft.date === 'ALL'}
+                  onPress={() => setDraft((d) => ({ ...d, date: 'ALL', dateRange: EMPTY_EVENT_DATE_RANGE }))}
                 />
                 {EVENT_DATE_FILTER_IDS.map((id) => (
                   <FilterChip
                     key={id}
                     label={t.eventFilter.dateOptions[id]}
-                    selected={draft.date === id}
-                    onPress={() => setDraft((d) => ({ ...d, date: id }))}
+                    selected={!hasCustomDateRange && draft.date === id}
+                    onPress={() => setDraft((d) => ({ ...d, date: id, dateRange: EMPTY_EVENT_DATE_RANGE }))}
                   />
                 ))}
               </View>
-              {/* TODO: wire up once a calendar/date-range picker screen exists */}
-              <Pressable style={styles.dateCustomButton}>
+              <Pressable
+                style={[styles.dateCustomButton, hasCustomDateRange && styles.dateCustomButtonSelected]}
+                onPress={() => setIsDateSheetOpen(true)}>
                 <SymbolView
                   name={{ ios: 'calendar', android: 'event', web: 'event' }}
                   size={16}
                   weight="regular"
-                  tintColor={Palette.grey500}
+                  tintColor={hasCustomDateRange ? Palette.white : Palette.grey500}
                 />
-                <CustomText style={styles.dateCustomText}>{t.eventFilter.dateCustomButton}</CustomText>
+                <CustomText
+                  numberOfLines={1}
+                  style={[styles.dateCustomText, hasCustomDateRange && styles.dateCustomTextSelected]}>
+                  {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
+                </CustomText>
               </Pressable>
             </View>
 
@@ -125,6 +189,14 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
           </SafeAreaView>
         </Pressable>
       </Pressable>
+
+      <DateRangeBottomSheet
+        key={`event-date-sheet-${isDateSheetOpen ? 'open' : 'closed'}`}
+        visible={isDateSheetOpen}
+        value={toDateRangeSelection(draft.dateRange)}
+        onApply={handleDateRangeApply}
+        onClose={() => setIsDateSheetOpen(false)}
+      />
     </Modal>
   );
 }
@@ -195,16 +267,17 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderRadius: 8,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   chipUnselected: {
     backgroundColor: '#ffffff',
-    borderWidth: 1,
     borderColor: Palette.grey200,
   },
   chipSelected: {
     backgroundColor: Palette.primary,
+    borderColor: Palette.primary,
   },
   chipLabelUnselected: {
     fontFamily: FontFamily.pretendard.semiBold,
@@ -221,6 +294,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     height: 36,
     borderRadius: 8,
     borderWidth: 1,
@@ -229,10 +303,18 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     paddingRight: 16,
   },
+  dateCustomButtonSelected: {
+    backgroundColor: Palette.primary,
+    borderColor: Palette.primary,
+  },
   dateCustomText: {
+    flexShrink: 1,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     color: Palette.grey600,
+  },
+  dateCustomTextSelected: {
+    color: '#ffffff',
   },
   footer: {
     flexDirection: 'row',

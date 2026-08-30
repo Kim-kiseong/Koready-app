@@ -20,6 +20,7 @@ export default function RootLayout() {
     [FontFamily.pretendard.bold]: require('@/assets/fonts/Pretendard-Bold.ttf'),
     [FontFamily.pretendard.black]: require('@/assets/fonts/Pretendard-Black.ttf'),
     [FontFamily.montserrat.extraBold]: require('@/assets/fonts/Montserrat-ExtraBold.ttf'),
+    [FontFamily.inter.medium]: require('@/assets/fonts/Inter-Medium.ttf'),
   });
 
   // Native splash stays up (preventAutoHideAsync above) until fonts are ready.

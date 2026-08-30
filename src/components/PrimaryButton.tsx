@@ -52,6 +52,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 16,
+    fontSize: 18,
   },
 });

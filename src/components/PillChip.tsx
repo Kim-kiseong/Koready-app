@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   labelUnselected: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     color: Palette.grey600,
   },
   labelSelected: {

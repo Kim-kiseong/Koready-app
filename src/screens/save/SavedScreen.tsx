@@ -16,6 +16,7 @@ import { fetchSavedPlaces, unsavePlace } from '@/api/saved-place';
 import type { LanguageCode, SavedPlaceItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
+import HeartIcon from '@/components/HeartIcon';
 import DetailTag from '@/components/place-detail/DetailTag';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -574,14 +575,7 @@ function SavedPlaceCard({
   onToggleSave: () => void;
 }) {
   const subtitleText = formatSavedPlaceSubtitle(place, language);
-  const heartIcon = (
-    <SymbolView
-      name={{ ios: 'heart.fill', android: 'favorite', web: 'favorite' }}
-      size={24}
-      weight="regular"
-      tintColor={Palette.red300}
-    />
-  );
+  const heartIcon = <HeartIcon filled color={Palette.red300} size={24} />;
 
   return (
     <Pressable style={styles.card} onPress={onPress}>

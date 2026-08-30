@@ -5,6 +5,10 @@ import type { Translations } from './ko';
 // translated — any key left out falls back to the Korean value (see
 // `../index.ts`), so partially-translated screens keep working.
 export const en: DeepPartial<Translations> = {
+  login: {
+    googleButton: 'Continue with Google',
+    appleButton: 'Continue with Apple',
+  },
   language: {
     title: 'Select Your Language',
     subtitle: 'Choose your language',
@@ -12,9 +16,9 @@ export const en: DeepPartial<Translations> = {
   },
   location: {
     title: 'Search Location',
-    searchPlaceholder: 'Search for a city, school, or neighborhood',
-    currentLocationButton: 'Use Current Location',
-    currentLocationValue: 'Current Location',
+    headline: 'Where are you staying in Korea?',
+    headlineSubtitle: 'We’ll use this location to recommend nearby places.',
+    searchPlaceholder: 'Search by city, school, or accommodation',
     roadAddressBadge: 'Road',
     lotNumberBadge: 'Lot',
     next: 'Next',
@@ -27,7 +31,7 @@ export const en: DeepPartial<Translations> = {
   },
   travelStyle: {
     title: 'What kind of trips do you enjoy?',
-    subtitle: 'Choose the travel styles you’re interested in.',
+    subtitle: 'Choose up to 4.',
     next: 'Next',
     options: {
       LOCAL_FOOD: 'Local Food',
@@ -44,8 +48,8 @@ export const en: DeepPartial<Translations> = {
     },
   },
   destination: {
-    title: 'Choose up to 3\ndestinations you’re interested in',
-    subtitle: 'We’ll recommend destinations tailored to your travel style.',
+    title: 'Choose up to 3\nplaces you’d like to visit.',
+    subtitle: 'This helps us personalize your recommendations.',
     next: 'Next',
     loadingText: 'Loading destination picks...',
     errorText: "Couldn't load destination picks.",
@@ -324,8 +328,8 @@ export const en: DeepPartial<Translations> = {
     emptyText: 'No recommendations right now.',
     retry: 'Try again',
     detailButton: 'View travel course',
-    guideTapText: 'Tap the image\nto see trip details',
-    guideSwipeText: 'Swipe the card\nto see other destinations',
+    guideTapText: 'Tap the image\nto see trip details.',
+    guideSwipeText: 'Swipe left or right\nto discover more places.',
   },
   messages: {
     threads: {
@@ -414,6 +418,12 @@ export const en: DeepPartial<Translations> = {
       EXHIBITION_MUSEUM: 'Exhibition & Museum',
       DRAMA_LOCATION: 'Drama Filming Location',
     },
+    cancel: 'Cancel',
+    apply: 'Apply',
+  },
+  dateRangePicker: {
+    title: 'Select dates',
+    reset: 'Reset',
     cancel: 'Cancel',
     apply: 'Apply',
   },
