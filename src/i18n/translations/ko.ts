@@ -10,6 +10,8 @@ export interface Translations {
   };
   location: {
     title: string;
+    headline: string;
+    headlineSubtitle: string;
     searchPlaceholder: string;
     roadAddressBadge: string;
     lotNumberBadge: string;
@@ -417,6 +419,8 @@ export const ko: Translations = {
   },
   location: {
     title: '위치 검색',
+    headline: '지금 머무는 곳은 어디인가요?',
+    headlineSubtitle: '현재 위치를 기준으로 가까운 로컬 여행지를 추천해드려요.',
     searchPlaceholder: '도시 · 학교 · 동네를 검색해보세요',
     roadAddressBadge: '도로명',
     lotNumberBadge: '지번',

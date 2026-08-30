@@ -62,7 +62,7 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
 
         <Pressable style={styles.centerButtonWrap} onPress={() => handlePress(centerTab)}>
           <LinearGradient
-            colors={[Palette.primaryLight, Palette.primaryDark]}
+            colors={[Palette.primaryLight, Palette.primary]}
             start={{ x: 0.2, y: 0 }}
             end={{ x: 0.8, y: 1 }}
             style={styles.centerButton}
@@ -90,7 +90,7 @@ function SideTab({
   onPress: (tab: TabConfig) => void;
 }) {
   const color = isActive ? Palette.grey700 : Palette.grey400;
-  const fontFamily = isActive ? FontFamily.pretendard.bold : FontFamily.pretendard.medium;
+  const fontFamily = isActive ? FontFamily.pretendard.bold : FontFamily.inter.medium;
   const Icon = tab.Icon;
 
   return (
@@ -206,15 +206,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   centerButtonWrap: {
-    width: 64,
-    height: 64,
-    marginTop: -24,
-    borderRadius: 32,
+    width: 66,
+    height: 66,
+    marginTop: -13,
+    borderRadius: 33,
   },
   centerButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,

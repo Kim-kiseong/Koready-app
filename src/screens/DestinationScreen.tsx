@@ -158,7 +158,7 @@ export default function DestinationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 2, totalSteps: 2 }} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 3, totalSteps: 3 }} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>

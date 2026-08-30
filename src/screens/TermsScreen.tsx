@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
   },
   agreeAllLabel: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 16,
     color: Palette.text,
   },

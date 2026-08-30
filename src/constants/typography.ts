@@ -11,4 +11,7 @@ export const FontFamily = {
   montserrat: {
     extraBold: 'Montserrat-ExtraBold',
   },
+  inter: {
+    medium: 'Inter-Medium',
+  },
 } as const;

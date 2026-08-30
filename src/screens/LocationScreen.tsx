@@ -144,9 +144,18 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.location.title} rightIcon={null} />
+      <OnboardingHeader
+        onBack={() => goBackOrRoot(router, '/login')}
+        progress={{ currentStep: 1, totalSteps: 3 }}
+        rightIcon={null}
+      />
 
       <View style={styles.content}>
+        <View style={styles.headerGroup}>
+          <CustomText style={styles.title}>{t.location.headline}</CustomText>
+          <CustomText style={styles.subtitle}>{t.location.headlineSubtitle}</CustomText>
+        </View>
+
         <View
           style={[
             styles.searchBar,
@@ -232,6 +241,20 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 12,
     flex: 1,
+  },
+  headerGroup: {
+    gap: 4,
+    marginBottom: 20,
+  },
+  title: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 22,
+    color: Palette.grey900,
+  },
+  subtitle: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    color: Palette.grey400,
   },
   searchBar: {
     flexDirection: 'row',

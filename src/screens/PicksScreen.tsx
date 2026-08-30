@@ -593,7 +593,7 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
   }));
 
   const heartIcon = (
-    <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={20} />
+    <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={24} />
   );
 
   return (
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     color: Palette.text,
   },
   scopeLabelUnselected: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     color: Palette.grey500,
   },
   state: {
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tagLabel: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 14,
     color: Palette.grey600,
     letterSpacing: -0.28,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   guideText: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   },
   guideClose: {
     position: 'absolute',
-    top: 16,
+    top: 59,
     right: 16,
   },
 });

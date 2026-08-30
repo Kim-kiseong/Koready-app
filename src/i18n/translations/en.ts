@@ -12,6 +12,8 @@ export const en: DeepPartial<Translations> = {
   },
   location: {
     title: 'Search Location',
+    headline: 'Where are you staying right now?',
+    headlineSubtitle: 'We’ll recommend nearby local spots based on your current location.',
     searchPlaceholder: 'Search for a city, school, or neighborhood',
     roadAddressBadge: 'Road',
     lotNumberBadge: 'Lot',

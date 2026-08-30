@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios';
 import { Image, type ImageSource } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -48,6 +49,12 @@ const MASCOT_WIDTH = 164;
 const MASCOT_BOTTOM = MASCOT_TOP + 210;
 const SHADOW_TOP = 586;
 const BUTTON_GROUP_TOP = 630;
+const BOTTOM_FADE_TOP = 560;
+const BOTTOM_FADE_HEIGHT = 187;
+// Figma's "Image_fx 2" reflection layer fades to solid white by 22.722% into
+// this band — past that point it's opaque white, which is what makes the
+// buttons below read as sitting on a white floor instead of the wallpaper.
+const BOTTOM_FADE_WHITE_STOP = 0.22722;
 
 export default function LoginScreen() {
   const { width } = useWindowDimensions();
@@ -118,6 +125,14 @@ export default function LoginScreen() {
         style={StyleSheet.absoluteFill}
         source={require('@/assets/images/wallpaper.jpg')}
         contentFit="cover"
+      />
+
+      <LinearGradient
+        colors={[`${Palette.white}00`, Palette.white, Palette.white]}
+        locations={[0, BOTTOM_FADE_WHITE_STOP, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.bottomFade, { top: BOTTOM_FADE_TOP * scale, height: BOTTOM_FADE_HEIGHT * scale }]}
       />
 
       {__DEV__ && (
@@ -244,7 +259,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: FontFamily.montserrat.extraBold,
     fontSize: 36,
+    letterSpacing: -0.72,
     color: Palette.primary,
+  },
+  bottomFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
   mascotWrap: {
     position: 'absolute',
@@ -291,5 +312,6 @@ const styles = StyleSheet.create({
   socialLabel: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
+    letterSpacing: -0.16,
   },
 });

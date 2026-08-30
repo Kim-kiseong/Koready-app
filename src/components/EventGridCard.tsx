@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   locationText: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 13,
     color: Palette.primary,
   },
