@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
+import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/language-store';
 
 export type DateOnly = {
   year: number;
@@ -39,7 +41,7 @@ export function getTodayDateOnly(): DateOnly {
   };
 }
 
-const WEEKDAY_LABELS = [
+const WEEKDAY_LABELS_KO = [
   { label: '일', color: '#FD4C4D' },
   { label: '월', color: Palette.grey600 },
   { label: '화', color: Palette.grey600 },
@@ -47,6 +49,16 @@ const WEEKDAY_LABELS = [
   { label: '목', color: Palette.grey600 },
   { label: '금', color: Palette.grey600 },
   { label: '토', color: '#3B82F6' },
+] as const;
+
+const WEEKDAY_LABELS_EN = [
+  { label: 'Sun', color: '#FD4C4D' },
+  { label: 'Mon', color: Palette.grey600 },
+  { label: 'Tue', color: Palette.grey600 },
+  { label: 'Wed', color: Palette.grey600 },
+  { label: 'Thu', color: Palette.grey600 },
+  { label: 'Fri', color: Palette.grey600 },
+  { label: 'Sat', color: '#3B82F6' },
 ] as const;
 
 export type DateRangeBottomSheetProps = {
@@ -58,6 +70,7 @@ export type DateRangeBottomSheetProps = {
 
 export default function DateRangeBottomSheet({ visible, value, onApply, onClose }: DateRangeBottomSheetProps) {
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const { height: windowHeight } = useWindowDimensions();
   const [draft, setDraft] = useState<DateRangeSelection>(value);
   const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
@@ -202,6 +215,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
                   selection={draft}
                   today={today}
                   onDayPress={handleDayPress}
+                  language={language}
                 />
               ))}
             </ScrollView>
@@ -226,20 +240,23 @@ function CalendarMonth({
   selection,
   today,
   onDayPress,
+  language,
 }: {
   month: YearMonth;
   selection: DateRangeSelection;
   today: DateOnly;
   onDayPress: (date: DateOnly) => void;
+  language: LanguageCode;
 }) {
   const monthRows = useMemo(() => buildMonthRows(month), [month]);
+  const weekdayLabels = language === 'EN' ? WEEKDAY_LABELS_EN : WEEKDAY_LABELS_KO;
 
   return (
     <View style={styles.monthBlock}>
-      <CustomText style={styles.monthLabel}>{formatMonthLabel(month)}</CustomText>
+      <CustomText style={styles.monthLabel}>{formatMonthLabel(month, language)}</CustomText>
 
       <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((weekday) => (
+        {weekdayLabels.map((weekday) => (
           <View key={weekday.label} style={styles.weekdayCell}>
             <CustomText style={[styles.weekdayLabel, { color: weekday.color }]}>{weekday.label}</CustomText>
           </View>
@@ -371,7 +388,13 @@ function shiftMonth(month: YearMonth, offset: number): YearMonth {
   };
 }
 
-function formatMonthLabel(month: YearMonth) {
+function formatMonthLabel(month: YearMonth, language: LanguageCode) {
+  if (language === 'EN') {
+    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
+      new Date(month.year, month.monthIndex, 1),
+    );
+  }
+
   return `${month.year}년 ${month.monthIndex + 1}월`;
 }
 

@@ -3,7 +3,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import type { TravelStyleId } from '@/api/onboarding';
+import { EVENT_DATE_FILTER_IDS } from '@/api/home';
+import { TRAVEL_STYLE_IDS, type TravelStyleId } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import DateRangeBottomSheet, {
   EMPTY_DATE_RANGE,
@@ -12,9 +13,10 @@ import DateRangeBottomSheet, {
 } from '@/components/DateRangeBottomSheet';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import {
   DEFAULT_PLACE_FILTER_SELECTION,
-  formatPlaceFilterDateButtonLabel,
+  formatPlaceDateRangeLabel,
   type PlaceDateFilterPreset,
   type PlaceDateRange,
   type PlaceFilterSelection,
@@ -26,23 +28,6 @@ export type PlaceFilterBottomSheetProps = {
   onApply: (value: PlaceFilterSelection) => void;
   onClose: () => void;
 };
-
-const DATE_OPTIONS: { value: PlaceDateFilterPreset; label: string }[] = [
-  { value: 'ALL', label: '전체' },
-  { value: 'THIS_WEEK', label: '이번 주' },
-  { value: 'THIS_MONTH', label: '이번 달' },
-  { value: 'NEXT_MONTH', label: '다음 달' },
-];
-
-const TRAVEL_STYLE_OPTIONS: { value: TravelStyleId; label: string }[] = [
-  { value: 'LOCAL_FOOD', label: '로컬맛집' },
-  { value: 'LOCAL_FESTIVAL', label: '지역축제' },
-  { value: 'TRADITIONAL_MARKET', label: '전통시장' },
-  { value: 'CULTURE_EXPERIENCE', label: '문화체험' },
-  { value: 'NATURE', label: '자연명소' },
-  { value: 'EXHIBITION_MUSEUM', label: '전시/미술관' },
-  { value: 'DRAMA_LOCATION', label: '드라마 촬영지' },
-];
 
 function toPlaceDateRange(selection: DateRangeSelection): PlaceDateRange {
   if (!selection.start && !selection.end) {
@@ -104,6 +89,7 @@ export default function PlaceFilterBottomSheet({
   onApply,
   onClose,
 }: PlaceFilterBottomSheetProps) {
+  const t = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const [draftFilter, setDraftFilter] = useState<PlaceFilterSelection>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
@@ -152,6 +138,9 @@ export default function PlaceFilterBottomSheet({
   };
 
   const hasCustomDateRange = Boolean(draftFilter.dateRange.startDate && draftFilter.dateRange.endDate);
+  const customDateRangeLabel = hasCustomDateRange
+    ? formatPlaceDateRangeLabel(draftFilter.dateRange.startDate!, draftFilter.dateRange.endDate!)
+    : null;
 
   return (
     <>
@@ -174,10 +163,10 @@ export default function PlaceFilterBottomSheet({
             <View style={styles.filterHeaderRow}>
               <View style={styles.filterHeaderSpacer} />
               <View pointerEvents="none" style={styles.filterHeaderTitleWrap}>
-                <CustomText style={styles.filterHeaderTitle}>필터</CustomText>
+                <CustomText style={styles.filterHeaderTitle}>{t.eventFilter.title}</CustomText>
               </View>
               <Pressable hitSlop={8} onPress={resetFilterDraft}>
-                <CustomText style={styles.resetText}>초기화</CustomText>
+                <CustomText style={styles.resetText}>{t.eventFilter.reset}</CustomText>
               </Pressable>
             </View>
 
@@ -187,14 +176,19 @@ export default function PlaceFilterBottomSheet({
               bounces={false}
             >
               <View style={styles.section}>
-                <CustomText style={styles.sectionLabel}>날짜</CustomText>
+                <CustomText style={styles.sectionLabel}>{t.eventFilter.dateLabel}</CustomText>
                 <View style={styles.chipWrap}>
-                  {DATE_OPTIONS.map((option) => (
+                  <FilterChip
+                    label={t.eventFilter.dateAll}
+                    selected={!hasCustomDateRange && draftFilter.datePreset === 'ALL'}
+                    onPress={() => handleDatePresetSelect('ALL')}
+                  />
+                  {EVENT_DATE_FILTER_IDS.map((id) => (
                     <FilterChip
-                      key={option.value}
-                      label={option.label}
-                      selected={!hasCustomDateRange && draftFilter.datePreset === option.value}
-                      onPress={() => handleDatePresetSelect(option.value)}
+                      key={id}
+                      label={t.eventFilter.dateOptions[id]}
+                      selected={!hasCustomDateRange && draftFilter.datePreset === id}
+                      onPress={() => handleDatePresetSelect(id)}
                     />
                   ))}
                 </View>
@@ -216,20 +210,20 @@ export default function PlaceFilterBottomSheet({
                       hasCustomDateRange ? styles.dateSelectTextSelected : null,
                     ]}
                   >
-                    {formatPlaceFilterDateButtonLabel(draftFilter)}
+                    {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
                   </CustomText>
                 </Pressable>
               </View>
 
               <View style={styles.section}>
-                <CustomText style={styles.sectionLabel}>관광 유형</CustomText>
+                <CustomText style={styles.sectionLabel}>{t.eventFilter.typeLabel}</CustomText>
                 <View style={styles.chipWrap}>
-                  {TRAVEL_STYLE_OPTIONS.map((option) => (
+                  {TRAVEL_STYLE_IDS.map((id) => (
                     <FilterChip
-                      key={option.value}
-                      label={option.label}
-                      selected={draftFilter.travelStyles.includes(option.value)}
-                      onPress={() => toggleTravelStyle(option.value)}
+                      key={id}
+                      label={t.eventFilter.typeOptions[id]}
+                      selected={draftFilter.travelStyles.includes(id)}
+                      onPress={() => toggleTravelStyle(id)}
                     />
                   ))}
                 </View>
@@ -238,10 +232,10 @@ export default function PlaceFilterBottomSheet({
 
             <SafeAreaView edges={['bottom']} style={styles.filterFooter}>
               <Pressable style={styles.cancelButton} onPress={handleClose}>
-                <CustomText style={styles.cancelButtonText}>취소</CustomText>
+                <CustomText style={styles.cancelButtonText}>{t.eventFilter.cancel}</CustomText>
               </Pressable>
               <Pressable style={styles.applyButton} onPress={handleApply}>
-                <CustomText style={styles.applyButtonText}>적용하기</CustomText>
+                <CustomText style={styles.applyButtonText}>{t.eventFilter.apply}</CustomText>
               </Pressable>
             </SafeAreaView>
           </Pressable>

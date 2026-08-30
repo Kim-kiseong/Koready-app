@@ -88,7 +88,7 @@ export default function AddressSearchScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} rightIcon={null} />
 
       <View style={styles.content}>
         <View
