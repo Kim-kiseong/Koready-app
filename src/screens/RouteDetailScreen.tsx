@@ -1,4 +1,5 @@
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { isAxiosError } from 'axios';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchMockRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
+import type { ApiErrorEnvelope } from '@/api/client';
+import { createBuddyRoute, fetchBuddyRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Component13,
@@ -29,6 +31,8 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useAuthStore } from '@/store/auth-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import { useLanguageStore } from '@/store/language-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
 
@@ -36,18 +40,22 @@ const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: 
   WALK: { Icon: Component13, width: 40, height: 40 },
   SUBWAY: { Icon: Component15, width: 40, height: 40 },
   BUS: { Icon: Component17, width: 40, height: 40 },
+  EXPRESS_BUS: { Icon: Component17, width: 40, height: 40 },
   TRAIN: { Icon: Component15, width: 40, height: 40 },
-  KTX: { Icon: Component15, width: 40, height: 40 },
-  SHUTTLE: { Icon: Component17, width: 40, height: 40 },
+  AIRPLANE: { Icon: Component15, width: 40, height: 40 },
+  FERRY: { Icon: Component15, width: 40, height: 40 },
+  SHUTTLE_BUS: { Icon: Component17, width: 40, height: 40 },
 };
 
 const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; borderColor: string }> = {
   WALK: { backgroundColor: '#F1F7FF', borderColor: '#D9E9FF' },
   SUBWAY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
   BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
+  EXPRESS_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
   TRAIN: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
-  KTX: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
-  SHUTTLE: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
+  AIRPLANE: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
+  FERRY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
+  SHUTTLE_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
 const HANDLE_OVERLAP = 180;
@@ -82,23 +90,13 @@ function formatRouteDurationText(
   return formatTemplate(formats.hourMinute, { hours: String(hours), minutes: String(mins) });
 }
 
-function formatSummaryTimeLabel(
-  minutes: number,
-  formats: {
-    minuteOnly: string;
-    hourOnly: string;
-    hourMinute: string;
-  },
-  language: 'KO' | 'EN',
-) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (language !== 'EN' || hours <= 0 || mins <= 0) {
-    return formatRouteDurationText(minutes, formats);
+function formatFareValue(amount: number | null, language: 'KO' | 'EN') {
+  if (amount == null) {
+    return '-';
   }
 
-  return `About ${hours} hr\n${mins} min`;
+  const formatted = amount.toLocaleString(language === 'EN' ? 'en-US' : 'ko-KR');
+  return language === 'EN' ? `₩${formatted}` : `${formatted}원`;
 }
 
 function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
@@ -109,15 +107,25 @@ function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
   return label;
 }
 
+function isRouteExpiredError(error: unknown) {
+  return isAxiosError<ApiErrorEnvelope>(error) && error.response?.status === 410 && error.response.data?.code === 'ROUTE_EXPIRED';
+}
+
 export default function RouteDetailScreen() {
   const router = useRouter();
-  const { routeId, placeName, placeAddress } = useLocalSearchParams<{
+  const { routeId, placeName, placeAddress, destinationPlaceId } = useLocalSearchParams<{
     routeId: string;
     placeName?: string;
     placeAddress?: string;
+    destinationPlaceId?: string;
   }>();
   const [route, setRoute] = useState<BuddyRoute | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const language = useLanguageStore((state) => state.language);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
+  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const isEnglish = language === 'EN';
   const t = useTranslation();
   const routeCopy = t.placeDetail.routeTab;
@@ -141,6 +149,15 @@ export default function RouteDetailScreen() {
       address: isEnglish ? 'Destination' : '목적지',
     };
   }, [isEnglish, placeAddress, placeName]);
+  const resolvedDestinationPlaceId = useMemo(() => {
+    const value = Array.isArray(destinationPlaceId) ? destinationPlaceId[0] : destinationPlaceId;
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [destinationPlaceId]);
 
   const handleKtxCtaPress = useCallback(() => {
     Alert.alert(
@@ -154,16 +171,75 @@ export default function RouteDetailScreen() {
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
 
+  const handleRetry = useCallback(() => {
+    setReloadToken((value) => value + 1);
+  }, []);
+
   useEffect(() => {
-    if (!routeId) return;
+    if (!routeId || !authHasHydrated || !onboardingHasHydrated) return;
+
     let active = true;
-    fetchMockRouteDetail(routeId, destination).then((value) => {
-      if (active) setRoute(value);
-    });
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setHasError(false);
+    setRoute(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    const loadRoute = async () => {
+      try {
+        const value = await fetchBuddyRouteDetail(routeId, destination);
+        if (active) {
+          setRoute(value);
+        }
+        return;
+      } catch (error) {
+        if (active && isRouteExpiredError(error) && resolvedDestinationPlaceId != null) {
+          try {
+            const recreated = await createBuddyRoute(
+              {
+                originLocationId: currentLocationId ?? resolvedDestinationPlaceId,
+                destinationPlaceId: resolvedDestinationPlaceId,
+              },
+              destination,
+            );
+
+            if (!active) {
+              return;
+            }
+
+            setRoute(recreated);
+            router.replace({
+              pathname: '/routes/[routeId]',
+              params: {
+                routeId: recreated.routeId,
+                placeName: destination.name,
+                placeAddress: destination.address,
+                destinationPlaceId: String(resolvedDestinationPlaceId),
+              },
+            });
+            return;
+          } catch {
+            if (!active) {
+              return;
+            }
+
+            setHasError(true);
+            return;
+          }
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setHasError(true);
+      }
+    };
+
+    void loadRoute();
     return () => {
       active = false;
     };
-  }, [destination, language, routeId]);
+  }, [authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
 
   const snapPoints = useMemo(() => {
     if (!mapAreaHeight) return ['50%', '100%'];
@@ -174,17 +250,26 @@ export default function RouteDetailScreen() {
     setMapAreaHeight(e.nativeEvent.layout.height);
   }, []);
 
-  const summaryTimeLabel = route
-    ? formatSummaryTimeLabel(route.summary.estimatedOneWayMinutes, routeCopy.timeFormats, language)
-    : '';
+  const summaryTimeLabel = route ? route.summary.estimatedOneWayTimeText : '';
   const dayTripLabel = route
     ? route.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
       ? routeCopy.dayTripValues.available
-      : routeCopy.dayTripValues.unavailable
+      : routeCopy.dayTripValues.stayRecommended
     : '';
   const summaryDayTripLabel = formatSummaryDayTripLabel(dayTripLabel, language);
 
   if (!route) {
+    if (hasError) {
+      return (
+        <SafeAreaView style={styles.loading} edges={['top']}>
+          <CustomText style={styles.errorText}>{routeCopy.error}</CustomText>
+          <Pressable style={styles.retryButton} onPress={handleRetry}>
+            <CustomText style={styles.retryText}>{routeCopy.retry}</CustomText>
+          </Pressable>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.loading} edges={['top']}>
         <ActivityIndicator color={Palette.primary} />
@@ -275,19 +360,13 @@ export default function RouteDetailScreen() {
               <View style={styles.fareRow}>
                 <CustomText style={styles.fareLabel}>{routeCopy.fareOneWay}</CustomText>
                 <CustomText style={styles.fareValue}>
-                  {routeCopy.farePrefix}{' '}
-                  {isEnglish
-                    ? `₩${route.summary.fare.oneWayEstimated.toLocaleString('en-US')}`
-                    : `${route.summary.fare.oneWayEstimated.toLocaleString('ko-KR')}원`}
+                  {routeCopy.farePrefix} {formatFareValue(route.summary.fare.oneWayEstimated, language)}
                 </CustomText>
               </View>
               <View style={[styles.fareRow, styles.fareRowSpaced]}>
                 <CustomText style={styles.fareLabel}>{routeCopy.fareRoundTrip}</CustomText>
                 <CustomText style={styles.fareValue}>
-                  {routeCopy.farePrefix}{' '}
-                  {isEnglish
-                    ? `₩${route.summary.fare.roundTripEstimated.toLocaleString('en-US')}`
-                    : `${route.summary.fare.roundTripEstimated.toLocaleString('ko-KR')}원`}
+                  {routeCopy.farePrefix} {formatFareValue(route.summary.fare.roundTripEstimated, language)}
                 </CustomText>
               </View>
               <View style={styles.fareDivider} />
@@ -383,7 +462,7 @@ function SegmentCardBody({
           <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
         </>
       ) : null}
-      {segment.mode === 'KTX' ? (
+      {segment.routeName?.toUpperCase() === 'KTX' ? (
         <Pressable style={styles.ctaButton} onPress={onCtaPress}>
           <CustomText style={styles.ctaButtonText}>{isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}</CustomText>
         </Pressable>
@@ -451,7 +530,7 @@ function TimelineItem({
 
 function RouteMetaIcon({ type }: { type: TransportMode }) {
   if (type === 'WALK') return <RouteWalkDot width={20} height={20} />;
-  if (type === 'BUS' || type === 'SHUTTLE') return <Directions_bus />;
+  if (type === 'BUS' || type === 'EXPRESS_BUS' || type === 'SHUTTLE_BUS') return <Directions_bus />;
   return <Directions_railway_2 width={11} height={16} />;
 }
 
@@ -461,7 +540,26 @@ function RouteMetaClock() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 12 },
+  errorText: {
+    alignSelf: 'stretch',
+    textAlign: 'left',
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Palette.grey700,
+  },
+  retryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: Palette.primary,
+  },
+  retryText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   back: { fontFamily: FontFamily.pretendard.regular, fontSize: 36, lineHeight: 36, color: Palette.text },
   headerTitle: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },

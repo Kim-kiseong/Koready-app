@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   fetchPlaceDetail,
+  getMissingPlaceDescriptionFields,
   type PlaceDetail,
   type PlaceDetailTab,
 } from '@/api/place';
@@ -42,6 +43,56 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+
+function normalizePlaceDetailTab(tab?: string): PlaceDetailTab {
+  if (tab === 'ROUTE' || tab === 'MATES') {
+    return tab;
+  }
+
+  if (tab === 'MATE') {
+    return 'MATES';
+  }
+
+  return 'DESCRIPTION';
+}
+
+function resolveVisiblePlaceTabs(tabs?: PlaceDetailTab[]): PlaceDetailTab[] {
+  const baseTabs: PlaceDetailTab[] =
+    tabs?.length
+      ? tabs
+      : ['DESCRIPTION', 'ROUTE', 'MATES'];
+
+  if (baseTabs.includes('ROUTE')) {
+    return baseTabs;
+  }
+
+  const nextTabs: PlaceDetailTab[] = [...baseTabs];
+  const descriptionIndex = nextTabs.indexOf('DESCRIPTION');
+
+  if (descriptionIndex >= 0) {
+    nextTabs.splice(descriptionIndex + 1, 0, 'ROUTE');
+  } else {
+    nextTabs.unshift('ROUTE');
+  }
+
+  return nextTabs;
+}
+
+function formatPlaceDescriptionJson(
+  description: PlaceDetail['description'],
+) {
+  if (description == null) {
+    return String(description);
+  }
+
+  return JSON.stringify(description, null, 2);
+}
+
+function formatRelatedPlacesJson(
+  relatedPlaces: PlaceDetail['relatedPlaces'],
+) {
+  return JSON.stringify(relatedPlaces, null, 2);
+}
 
 export default function PlaceDetailScreen() {
   const { placeId, tab, deckId } =
@@ -79,10 +130,7 @@ function PlaceDetailScreenContent({
   const [place, setPlace] =
     useState<PlaceDetail | null>(null);
 
-  const initialTab: PlaceDetailTab =
-    normalizedTab === 'ROUTE' || normalizedTab === 'MATE'
-      ? normalizedTab
-      : 'DESCRIPTION';
+  const initialTab: PlaceDetailTab = normalizePlaceDetailTab(normalizedTab);
 
   const [activeTab, setActiveTab] =
     useState<PlaceDetailTab>(initialTab);
@@ -118,6 +166,67 @@ function PlaceDetailScreenContent({
     localSavedState ??
     place?.isSaved ??
     false;
+
+  const visibleTabs = resolveVisiblePlaceTabs(place?.availableTabs);
+  const resolvedTab = visibleTabs.includes(activeTab)
+    ? activeTab
+    : visibleTabs[0] ?? 'DESCRIPTION';
+
+  const description = place?.description ?? null;
+  const relatedPlaces = place?.relatedPlaces;
+  const missingDescriptionFields =
+    __DEV__
+      ? getMissingPlaceDescriptionFields(
+          description,
+        )
+      : [];
+  const descriptionDebugJson =
+    __DEV__
+      ? formatPlaceDescriptionJson(description)
+      : '';
+  const relatedPlacesDebugJson =
+    __DEV__
+      ? formatRelatedPlacesJson(relatedPlaces ?? [])
+      : '';
+
+  useEffect(() => {
+    if (!__DEV__ || !place || !hasHydrated) {
+      return;
+    }
+
+    console.info('[place-detail] screen place.description', {
+      placeId,
+      title: place.title,
+      description,
+      missingDescriptionFields:
+        getMissingPlaceDescriptionFields(
+          description,
+        ),
+    });
+  }, [
+    description,
+    hasHydrated,
+    place,
+    placeId,
+  ]);
+
+  useEffect(() => {
+    if (!__DEV__ || !place || !hasHydrated) {
+      return;
+    }
+
+    console.info('[place-detail] screen relatedPlaces', {
+      placeId,
+      title: place.title,
+      relatedPlacesCount: relatedPlaces?.length ?? 0,
+      relatedPlaces: relatedPlaces ?? [],
+    });
+  }, [
+    hasHydrated,
+    place,
+    placeId,
+    relatedPlaces,
+  ]);
 
   useEffect(() => {
     if (!placeId) {
@@ -182,8 +291,6 @@ function PlaceDetailScreenContent({
     );
   }
 
-  const description = place.description;
-
   const handleToggleSave = () => {
     if (!placeId) {
       return;
@@ -232,6 +339,7 @@ function PlaceDetailScreenContent({
         placeId,
         placeName: place.title,
         placeAddress: place.address,
+        destinationPlaceId: place.numericId != null ? String(place.numericId) : undefined,
         deckId: deckId ?? undefined,
       },
     });
@@ -283,20 +391,55 @@ function PlaceDetailScreenContent({
         />
 
         <PlaceDetailTabs
-          activeTab={activeTab}
+          activeTab={resolvedTab}
+          tabs={visibleTabs}
           onChange={setActiveTab}
         />
 
-        {activeTab ===
+        {resolvedTab ===
           'DESCRIPTION' && (
           <>
+            {__DEV__ ? (
+              <View
+                style={
+                  styles.debugDescriptionBox
+                }
+              >
+                <CustomText
+                  style={
+                    styles.debugDescriptionTitle
+                  }
+                >
+                  DEV place.description
+                </CustomText>
+
+                <CustomText
+                  style={
+                    styles.debugDescriptionMeta
+                  }
+                >
+                  missing fields: {missingDescriptionFields.length > 0
+                    ? missingDescriptionFields.join(', ')
+                    : 'none'}
+                </CustomText>
+
+                <CustomText
+                  style={
+                    styles.debugDescriptionJson
+                  }
+                >
+                  {descriptionDebugJson}
+                </CustomText>
+              </View>
+            ) : null}
+
             <PlaceDescription
               description={description}
               images={place.images}
             />
 
             <EnjoyPoints
-              points={description.enjoyPoints}
+              points={description?.enjoyPoints ?? []}
             />
 
             <View
@@ -314,6 +457,38 @@ function PlaceDetailScreenContent({
                     .nearbyTitle
                 }
               </CustomText>
+
+              {__DEV__ ? (
+                <View
+                  style={
+                    styles.debugDescriptionBox
+                  }
+                >
+                  <CustomText
+                    style={
+                      styles.debugDescriptionTitle
+                    }
+                  >
+                    DEV place.relatedPlaces
+                  </CustomText>
+
+                  <CustomText
+                    style={
+                      styles.debugDescriptionMeta
+                    }
+                  >
+                  count: {relatedPlaces?.length ?? 0}
+                </CustomText>
+
+                  <CustomText
+                    style={
+                      styles.debugDescriptionJson
+                    }
+                  >
+                    {relatedPlacesDebugJson}
+                  </CustomText>
+                </View>
+              ) : null}
 
               {place.relatedPlaces.map(
                 (relatedPlace) => (
@@ -341,9 +516,10 @@ function PlaceDetailScreenContent({
           </>
         )}
 
-        {activeTab === 'ROUTE' && placeId && (
+        {resolvedTab === 'ROUTE' && placeId && (
           <BuddyRouteTab
             placeId={placeId}
+            destinationPlaceId={place.numericId ?? null}
             destination={{
               name: place.title,
               address: place.address,
@@ -352,7 +528,7 @@ function PlaceDetailScreenContent({
           />
         )}
 
-        {activeTab === 'MATE' && placeId ? (
+        {resolvedTab === 'MATES' && placeId ? (
           <MateTab
             placeId={placeId}
             placeTitle={place.title}
@@ -411,6 +587,43 @@ const styles = StyleSheet.create({
   nearbySection: {
     paddingHorizontal: 24,
     marginTop: 40,
+  },
+
+  debugDescriptionBox: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f0c36c',
+    borderRadius: 12,
+    backgroundColor: '#fffaf0',
+  },
+
+  debugDescriptionTitle: {
+    marginBottom: 8,
+    fontFamily:
+      FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#996c12',
+  },
+
+  debugDescriptionMeta: {
+    marginBottom: 8,
+    fontFamily:
+      FontFamily.pretendard.medium,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#725108',
+  },
+
+  debugDescriptionJson: {
+    fontFamily:
+      FontFamily.pretendard.regular,
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#4a3a12',
   },
 
   sectionTitle: {

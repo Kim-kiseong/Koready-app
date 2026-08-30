@@ -23,7 +23,7 @@ type ThreadRecord = {
 };
 
 type ListCursor = {
-  updatedAt: string;
+  lastSentAt: string;
   threadId: string;
 };
 
@@ -393,7 +393,7 @@ function getLatestMessage(messages: MessageThreadMessage[]) {
   return sortMessages(messages).at(-1) ?? null;
 }
 
-function getThreadUpdatedAt(record: ThreadRecord) {
+function getThreadLastSentAt(record: ThreadRecord) {
   return getLatestMessage(record.messages)?.sentAt ?? '1970-01-01T00:00:00.000Z';
 }
 
@@ -406,6 +406,7 @@ function getUnreadCount(record: ThreadRecord) {
 function buildListItem(record: ThreadRecord): MessageThreadListItem {
   const latestMessage = getLatestMessage(record.messages);
   const localizedLatestMessage = latestMessage ? localizeMessage(record.threadId, latestMessage) : null;
+  const lastSentAt = getThreadLastSentAt(record);
 
   return {
     threadId: record.threadId,
@@ -414,15 +415,15 @@ function buildListItem(record: ThreadRecord): MessageThreadListItem {
       ...record.otherProfile,
     },
     preview: normalizeContent(localizedLatestMessage?.content ?? '').slice(0, 100),
-    updatedAt: latestMessage?.sentAt ?? '1970-01-01T00:00:00.000Z',
+    lastSentAt,
     unreadCount: getUnreadCount(record),
     blocked: false,
     canReply: record.canReply,
   };
 }
 
-function encodeListCursor(updatedAt: string, threadId: string) {
-  return `${updatedAt}|${threadId}`;
+function encodeListCursor(lastSentAt: string, threadId: string) {
+  return `${lastSentAt}|${threadId}`;
 }
 
 function decodeListCursor(cursor: string): ListCursor | null {
@@ -431,21 +432,21 @@ function decodeListCursor(cursor: string): ListCursor | null {
     return null;
   }
 
-  const updatedAt = cursor.slice(0, separatorIndex);
+  const lastSentAt = cursor.slice(0, separatorIndex);
   const threadId = cursor.slice(separatorIndex + 1);
-  if (!updatedAt || !threadId) {
+  if (!lastSentAt || !threadId) {
     return null;
   }
 
-  return { updatedAt, threadId };
+  return { lastSentAt, threadId };
 }
 
 function paginateList(items: MessageThreadListItem[], cursor?: string | null, size = 20) {
   const normalizedSize = Math.min(50, Math.max(1, size));
   const sorted = [...items].sort((left, right) => {
-    const updatedDiff = right.updatedAt.localeCompare(left.updatedAt);
-    if (updatedDiff !== 0) {
-      return updatedDiff;
+    const lastSentDiff = right.lastSentAt.localeCompare(left.lastSentAt);
+    if (lastSentDiff !== 0) {
+      return lastSentDiff;
     }
 
     return right.threadId.localeCompare(left.threadId);
@@ -458,7 +459,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
       hasMore: sorted.length > normalizedSize,
       nextCursor:
         sorted.length > normalizedSize
-          ? encodeListCursor(page.at(-1)!.updatedAt, page.at(-1)!.threadId)
+          ? encodeListCursor(page.at(-1)!.lastSentAt, page.at(-1)!.threadId)
           : null,
     };
   }
@@ -469,7 +470,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
   }
 
   const cursorIndex = sorted.findIndex(
-    (item) => item.updatedAt === decoded.updatedAt && item.threadId === decoded.threadId,
+    (item) => item.lastSentAt === decoded.lastSentAt && item.threadId === decoded.threadId,
   );
   if (cursorIndex === -1) {
     return null;
@@ -479,7 +480,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
   return {
     items: page,
     hasMore: cursorIndex + 1 + normalizedSize < sorted.length,
-    nextCursor: page.length > 0 ? encodeListCursor(page.at(-1)!.updatedAt, page.at(-1)!.threadId) : null,
+    nextCursor: page.length > 0 ? encodeListCursor(page.at(-1)!.lastSentAt, page.at(-1)!.threadId) : null,
   };
 }
 

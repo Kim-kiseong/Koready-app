@@ -40,7 +40,7 @@
       ],
       "expo-secure-store",
       [
-        "@react-native-google-signin/google-signin",
+        "@react-native-google-signin/google-signin/app.plugin.js",
         {
           "iosUrlScheme": "com.googleusercontent.apps.1039304334068-jke8pl5f0itkiq8h41l3gonm7u5bkh2s"
         }

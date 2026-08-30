@@ -3,12 +3,16 @@ import { Asset } from 'expo-asset';
 import type { ImageSource } from 'expo-image';
 
 import { HomeImages } from '@/constants/home-images';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { formatPlaceRegionName } from '@/utils/place-i18n';
 import { useLanguageStore } from '@/store/language-store';
+import { useAuthStore } from '@/store/auth-store';
 import type { ServiceRegionCode } from './onboarding';
 import type {
   PlaceListItem,
   PlaceListResponse,
   PlaceSortOrder,
+  SavedPlaceFestivalOccurrence,
 } from './types';
 
 import { client } from './client';
@@ -17,7 +21,13 @@ function isEnglish() {
   return useLanguageStore.getState().language === 'EN';
 }
 
-export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATE';
+function isDevMockSession() {
+  return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
+}
+
+export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATES';
+
+export type PlaceDescriptionSourceType = 'KTO_ORIGINAL' | 'AI_GENERATED' | 'MANUAL_EDITED';
 
 export type PlaceImage = {
   source: ImageSource;
@@ -26,11 +36,135 @@ export type PlaceImage = {
 };
 
 export type PlaceDescription = {
-  impactTitle: string;
-  impactSubtitle: string;
+  topic?: string | null;
+  oneLineDescription?: string | null;
+  shortIntroduction?: string | null;
+  enjoyPoints?: string[] | null;
+  contentVersion?: string | null;
+  impactTitle?: string | null;
+  impactSubtitle?: string | null;
+  introParagraphs?: string[] | null;
+  sourceType?: PlaceDescriptionSourceType | string | null;
+};
+
+const PLACE_DESCRIPTION_FIELDS = [
+  'topic',
+  'oneLineDescription',
+  'shortIntroduction',
+  'enjoyPoints',
+  'contentVersion',
+] as const;
+
+type PlaceDescriptionField =
+  (typeof PLACE_DESCRIPTION_FIELDS)[number];
+
+function getNormalizedText(
+  ...values: (string | null | undefined)[]
+) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function getNormalizedStringArray(
+  ...values: (string[] | null | undefined)[]
+) {
+  for (const value of values) {
+    if (
+      Array.isArray(value) &&
+      value.some(
+        (item) => typeof item === 'string' && item.trim().length > 0,
+      )
+    ) {
+      return value
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+  }
+
+  return [];
+}
+
+export type NormalizedPlaceDescription = {
+  topic: string | null;
+  oneLineDescription: string | null;
+  shortIntroduction: string | null;
   introParagraphs: string[];
   enjoyPoints: string[];
+  contentVersion: string | null;
 };
+
+export function normalizePlaceDescription(
+  description: PlaceDescription | null | undefined,
+): NormalizedPlaceDescription {
+  const introParagraphs = getNormalizedStringArray(
+    description?.introParagraphs,
+  );
+  const shortIntroduction = getNormalizedText(
+    description?.shortIntroduction,
+    introParagraphs[0],
+  );
+
+  return {
+    topic: getNormalizedText(
+      description?.topic,
+      description?.impactTitle,
+    ),
+    oneLineDescription: getNormalizedText(
+      description?.oneLineDescription,
+      description?.impactSubtitle,
+    ),
+    shortIntroduction,
+    introParagraphs:
+      introParagraphs.length > 0
+        ? introParagraphs
+        : shortIntroduction
+          ? [shortIntroduction]
+          : [],
+    enjoyPoints: getNormalizedStringArray(description?.enjoyPoints),
+    contentVersion: getNormalizedText(
+      description?.contentVersion,
+      description?.sourceType,
+    ),
+  };
+}
+
+export function getMissingPlaceDescriptionFields(
+  description: PlaceDescription | null | undefined,
+): PlaceDescriptionField[] {
+  if (!description) {
+    return [...PLACE_DESCRIPTION_FIELDS];
+  }
+
+  const normalized = normalizePlaceDescription(description);
+  const missingFields: PlaceDescriptionField[] = [];
+
+  if (!normalized.topic) {
+    missingFields.push('topic');
+  }
+
+  if (!normalized.oneLineDescription) {
+    missingFields.push('oneLineDescription');
+  }
+
+  if (!normalized.shortIntroduction) {
+    missingFields.push('shortIntroduction');
+  }
+
+  if (normalized.enjoyPoints.length === 0) {
+    missingFields.push('enjoyPoints');
+  }
+
+  if (!normalized.contentVersion) {
+    missingFields.push('contentVersion');
+  }
+
+  return missingFields;
+}
 
 export type RelatedPlace = {
   id: string;
@@ -48,8 +182,9 @@ export type PlaceDetail = {
   tags: string[];
   isSaved: boolean;
   images: PlaceImage[];
-  description: PlaceDescription;
+  description: PlaceDescription | null;
   relatedPlaces: RelatedPlace[];
+  availableTabs?: PlaceDetailTab[];
 };
 
 export const DEFAULT_PLACE_DESCRIPTION: PlaceDescription = {
@@ -73,6 +208,7 @@ const DEFAULT_PLACE_DETAIL: Omit<PlaceDetail, 'id' | 'title'> = {
   address: '경상북도 김천시 직지사길 130 (대항면 운수리)',
   tags: ['지역축제', '음식', '시즌추천'],
   isSaved: false,
+  availableTabs: ['DESCRIPTION', 'ROUTE', 'MATES'],
   images: [
     { source: { uri: 'https://picsum.photos/id/1050/1200/1200' }, order: 1, altText: '축제 메인 이미지' },
     { source: { uri: 'https://picsum.photos/id/1025/1200/1200' }, order: 2, altText: '축제장 풍경' },
@@ -438,7 +574,9 @@ function buildRelatedPlacesFromRegionCode(serviceRegionCode: ServiceRegionCode, 
     return [];
   }
 
-  const fallbackRegionName = regionPlaces[0]?.serviceRegionName ?? serviceRegionCode;
+  const fallbackRegionName =
+    regionPlaces[0]?.serviceRegionName ??
+    formatPlaceRegionName(serviceRegionCode, useLanguageStore.getState().language);
   const fallbackDescription = isEnglish()
     ? `A place worth visiting in ${fallbackRegionName}.`
     : `${fallbackRegionName}에서 함께 둘러보기 좋은 곳이에요.`;
@@ -497,6 +635,7 @@ function buildGenericPlaceDetailFromListItem(place: MockPlaceListItem): PlaceDet
           ],
         },
     relatedPlaces: buildRelatedPlaces(place),
+    availableTabs: ['DESCRIPTION', 'ROUTE', 'MATES'],
   };
 }
 
@@ -1956,8 +2095,100 @@ function buildMockPlaceList(params: FetchPlacesParams): PlaceListResponse {
   return paginateMockPlaces(sorted, params.cursor, size);
 }
 
+const DEFAULT_PLACE_CARD_IMAGE_URI = Asset.fromModule(
+  require('@/assets/images/destinations/default.jpg'),
+).uri;
+
+type PlaceListApiCard = {
+  placeId: number;
+  title: string;
+  serviceRegionCode: ServiceRegionCode;
+  serviceRegionName: string;
+  addressSummary: string;
+  imageUrl: string | null;
+  festivalOccurrence: SavedPlaceFestivalOccurrence | null;
+  operatingHours?: string | null;
+  travelStyle: string | null;
+  tags: string[];
+  shortDescription: string | null;
+  saved: boolean;
+};
+
+type PlaceListApiResponse = {
+  items: PlaceListApiCard[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount?: number | null;
+};
+
+type PlaceListEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: PlaceListApiResponse;
+  traceId: string;
+};
+
+function mapPlaceListCardResponse(item: PlaceListApiCard): PlaceListItem {
+  return {
+    placeId: item.placeId,
+    title: item.title,
+    serviceRegionCode: item.serviceRegionCode,
+    serviceRegionName: formatPlaceRegionName(item.serviceRegionCode, useLanguageStore.getState().language),
+    addressSummary: item.addressSummary,
+    imageUrl: item.imageUrl ?? DEFAULT_PLACE_CARD_IMAGE_URI,
+    festivalOccurrence: item.festivalOccurrence,
+    operatingHours: item.operatingHours ?? null,
+    travelStyle: item.travelStyle ?? '',
+    tags: [...item.tags],
+    shortDescription: item.shortDescription,
+    overview: null,
+    saved: item.saved,
+    savedAt: null,
+  };
+}
+
+function mapPlaceListResponse(response: PlaceListApiResponse): PlaceListResponse {
+  return {
+    items: response.items.map(mapPlaceListCardResponse),
+    nextCursor: response.nextCursor,
+    hasMore: response.hasMore,
+    totalCount: response.totalCount ?? null,
+  };
+}
+
 export async function fetchPlaces(params: FetchPlacesParams): Promise<PlaceListResponse> {
-  return buildMockPlaceList(params);
+  if (isDevMockSession()) {
+    return buildMockPlaceList(params);
+  }
+
+  try {
+    const query = new URLSearchParams();
+    query.set('serviceRegionCode', params.serviceRegionCode);
+    if (params.travelStyles && params.travelStyles.length > 0) {
+      // OpenAPI defines travelStyles as a form array with explode=false, so the
+      // backend expects a comma-separated list like `NATURE,LOCAL_FESTIVAL`.
+      query.set('travelStyles', params.travelStyles.join(','));
+    }
+    if (params.sort) {
+      query.set('sort', params.sort);
+    }
+    if (params.cursor) {
+      query.set('cursor', params.cursor);
+    }
+    if (params.size != null) {
+      query.set('size', String(params.size));
+    }
+
+    const response = await client.get<PlaceListEnvelope>(`/places?${query.toString()}`);
+    return mapPlaceListResponse(response.data.data);
+  } catch (error) {
+    if (__DEV__ && isAxiosError(error)) {
+      return buildMockPlaceList(params);
+    }
+
+    throw error;
+  }
 }
 
 type PlaceDetailApiImage = {
@@ -1983,6 +2214,7 @@ type PlaceDetailApiResponse = {
   images: PlaceDetailApiImage[];
   description: PlaceDescription | null;
   relatedPlaces: PlaceDetailApiRelatedPlace[];
+  availableTabs?: PlaceDetailTab[];
 };
 
 type PlaceDetailEnvelope = {
@@ -2019,8 +2251,9 @@ function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
         order: image.order,
         altText: image.altText,
       })),
-    description: response.description ?? DEFAULT_PLACE_DESCRIPTION,
+    description: response.description,
     relatedPlaces,
+    availableTabs: response.availableTabs ?? ['DESCRIPTION', 'ROUTE', 'MATES'],
   };
 }
 
@@ -2062,6 +2295,10 @@ function buildFallbackPlaceDetail(placeId: string): PlaceDetail {
 // rows, so those — and any id the backend 404s on — fall back to the local mock below
 // instead of surfacing an error.
 export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
+  if (isDevMockSession()) {
+    return buildFallbackPlaceDetail(placeId);
+  }
+
   const numericId = Number(placeId);
   if (Number.isFinite(numericId) && numericId > 0) {
     const language = useLanguageStore.getState().language;
@@ -2076,9 +2313,13 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
       try {
         const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
         if (__DEV__) {
-          console.info('[place-detail] GET /places/{placeId} response.relatedPlaces', {
+          console.info('[place-detail] GET /places/{placeId} response', {
             placeId: numericId,
             serviceRegionCode: response.data.data.serviceRegionCode,
+            description: response.data.data.description,
+            missingDescriptionFields: getMissingPlaceDescriptionFields(
+              response.data.data.description,
+            ),
             relatedPlacesCount: response.data.data.relatedPlaces.length,
             relatedPlaces: response.data.data.relatedPlaces,
           });
