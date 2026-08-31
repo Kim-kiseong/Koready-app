@@ -62,7 +62,7 @@ export function toStableListKey(value: unknown, index: number): string {
   }
 
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
-    return String(value);
+    return `${String(value)}-${index}`;
   }
 
   if (Array.isArray(value)) {

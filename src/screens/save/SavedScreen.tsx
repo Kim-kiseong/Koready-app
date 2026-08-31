@@ -7,17 +7,23 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchSavedPlaces, unsavePlace } from '@/api/saved-place';
+import {
+  fetchSavedPlaces,
+  getSavedPlacesFetchMode,
+  unsavePlace,
+} from '@/api/saved-place';
 import type { LanguageCode, SavedPlaceItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import DetailTag from '@/components/place-detail/DetailTag';
 import { Palette } from '@/constants/colors';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
@@ -30,6 +36,22 @@ type SavedSortOrder = 'SAVED_AT' | 'DEADLINE';
 type SavedSortOption = {
   value: SavedSortOrder;
   label: string;
+};
+
+type SavedPlacesDebugSample = {
+  placeId: number;
+  title: string;
+  tags: string[];
+  rawJson: string;
+};
+
+type SavedPlacesDebugState = {
+  session: 'missing-token' | 'mock-token' | 'real-token';
+  fetchMode: 'MOCK' | 'API' | 'FALLBACK';
+  itemCount: number;
+  nextCursor: string | null;
+  hasMore: boolean;
+  samples: SavedPlacesDebugSample[];
 };
 
 const TRAVEL_STYLE_LABELS: Record<LanguageCode, Record<string, string>> = {
@@ -198,6 +220,7 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['분식', 'Korean Snack'],
   ['빵', 'Bread'],
   ['사진', 'Photography'],
+  ['재미', 'Fun'],
   ['사찰', 'Temple'],
   ['산', 'Mountain'],
   ['산책', 'Walking'],
@@ -380,6 +403,7 @@ export default function SavedScreen() {
   const router = useRouter();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const hasAuthHydrated = useAuthStore((state) => state.hasHydrated);
   const savedStoreHydrated = useSavedPlaceStore((state) => state.hasHydrated);
   const savedPlacesByPlaceId = useSavedPlaceStore((state) => state.savedPlacesByPlaceId);
@@ -392,6 +416,7 @@ export default function SavedScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSortSheetVisible, setIsSortSheetVisible] = useState(false);
+  const [devSavedPlacesDebug, setDevSavedPlacesDebug] = useState<SavedPlacesDebugState | null>(null);
 
   const loadSavedPlaces = useCallback(
     async (nextCursor: string | null = null, isMore = false) => {
@@ -410,6 +435,28 @@ export default function SavedScreen() {
         replaceSavedPlaces(result.items);
         setCursor(result.nextCursor);
         setHasMore(result.hasMore);
+
+        if (__DEV__) {
+          const session: SavedPlacesDebugState['session'] = !accessToken
+            ? 'missing-token'
+            : accessToken === DEV_MOCK_ACCESS_TOKEN
+              ? 'mock-token'
+              : 'real-token';
+
+          setDevSavedPlacesDebug({
+            session,
+            fetchMode: getSavedPlacesFetchMode(),
+            itemCount: result.items.length,
+            nextCursor: result.nextCursor,
+            hasMore: result.hasMore,
+            samples: result.items.slice(0, 5).map((item) => ({
+              placeId: item.placeId,
+              title: item.title,
+              tags: [...item.tags],
+              rawJson: JSON.stringify(item, null, 2),
+            })),
+          });
+        }
       } finally {
         if (isMore) {
           setIsLoadingMore(false);
@@ -418,7 +465,7 @@ export default function SavedScreen() {
         }
       }
     },
-    [hasAuthHydrated, replaceSavedPlaces, savedStoreHydrated],
+    [accessToken, hasAuthHydrated, replaceSavedPlaces, savedStoreHydrated],
   );
 
   useEffect(() => {
@@ -501,6 +548,45 @@ export default function SavedScreen() {
           </Pressable>
         </View>
       </View>
+
+      {__DEV__ ? (
+        <View style={styles.devDebugCard}>
+          <CustomText style={styles.devDebugTitle}>DEV saved-places debug</CustomText>
+          <CustomText style={styles.devDebugText}>
+            {`session: ${
+              !accessToken
+                ? 'missing-token'
+                : accessToken === DEV_MOCK_ACCESS_TOKEN
+                  ? 'mock-token'
+                  : 'real-token'
+            }`}
+          </CustomText>
+          <CustomText style={styles.devDebugText}>
+            {`fetchMode: ${devSavedPlacesDebug?.fetchMode ?? 'waiting'} | items: ${devSavedPlacesDebug?.itemCount ?? 0} | hasMore: ${String(devSavedPlacesDebug?.hasMore ?? false)}`}
+          </CustomText>
+          <CustomText style={styles.devDebugText}>
+            {`nextCursor: ${devSavedPlacesDebug?.nextCursor ?? 'null'}`}
+          </CustomText>
+          {devSavedPlacesDebug ? (
+            devSavedPlacesDebug.samples.length > 0 ? (
+              <ScrollView style={styles.devDebugJsonScroll} contentContainerStyle={styles.devDebugJsonScrollContent}>
+                {devSavedPlacesDebug.samples.map((sample) => (
+                  <View key={String(sample.placeId)} style={styles.devDebugJsonBlock}>
+                    <CustomText style={styles.devDebugJsonTitle}>
+                      {`#${sample.placeId} ${sample.title} | tags: ${sample.tags.length}`}
+                    </CustomText>
+                    <CustomText style={styles.devDebugJsonText}>{sample.rawJson}</CustomText>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <CustomText style={styles.devDebugSample}>(no saved-place samples)</CustomText>
+            )
+          ) : (
+            <CustomText style={styles.devDebugSample}>waiting for saved places fetch...</CustomText>
+          )}
+        </View>
+      ) : null}
 
       {isLoading && savedPlaces.length === 0 ? (
         <View style={styles.loadingState}>
@@ -624,9 +710,13 @@ function SavedPlaceCard({
         </View>
 
         <View style={styles.tagRow}>
-          {place.tags.slice(0, 3).map((tag, index) => (
-            <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(formatSavedTag(tag, language))} />
-          ))}
+          {place.tags
+            .map((tag) => formatSavedTag(tag, language))
+            .filter((tag) => !isHiddenSavedTag(tag))
+            .slice(0, 3)
+            .map((tag, index) => (
+              <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(tag)} />
+            ))}
         </View>
       </View>
     </Pressable>
@@ -723,7 +813,13 @@ function formatTravelStyle(value: string, language: LanguageCode) {
 }
 
 function formatSavedTag(value: string, language: LanguageCode) {
-  return TAG_TRANSLATIONS[language][value] ?? value;
+  const normalized = value.trim().replace(/^#+\s*/, '');
+  return TAG_TRANSLATIONS[language][normalized] ?? normalized;
+}
+
+function isHiddenSavedTag(value: string) {
+  const normalized = value.trim().replace(/^#+\s*/, '').replace(/[\s_]+/g, '').toLowerCase();
+  return normalized === '지역축제' || normalized === 'localfestival';
 }
 
 function translateKoreanTitleToEnglish(title: string) {
@@ -1181,6 +1277,59 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
     marginTop: 0,
+  },
+  devDebugCard: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(233, 179, 61, 0.6)',
+    backgroundColor: 'rgba(255, 248, 226, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  devDebugTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#a36d00',
+  },
+  devDebugText: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: '#6f5600',
+  },
+  devDebugSample: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: '#6f5600',
+  },
+  devDebugJsonScroll: {
+    maxHeight: 260,
+  },
+  devDebugJsonScrollContent: {
+    gap: 8,
+  },
+  devDebugJsonBlock: {
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    padding: 10,
+    gap: 6,
+  },
+  devDebugJsonTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 12,
+    lineHeight: 16.8,
+    color: '#745000',
+  },
+  devDebugJsonText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    lineHeight: 15.4,
+    color: '#6f5600',
   },
   heartButton: {
     padding: 0,

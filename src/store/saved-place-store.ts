@@ -5,9 +5,42 @@ import {
 } from 'zustand/middleware';
 
 import type { SavedPlaceItem } from '@/api/types';
-import { normalizeTaggedPlace } from '@/utils/place-tags';
 
 import { secureStorage } from './secure-storage';
+
+function sanitizeSavedPlaceTags(tags: readonly unknown[] = []) {
+  const seen = new Set<string>();
+  const nextTags: string[] = [];
+
+  for (const tag of tags) {
+    if (typeof tag !== 'string') {
+      continue;
+    }
+
+    const trimmed = tag.trim().replace(/^#+\s*/, '');
+    if (!trimmed) {
+      continue;
+    }
+
+    const normalized = trimmed.replace(/[\s_]+/g, '').toLowerCase();
+
+    if (seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    nextTags.push(trimmed);
+  }
+
+  return nextTags;
+}
+
+function sanitizeSavedPlace(place: SavedPlaceItem): SavedPlaceItem {
+  return {
+    ...place,
+    tags: sanitizeSavedPlaceTags(place.tags),
+  };
+}
 
 interface SavedPlaceState {
   savedByPlaceId: Record<string, boolean>;
@@ -61,7 +94,7 @@ export const useSavedPlaceStore =
                 ? {
                     savedPlacesByPlaceId: {
                       ...state.savedPlacesByPlaceId,
-                      [placeId]: normalizeTaggedPlace(snapshot),
+                      [placeId]: sanitizeSavedPlace(snapshot),
                     },
                   }
                 : null),
@@ -88,7 +121,7 @@ export const useSavedPlaceStore =
 
         upsertSavedPlace: (place) => {
           const placeId = String(place.placeId);
-          const normalizedPlace = normalizeTaggedPlace(place);
+          const normalizedPlace = sanitizeSavedPlace(place);
 
           set((state) => {
             const existing = state.savedPlacesByPlaceId[placeId];
@@ -155,7 +188,7 @@ export const useSavedPlaceStore =
             };
 
             for (const place of places) {
-              const normalizedPlace = normalizeTaggedPlace(place);
+              const normalizedPlace = sanitizeSavedPlace(place);
               const key = String(place.placeId);
 
               if (nextSavedByPlaceId[key] === false) {
@@ -209,7 +242,7 @@ export const useSavedPlaceStore =
             const normalizedSavedPlacesByPlaceId = Object.fromEntries(
               Object.entries(state.savedPlacesByPlaceId).map(([key, place]) => [
                 key,
-                normalizeTaggedPlace(place),
+                sanitizeSavedPlace(place),
               ]),
             );
 
