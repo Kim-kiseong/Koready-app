@@ -10,6 +10,7 @@ import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 import {
   DEFAULT_PLACE_DESCRIPTION,
+  fetchPlaceDetail,
   getMockPlaceTitleById,
   normalizePlaceDescription,
   type PlaceDetail,
@@ -22,10 +23,6 @@ import type {
   SavedPlacesResponse,
   SavedPlaceToggleResponse,
 } from './types';
-import {
-  normalizePlaceTags,
-  normalizeTaggedPlace,
-} from '@/utils/place-tags';
 
 type SavedPlacesEnvelope = {
   success: true;
@@ -42,6 +39,37 @@ type SavedPlaceToggleEnvelope = {
   data: SavedPlaceToggleResponse;
   traceId: string;
 };
+
+export type SavedPlacesFetchMode = 'MOCK' | 'API' | 'FALLBACK';
+
+let lastSavedPlacesFetchMode: SavedPlacesFetchMode = 'MOCK';
+
+export function getSavedPlacesFetchMode() {
+  return lastSavedPlacesFetchMode;
+}
+
+function logSavedPlacesDebug(
+  mode: SavedPlacesFetchMode,
+  items: SavedPlaceItem[],
+  extra?: Record<string, unknown>,
+) {
+  if (!__DEV__) {
+    return;
+  }
+
+  console.info('[saved-places] fetchSavedPlaces', {
+    mode,
+    itemCount: items.length,
+    rawItems: extra?.rawItems,
+    samples: items.slice(0, 5).map((item) => ({
+      placeId: item.placeId,
+      title: item.title,
+      tags: item.tags,
+      saved: item.saved,
+    })),
+    ...extra,
+  });
+}
 
 const savedClient = create({
   baseURL: API_V1_BASE_URL,
@@ -152,7 +180,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     festivalOccurrence: PLACE_METADATA_BY_ID[1102].festivalOccurrence,
     travelStyle: PLACE_METADATA_BY_ID[1102].travelStyle,
     scheduleText: PLACE_METADATA_BY_ID[1102].scheduleText,
-    tags: ['지역축제', '감성', '사진'],
+    tags: ['체험', '재미', '사진'],
     shortDescription: '이팝나무가 활짝 피는 계절에 즐기는 전주의 대표 축제예요.',
     saved: true,
     savedAt: '2026-08-07T06:20:00.000Z',
@@ -168,7 +196,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     festivalOccurrence: PLACE_METADATA_BY_ID[1103].festivalOccurrence,
     travelStyle: PLACE_METADATA_BY_ID[1103].travelStyle,
     scheduleText: PLACE_METADATA_BY_ID[1103].scheduleText,
-    tags: ['지역축제', '힐링', '사진'],
+    tags: ['체험', '재미', '사진'],
     shortDescription: '대나무 숲 산책과 지역 먹거리를 함께 즐길 수 있는 축제예요.',
     saved: true,
     savedAt: '2026-08-07T05:18:00.000Z',
@@ -184,7 +212,7 @@ const INITIAL_MOCK_SAVED_PLACES: SavedPlaceItem[] = [
     festivalOccurrence: PLACE_METADATA_BY_ID[1101].festivalOccurrence,
     travelStyle: PLACE_METADATA_BY_ID[1101].travelStyle,
     scheduleText: PLACE_METADATA_BY_ID[1101].scheduleText,
-    tags: ['지역축제', '감성', '사진'],
+    tags: ['체험', '재미', '사진'],
     shortDescription: '김밥을 주제로 먹고 만들고 즐길 수 있는 김천의 지역 축제예요.',
     saved: true,
     savedAt: '2026-08-07T03:40:00.000Z',
@@ -245,13 +273,13 @@ let savedPlaceCache: SavedPlaceItem[] = sortSavedPlaces(
 );
 
 function cloneSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
-  return normalizeTaggedPlace({
+  return {
     ...place,
     festivalOccurrence: place.festivalOccurrence
       ? { ...place.festivalOccurrence }
       : null,
     tags: [...place.tags],
-  });
+  };
 }
 
 function localizeSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
@@ -373,6 +401,44 @@ function removeSavedPlaceFromCache(placeId: string | number) {
   savedPlaceCache = savedPlaceCache.filter((item) => item.placeId !== key);
 }
 
+const SAVED_PLACE_DETAIL_TAGS_CACHE = new Map<number, string[]>();
+
+async function loadDetailTagsForSavedPlace(placeId: number) {
+  const cachedTags = SAVED_PLACE_DETAIL_TAGS_CACHE.get(placeId);
+  if (cachedTags) {
+    return [...cachedTags];
+  }
+
+  try {
+    const detail = await fetchPlaceDetail(String(placeId));
+    const tags = sanitizeSavedTags(Array.isArray(detail.tags) ? detail.tags : []);
+    SAVED_PLACE_DETAIL_TAGS_CACHE.set(placeId, tags);
+    return [...tags];
+  } catch {
+    return [];
+  }
+}
+
+async function enrichSavedPlacesWithDetailTags(places: SavedPlaceItem[]) {
+  return Promise.all(
+    places.map(async (place) => {
+      if (place.tags.length > 0) {
+        return place;
+      }
+
+      const fallbackTags = await loadDetailTagsForSavedPlace(place.placeId);
+      if (fallbackTags.length === 0) {
+        return place;
+      }
+
+      return {
+        ...place,
+        tags: fallbackTags,
+      };
+    }),
+  );
+}
+
 function shouldUseMockSavedPlaces() {
   const accessToken = useAuthStore.getState().accessToken;
   return !accessToken || (__DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN);
@@ -398,12 +464,18 @@ function buildAddressSummary(address: string) {
   return cleaned;
 }
 
+function sanitizeSavedTags(tags: unknown[]) {
+  return tags
+    .filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+    .map((tag) => tag.trim());
+}
+
 export function buildSavedPlaceFromPickCard(
   card: Pick<PicksCard, 'placeId' | 'title' | 'locationText' | 'imageUrl' | 'saved' | 'tags' | 'shortDescription' | 'serviceRegionCode' | 'travelStyle'>,
   source: SavedPlaceSource,
 ): SavedPlaceItem {
   const metadata = PLACE_METADATA_BY_ID[card.placeId];
-  const tags = normalizePlaceTags(card.tags, card.travelStyle, card.title);
+  const tags = sanitizeSavedTags(card.tags);
   return {
     placeId: card.placeId,
     title: card.title,
@@ -430,12 +502,8 @@ export function buildSavedPlaceFromPlaceDetail(
   const imageUrl = getSavedPlaceImageUriFromDetail(place) || getAssetUri(HomeImages.JEONJU_IPAP_FESTIVAL);
   const numericPlaceId = place.numericId ?? Number(place.id);
   const safeTags = Array.isArray(place.tags)
-    ? normalizePlaceTags(
-        place.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0),
-        metadata.travelStyle,
-        place.title,
-      )
-    : normalizePlaceTags([], metadata.travelStyle, place.title);
+    ? sanitizeSavedTags(place.tags)
+    : [];
   const safeDescription = normalizePlaceDescription(place.description ?? DEFAULT_PLACE_DESCRIPTION);
   const shortDescription =
     safeDescription.oneLineDescription ||
@@ -475,21 +543,45 @@ export async function fetchSavedPlaces(
   size = 20,
 ): Promise<SavedPlacesResponse> {
   if (shouldUseMockSavedPlaces()) {
-    return paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
+    const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
+    const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
+    lastSavedPlacesFetchMode = 'MOCK';
+    logSavedPlacesDebug('MOCK', enrichedItems, { cursor, size, rawItems: result.items });
+    return {
+      ...result,
+      items: enrichedItems,
+    };
   }
 
   try {
     const response = await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
       params: { size, ...(cursor ? { cursor } : {}) },
     });
-    const normalizedItems = response.data.data.items.map(cloneSavedPlaceItem);
-    mergeSavedPlacesIntoCache(normalizedItems);
+    const enrichedItems = await enrichSavedPlacesWithDetailTags(
+      response.data.data.items.map(cloneSavedPlaceItem),
+    );
+    lastSavedPlacesFetchMode = 'API';
+    mergeSavedPlacesIntoCache(enrichedItems);
+    logSavedPlacesDebug('API', enrichedItems, {
+      cursor,
+      size,
+      nextCursor: response.data.data.nextCursor,
+      hasMore: response.data.data.hasMore,
+      rawItems: response.data.data.items,
+    });
     return {
       ...response.data.data,
-      items: normalizedItems,
+      items: enrichedItems,
     };
   } catch {
-    return paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
+    const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
+    const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
+    lastSavedPlacesFetchMode = 'FALLBACK';
+    logSavedPlacesDebug('FALLBACK', enrichedItems, { cursor, size, rawItems: result.items });
+    return {
+      ...result,
+      items: enrichedItems,
+    };
   }
 }
 

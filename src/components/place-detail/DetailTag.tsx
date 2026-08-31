@@ -5,9 +5,11 @@ import { Palette } from '@/constants/colors';
 import { toDisplayText } from '@/utils/list-item';
 
 export default function DetailTag({ label }: { label: unknown }) {
+  const displayLabel = toDisplayText(label).replace(/^#+\s*/, '').trim();
+
   return (
     <View style={styles.tag}>
-      <CustomText style={styles.label}>{toDisplayText(label)}</CustomText>
+      <CustomText style={styles.label}>{displayLabel}</CustomText>
     </View>
   );
 }

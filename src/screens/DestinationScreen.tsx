@@ -140,9 +140,12 @@ export default function DestinationScreen() {
   }, [setCandidateSet, isDevMockSession, language]);
 
   useEffect(() => {
-    loadCandidateSet();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDevMockSession, language]);
+    const frameId = requestAnimationFrame(() => {
+      loadCandidateSet();
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [loadCandidateSet]);
 
   const handleNext = () => {
     if (selectedPreferencePlaceIds.length === 0) return;
@@ -158,7 +161,11 @@ export default function DestinationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 3, totalSteps: 3 }} />
+      <OnboardingHeader
+        onBack={() => goBackOrRoot(router, '/login')}
+        progress={{ currentStep: 3, totalSteps: 3 }}
+        rightIcon={null}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>

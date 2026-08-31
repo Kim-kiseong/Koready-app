@@ -33,7 +33,9 @@ export default function EventGridCard({ event, categoryLabel, width, onPress }: 
           <LocationPinIcon />
           <CustomText style={styles.locationText}>{event.location}</CustomText>
         </View>
-        <CustomText style={styles.title}>{event.title}</CustomText>
+        <CustomText numberOfLines={2} style={styles.title}>
+          {event.title}
+        </CustomText>
         <CustomText style={styles.dateRange}>{event.dateRangeLabel}</CustomText>
       </View>
     </Pressable>
@@ -56,30 +58,48 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Palette.grey200,
+    backgroundColor: Palette.white,
     overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   photoSection: {
     height: 110,
-    padding: 10,
+    backgroundColor: Palette.grey150,
+    justifyContent: 'flex-start',
+    padding: 16,
   },
   imageFallback: {
     backgroundColor: Palette.grey200,
   },
   badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#000000',
-    borderRadius: 100,
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     paddingHorizontal: 10,
     paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   badgeText: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 12,
+    lineHeight: 16.8,
     color: '#ffffff',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   content: {
     padding: 12,
-    gap: 4,
+    gap: 6,
   },
   locationRow: {
     flexDirection: 'row',
@@ -87,18 +107,21 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   locationText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.primary,
   },
   title: {
     fontFamily: FontFamily.pretendard.bold,
     fontSize: 16,
+    lineHeight: 22.4,
     color: Palette.text,
   },
   dateRange: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,
+    lineHeight: 19.6,
     color: Palette.grey600,
   },
 });

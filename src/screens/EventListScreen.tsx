@@ -25,6 +25,7 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
+import { formatPlaceTravelStyle } from '@/utils/place-i18n';
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const EN_MONTH_NAMES = [
@@ -56,6 +57,7 @@ export default function EventListScreen() {
   const router = useRouter();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
+  const isEnglish = language === 'EN';
   const { width: windowWidth } = useWindowDimensions();
   // Figma's grid card is a fixed 165pt that only fits 2-per-row at exactly the
   // 375pt reference width — on any other device width that leaves either dead
@@ -119,7 +121,9 @@ export default function EventListScreen() {
           </View>
 
           <View style={styles.toolsRow}>
-            <Pressable style={styles.sortButton} onPress={() => setSortSheetOpen(true)}>
+            <Pressable
+              style={[styles.sortButton, isEnglish && styles.sortButtonEnglish]}
+              onPress={() => setSortSheetOpen(true)}>
               <CustomText style={styles.sortButtonText}>
                 {sortOrder === 'RECOMMENDED' ? t.eventList.sortRecommended : t.eventList.sortDeadline}
               </CustomText>
@@ -146,7 +150,7 @@ export default function EventListScreen() {
             <EventGridCard
               key={event.id}
               event={event}
-              categoryLabel={t.eventFilter.typeOptions[event.category]}
+              categoryLabel={formatPlaceTravelStyle(event.category, language)}
               width={gridCardWidth}
               onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
             />
@@ -222,21 +226,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    height: 36,
+    height: 30,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Palette.grey200,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
+    paddingLeft: 12,
+    paddingRight: 8,
+    justifyContent: 'center',
+  },
+  sortButtonEnglish: {
+    width: 124,
   },
   sortButtonText: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.grey500,
   },
   filterButton: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Palette.grey200,

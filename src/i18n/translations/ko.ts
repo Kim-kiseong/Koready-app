@@ -293,13 +293,29 @@ export interface Translations {
     searchPlaceholder: string;
     addHome: string;
     currentAddressBadge: string;
+    alerts: {
+      errorTitle: string;
+      locationMissing: string;
+      setDefaultFailed: string;
+    };
   };
   addressSearch: {
     title: string;
+    alerts: {
+      errorTitle: string;
+      mapServiceError: string;
+      searchResultExpired: string;
+      saveFailed: string;
+    };
   };
   addressEdit: {
     title: string;
     delete: string;
+    alerts: {
+      errorTitle: string;
+      deleteFailed: string;
+      refreshFailed: string;
+    };
   };
   deleteAddressModal: {
     suffix: string;
@@ -829,13 +845,29 @@ export const ko: Translations = {
     searchPlaceholder: '도로명, 건물명, 지번으로 검색해 보세요',
     addHome: '우리집 추가',
     currentAddressBadge: '현재 설정된 주소',
+    alerts: {
+      errorTitle: '오류',
+      locationMissing: '삭제되었거나 존재하지 않는 위치예요.',
+      setDefaultFailed: '기본 위치 변경에 실패했습니다.',
+    },
   },
   addressSearch: {
     title: '주소 검색',
+    alerts: {
+      errorTitle: '오류',
+      mapServiceError: '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.',
+      searchResultExpired: '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.',
+      saveFailed: '위치 저장에 실패했습니다.',
+    },
   },
   addressEdit: {
     title: '주소 편집',
     delete: '삭제',
+    alerts: {
+      errorTitle: '오류',
+      deleteFailed: '위치 삭제에 실패했습니다.',
+      refreshFailed: '위치 목록을 새로고침하지 못했어요. 화면을 다시 열어 확인해 주세요.',
+    },
   },
   deleteAddressModal: {
     suffix: '주소를 삭제하시나요?',
