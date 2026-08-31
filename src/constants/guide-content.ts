@@ -549,6 +549,7 @@ export const GUIDE_CONTENT: Record<string, GuideContent> = {
             },
             title: "카드 결제",
             description: "국내외 신용카드로 결제",
+            orientation: "row",
           },
           {
             icon: {
@@ -558,6 +559,7 @@ export const GUIDE_CONTENT: Record<string, GuideContent> = {
             },
             title: "현금 결제",
             description: "현금으로 직접 결제",
+            orientation: "row",
           },
         ],
       },
@@ -2047,6 +2049,7 @@ export const GUIDE_CONTENT_EN: Record<string, GuideContent> = {
             },
             title: "Card Payment",
             description: "Pay with a domestic or international credit card",
+            orientation: "row",
           },
           {
             icon: {
@@ -2056,6 +2059,7 @@ export const GUIDE_CONTENT_EN: Record<string, GuideContent> = {
             },
             title: "Cash Payment",
             description: "Pay directly with cash",
+            orientation: "row",
           },
         ],
       },

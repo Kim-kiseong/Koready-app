@@ -340,9 +340,13 @@ export const en: DeepPartial<Translations> = {
     seeAll: 'View all',
     categories: {
       POPULAR: 'Popular',
+      LOCAL_FOOD: 'Local Food',
       LOCAL_FESTIVAL: 'Local Festivals',
-      EXHIBITION_MUSEUM: 'Exhibitions & Museums',
+      TRADITIONAL_MARKET: 'Traditional Markets',
+      CULTURE_EXPERIENCE: 'Culture Experiences',
       NATURE: 'Nature Spots',
+      EXHIBITION_MUSEUM: 'Exhibitions & Museums',
+      DRAMA_LOCATION: 'Drama Filming Locations',
     },
   },
   map: {
