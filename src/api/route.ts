@@ -1,3 +1,5 @@
+import { isAxiosError } from 'axios';
+
 import { client } from './client';
 import { fetchMyLocations } from './address';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
@@ -114,6 +116,20 @@ const ROUTE_CACHE = new Map<string, BuddyRoute>();
 
 function isDevMockSession() {
   return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
+}
+
+function logRouteFailure(call: string, error: unknown, context?: Record<string, unknown>) {
+  if (isAxiosError(error)) {
+    console.warn(`[route] ${call} failed, using fallback`, {
+      ...context,
+      status: error.response?.status,
+      code: error.response?.data?.code,
+      message: error.response?.data?.message ?? error.message,
+    });
+    return;
+  }
+
+  console.warn(`[route] ${call} failed, using fallback`, { ...context, error });
 }
 
 const FALLBACK_ORIGIN_KO: RoutePlace = {
@@ -464,6 +480,10 @@ export async function createBuddyRoute(
     return normalizeRouteResponse(response.data.data);
   } catch (error) {
     if (__DEV__) {
+      // Every real /routes failure (auth, validation, network — anything) used
+      // to be swallowed here with no trace, always landing on the exact same
+      // hardcoded createMockRoute() output regardless of what actually broke.
+      logRouteFailure('POST /routes', error, { originLocationId: request.originLocationId, destinationPlaceId: request.destinationPlaceId });
       return fallbackRoute();
     }
 
@@ -495,6 +515,7 @@ export async function fetchBuddyRouteDetail(
     return normalizeRouteResponse(response.data.data);
   } catch (error) {
     if (__DEV__) {
+      logRouteFailure(`GET /routes/${routeId}`, error);
       return fallbackRoute();
     }
 

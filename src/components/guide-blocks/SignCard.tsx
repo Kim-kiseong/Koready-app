@@ -1,15 +1,12 @@
-import { SymbolView } from 'expo-symbols';
-import type { ComponentProps } from 'react';
+import { Image, type ImageSource } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
-
 export type SignCardProps = {
-  icon: SymbolName;
+  icon: ImageSource;
   title: string;
   translations: string[];
   caption?: string;
@@ -20,7 +17,7 @@ export default function SignCard({ icon, title, translations, caption }: SignCar
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
-        <SymbolView name={icon} size={32} weight="regular" tintColor="#ffffff" />
+        <Image source={icon} style={styles.icon} contentFit="contain" />
         <CustomText style={styles.title}>{title}</CustomText>
         <View style={styles.divider} />
         <View style={styles.translations}>
@@ -49,6 +46,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: Palette.grey700,
     padding: 20,
+  },
+  icon: {
+    width: 48,
+    height: 48,
   },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,
