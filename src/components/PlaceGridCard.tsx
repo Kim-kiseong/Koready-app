@@ -6,8 +6,8 @@ import type { PlaceListItem } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { formatPlaceRegionName, formatPlaceTitle, formatPlaceTravelStyle } from '@/utils/place-i18n';
 import { useLanguageStore } from '@/store/language-store';
+import { formatPlaceRegionName, formatPlaceTitle, formatPlaceTravelStyle } from '@/utils/place-i18n';
 
 export type PlaceGridCardProps = {
   place: PlaceListItem;
@@ -26,9 +26,7 @@ export default function PlaceGridCard({ place, width, onPress }: PlaceGridCardPr
       <View style={styles.photoSection}>
         <Image source={{ uri: place.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
 
-        <View style={styles.badge}>
-          <CustomText style={styles.badgeText}>{travelStyleText}</CustomText>
-        </View>
+        <CustomText style={styles.badge}>{travelStyleText}</CustomText>
       </View>
 
       <View style={styles.content}>
@@ -79,18 +77,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 10,
+    alignSelf: 'flex-start',
     borderRadius: 999,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     paddingHorizontal: 10,
     paddingVertical: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  badgeText: {
+    flexShrink: 0,
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 12,
+    fontSize: 11.2,
     lineHeight: 16.8,
     color: Palette.white,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',

@@ -10,7 +10,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
@@ -38,6 +38,7 @@ export default function LanguageSwitchModal({
   onConfirm,
 }: LanguageSwitchModalProps) {
   const t = useTranslation();
+  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   // Modal's own animationType="slide" translates the whole tree it renders —
   // backdrop included — so the dim overlay used to slide up from the bottom
@@ -81,7 +82,7 @@ export default function LanguageSwitchModal({
     code === 'KO' ? t.home.languageKo : t.home.languageEn;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent statusBarTranslucent animationType="none" onRequestClose={onCancel}>
       <View style={styles.overlay}>
         <AnimatedPressable
           style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdropOpacity }]}
@@ -93,7 +94,7 @@ export default function LanguageSwitchModal({
           </View>
 
           <View style={styles.textGroup}>
-            <CustomText style={styles.title}>{t.languageModal.title}</CustomText>
+            <CustomText style={styles.title}>{t.languageModal.title[targetLanguage]}</CustomText>
             <CustomText style={styles.subtitle}>{t.languageModal.subtitle[targetLanguage]}</CustomText>
           </View>
 
@@ -114,7 +115,7 @@ export default function LanguageSwitchModal({
             </View>
           </View>
 
-          <SafeAreaView edges={['bottom']} style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
             <Pressable
               style={[styles.cancelButton, loading && styles.buttonDisabled]}
               onPress={onCancel}
@@ -128,7 +129,7 @@ export default function LanguageSwitchModal({
                 <CustomText style={styles.confirmButtonText}>{t.languageModal.confirm}</CustomText>
               )}
             </Pressable>
-          </SafeAreaView>
+          </View>
         </Animated.View>
       </View>
     </Modal>

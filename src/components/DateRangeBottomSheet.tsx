@@ -71,7 +71,9 @@ export type DateRangeBottomSheetProps = {
 export default function DateRangeBottomSheet({ visible, value, onApply, onClose }: DateRangeBottomSheetProps) {
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
+  const isEnglish = language === 'EN';
   const { height: windowHeight } = useWindowDimensions();
+  const sheetHeight = windowHeight * (isEnglish ? 0.84 : 0.78);
   const [draft, setDraft] = useState<DateRangeSelection>(value);
   const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
   const today = useMemo(() => getTodayDateOnly(), []);
@@ -186,7 +188,8 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
         <Animated.View
           style={[
             styles.sheet,
-            { height: windowHeight * 0.78, transform: [{ translateY: sheetTranslateY }] },
+            isEnglish && styles.sheetEnglish,
+            { height: sheetHeight, transform: [{ translateY: sheetTranslateY }] },
           ]}
         >
           <View style={styles.body}>
@@ -461,6 +464,9 @@ const styles = StyleSheet.create({
     gap: 16,
     overflow: 'hidden',
   },
+  sheetEnglish: {
+    bottom: 10,
+  },
   body: {
     flex: 1,
   },
@@ -497,6 +503,7 @@ const styles = StyleSheet.create({
   },
   calendarContent: {
     gap: 24,
+    paddingTop: 24,
     paddingBottom: 8,
   },
   monthBlock: {
