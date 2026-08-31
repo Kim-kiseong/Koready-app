@@ -697,7 +697,7 @@ function filterMockPlaces(
 }
 
 function isWithinRequestedDateRange(
-  place: MockPlaceListItem,
+  place: { festivalOccurrence: SavedPlaceFestivalOccurrence | null },
   dateFrom?: string | null,
   dateTo?: string | null,
 ) {
@@ -2181,7 +2181,22 @@ export async function fetchPlaces(params: FetchPlacesParams): Promise<PlaceListR
     }
 
     const response = await client.get<PlaceListEnvelope>(`/places?${query.toString()}`);
-    return mapPlaceListResponse(response.data.data);
+    const result = mapPlaceListResponse(response.data.data);
+
+    // GET /places has no dateFrom/dateTo param — the backend contract only
+    // supports serviceRegionCode/travelStyles/sort/cursor/size — so the date
+    // filter picked in PlaceFilterBottomSheet has to be applied here instead,
+    // otherwise it's silently ignored against the real API.
+    if (!params.dateFrom && !params.dateTo) {
+      return result;
+    }
+
+    return {
+      ...result,
+      items: result.items.filter((item) =>
+        isWithinRequestedDateRange(item, params.dateFrom, params.dateTo),
+      ),
+    };
   } catch (error) {
     if (__DEV__ && isAxiosError(error)) {
       return buildMockPlaceList(params);
@@ -2213,7 +2228,10 @@ type PlaceDetailApiResponse = {
   isSaved: boolean;
   images: PlaceDetailApiImage[];
   description: PlaceDescription | null;
-  relatedPlaces: PlaceDetailApiRelatedPlace[];
+  // Optional/nullable defensively: if the backend omits this field, treating it
+  // as required throws inside mapPlaceDetailResponse, which isn't an AxiosError
+  // and so isn't caught by fetchPlaceDetail's fallback — the screen just hangs.
+  relatedPlaces?: PlaceDetailApiRelatedPlace[] | null;
   availableTabs?: PlaceDetailTab[];
 };
 
@@ -2226,9 +2244,10 @@ type PlaceDetailEnvelope = {
 };
 
 function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
+  const apiRelatedPlaces = response.relatedPlaces ?? [];
   const relatedPlaces =
-    response.relatedPlaces.length > 0
-      ? response.relatedPlaces.map((related) => ({
+    apiRelatedPlaces.length > 0
+      ? apiRelatedPlaces.map((related) => ({
           id: String(related.placeId),
           title: related.title,
           imageUrl: related.imageUrl,
@@ -2320,13 +2339,22 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
             missingDescriptionFields: getMissingPlaceDescriptionFields(
               response.data.data.description,
             ),
-            relatedPlacesCount: response.data.data.relatedPlaces.length,
-            relatedPlaces: response.data.data.relatedPlaces,
+            relatedPlacesFieldPresent: 'relatedPlaces' in response.data.data,
+            relatedPlacesCount: response.data.data.relatedPlaces?.length ?? 0,
+            relatedPlaces: response.data.data.relatedPlaces ?? [],
           });
         }
         return mapPlaceDetailResponse(response.data.data);
       } catch (error) {
         if (!isAxiosError(error)) throw error;
+        if (__DEV__) {
+          console.warn('[place-detail] GET /places/{placeId} failed, using fallback', {
+            placeId: numericId,
+            language,
+            status: error.response?.status,
+            message: error.message,
+          });
+        }
         return buildFallbackPlaceDetail(placeId);
       } finally {
         PLACE_DETAIL_IN_FLIGHT_REQUESTS.delete(cacheKey);

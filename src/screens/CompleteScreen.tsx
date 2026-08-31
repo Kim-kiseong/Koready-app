@@ -138,7 +138,7 @@ export default function CompleteScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} rightIcon={null} />
 
       <View style={styles.content}>
         <Image

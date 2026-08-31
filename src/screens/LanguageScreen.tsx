@@ -92,7 +92,11 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 24,
+    // Figma reserves the shared 54pt header's height here even though this
+    // screen renders no header — content starts at the same 122pt mark
+    // (54 header + 24 margin) as the sibling onboarding screens that do
+    // render one.
+    paddingTop: 78,
     gap: 32,
   },
   headerGroup: {

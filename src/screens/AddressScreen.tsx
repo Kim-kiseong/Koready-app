@@ -91,13 +91,6 @@ export default function AddressScreen() {
           <CustomText style={styles.searchPlaceholder}>{t.address.searchPlaceholder}</CustomText>
         </Pressable>
 
-        <Pressable
-          style={styles.currentLocationButton}
-          onPress={() => router.push('/address-search')}>
-          <Image source={require('@/assets/images/my_location.svg')} style={styles.myLocationIcon} />
-          <CustomText style={styles.currentLocationText}>{t.location.currentLocationButton}</CustomText>
-        </Pressable>
-
         <Pressable style={styles.addHomeRow} onPress={() => router.push('/address-search')}>
           <Image source={require('@/assets/images/myhome.svg')} style={styles.myHomeIcon} />
           <CustomText style={styles.addHomeText}>{t.address.addHome}</CustomText>
@@ -166,22 +159,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Palette.grey400,
   },
-  currentLocationButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Palette.grey200,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  currentLocationText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.text,
-  },
   addHomeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,10 +176,6 @@ const styles = StyleSheet.create({
   pencilIcon: {
     width: 24,
     height: 24,
-  },
-  myLocationIcon: {
-    width: 18,
-    height: 18,
   },
   myHomeIcon: {
     width: 17,

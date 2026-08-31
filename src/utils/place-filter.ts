@@ -27,17 +27,6 @@ export const DEFAULT_PLACE_FILTER_SELECTION: PlaceFilterSelection = {
   },
 };
 
-export function formatPlaceFilterDateButtonLabel(
-  selection: PlaceFilterSelection,
-  language: 'KO' | 'EN' = 'KO',
-) {
-  if (selection.dateRange.startDate && selection.dateRange.endDate) {
-    return formatPlaceDateRangeLabel(selection.dateRange.startDate, selection.dateRange.endDate);
-  }
-
-  return language === 'EN' ? 'Select Dates' : '날짜 선택';
-}
-
 export function formatPlaceDateRangeLabel(startDate: string, endDate: string) {
   if (startDate === endDate) {
     return formatPlaceDateLabel(startDate);

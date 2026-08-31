@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 16,
     color: Palette.text,
   },
