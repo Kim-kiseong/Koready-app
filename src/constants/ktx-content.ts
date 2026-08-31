@@ -1,3 +1,5 @@
+export type KtxInfoIconKind = 'calendar' | 'globe' | 'warning';
+
 export const KTX_INTRO = {
   hero: require("@/assets/images/guides/ktx-intro-hero.jpg"),
   title: "KTX 쉽게 예매하기",
@@ -5,25 +7,17 @@ export const KTX_INTRO = {
     "서울에서 부산, 경주, 강릉, 전주, 여수까지!\nKTX를 타고 한국 로컬 여행을 떠나보세요.",
   infoRows: [
     {
-      icon: {
-        ios: "calendar",
-        android: "calendar_month",
-        web: "calendar_month",
-      } as const,
+      icon: "calendar" as const,
       label: "예매 시작",
       value: "출발 1개월 전 오전 7시부터",
     },
     {
-      icon: { ios: "globe", android: "public", web: "public" } as const,
+      icon: "globe" as const,
       label: "예매 채널",
       value: "KORAIL 공식 웹사이트 / Korail+ 앱",
     },
     {
-      icon: {
-        ios: "exclamationmark.triangle",
-        android: "warning",
-        web: "warning",
-      } as const,
+      icon: "warning" as const,
       label: "주의 사항",
       value: "KTX와 SRT는 예매 사이트가 달라요!",
     },
@@ -99,25 +93,17 @@ export const KTX_INTRO_EN = {
     "From Seoul to Busan, Gyeongju, Gangneung, Jeonju, and Yeosu! Take the KTX and explore local destinations across Korea.",
   infoRows: [
     {
-      icon: {
-        ios: "calendar",
-        android: "calendar_month",
-        web: "calendar_month",
-      } as const,
+      icon: "calendar" as const,
       label: "Booking Opens",
       value: "From 7:00 AM, one month before departure",
     },
     {
-      icon: { ios: "globe", android: "public", web: "public" } as const,
+      icon: "globe" as const,
       label: "Where to Book",
       value: "KORAIL Official Website / Korail+ App",
     },
     {
-      icon: {
-        ios: "exclamationmark.triangle",
-        android: "warning",
-        web: "warning",
-      } as const,
+      icon: "warning" as const,
       label: "Good to Know",
       value: "KTX and SRT use different booking websites!",
     },
