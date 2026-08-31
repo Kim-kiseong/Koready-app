@@ -16,6 +16,15 @@ export type Card = {
   color?: string;
   title: string;
   description: string;
+  /** 'stacked' (default) — icon on top, text below. 'row' — icon on the left,
+   * title/description stacked to its right (taxi's payment-method cards, bus's
+   * ticket-type cards). */
+  orientation?: 'stacked' | 'row';
+  /** Overrides for the icon circle — call-center style cards use a red circle
+   * instead of the default mint one. */
+  iconBackground?: string;
+  iconTintColor?: string;
+  iconBorderless?: boolean;
 };
 
 export type CardListProps = {
@@ -29,32 +38,58 @@ export type CardListProps = {
 export default function CardList({ layout, cards }: CardListProps) {
   return (
     <View style={[styles.wrap, layout === 'row' ? styles.row : styles.column]}>
-      {cards.map((card) => (
-        <View
-          key={card.title}
-          style={[
-            styles.card,
-            layout === 'row' && styles.cardFlex,
-            card.color ? { backgroundColor: card.color, borderWidth: 0 } : null,
-          ]}>
-          {card.image ? (
-            <Image source={card.image} style={styles.iconImage} contentFit="cover" />
-          ) : card.icon ? (
-            <View style={styles.iconCircle}>
-              <SymbolView name={card.icon} size={18} weight="regular" tintColor={Palette.primary} />
-            </View>
-          ) : null}
-          <CustomText style={[styles.title, card.color && styles.titleOnColor]}>
-            {card.emoji ? `${card.emoji} ` : ''}
-            {card.title}
-          </CustomText>
-          {card.description ? (
-            <CustomText style={[styles.description, card.color && styles.descriptionOnColor]}>
-              {card.description}
+      {cards.map((card) => {
+        const isRow = card.orientation === 'row';
+
+        const icon = card.image ? (
+          <Image source={card.image} style={styles.iconImage} contentFit="cover" />
+        ) : card.icon ? (
+          <View
+            style={[
+              styles.iconCircle,
+              card.iconBackground ? { backgroundColor: card.iconBackground } : null,
+              card.iconBorderless ? styles.iconCircleBorderless : null,
+            ]}>
+            <SymbolView name={card.icon} size={18} weight="regular" tintColor={card.iconTintColor ?? Palette.primary} />
+          </View>
+        ) : null;
+
+        const text = (
+          <View style={isRow ? styles.textGroupRow : styles.textGroupStacked}>
+            <CustomText style={[styles.title, card.color && styles.titleOnColor]}>
+              {card.emoji ? `${card.emoji} ` : ''}
+              {card.title}
             </CustomText>
-          ) : null}
-        </View>
-      ))}
+            {card.description ? (
+              <CustomText style={[styles.description, card.color && styles.descriptionOnColor]}>
+                {card.description}
+              </CustomText>
+            ) : null}
+          </View>
+        );
+
+        return (
+          <View
+            key={card.title}
+            style={[
+              styles.card,
+              layout === 'row' && styles.cardFlex,
+              card.color ? { backgroundColor: card.color, borderWidth: 0 } : null,
+            ]}>
+            {isRow ? (
+              <View style={styles.iconTextRow}>
+                {icon}
+                {text}
+              </View>
+            ) : (
+              <>
+                {icon}
+                {text}
+              </>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -96,6 +131,20 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.secondary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconCircleBorderless: {
+    borderWidth: 0,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  textGroupStacked: {
+    gap: 8,
+  },
+  textGroupRow: {
+    gap: 4,
   },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,

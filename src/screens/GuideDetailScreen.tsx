@@ -57,7 +57,7 @@ function GuideBlockView({ block }: { block: GuideBlock }) {
     case 'routeStops':
       return <RouteStops caption={block.caption} stops={block.stops} />;
     case 'horiTipInline':
-      return <HoriTipCard title={block.title} body={block.body} />;
+      return <HoriTipCard variant="inline" title={block.title} body={block.body} />;
     case 'notificationCard':
       return (
         <NotificationCard

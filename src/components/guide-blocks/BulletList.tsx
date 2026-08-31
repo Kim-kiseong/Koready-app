@@ -49,9 +49,10 @@ const styles = StyleSheet.create({
   },
   columns: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 18,
   },
   column: {
+    flex: 1,
     gap: 14,
   },
   label: {
@@ -73,8 +74,11 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   itemText: {
+    flex: 1,
+    flexShrink: 1,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.text,
   },
 });
