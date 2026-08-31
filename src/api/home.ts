@@ -57,7 +57,7 @@ const MOCK_GUIDES: GuideArticle[] = [
     badge: '이동 가이드',
     title: 'KTX 쉽게 예매하기',
     description: '공식 예매 방법부터 좌석 선택, 결제,\n티켓 확인까지 한 번에!',
-    tags: ['KTX', '교통', '공식예매', '외국인 가능'],
+    tags: ['KTX', '교통'],
     imageKey: 'KTX_GUIDE',
   },
 ];

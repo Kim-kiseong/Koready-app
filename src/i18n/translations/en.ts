@@ -14,6 +14,18 @@ export const en: DeepPartial<Translations> = {
     subtitle: '언어를 선택해주세요',
     next: 'Continue',
   },
+  languageModal: {
+    title: {
+      EN: 'Switch to English?',
+      KO: 'Switch to Korean?',
+    },
+    subtitle: {
+      EN: 'Would you like to change the app language to English?\nSome screens may reload after you switch.',
+      KO: 'Would you like to change the app language to Korean?\nSome screens may reload after you switch.',
+    },
+    cancel: 'Cancel',
+    confirm: 'Switch',
+  },
   location: {
     title: 'Search Location',
     headline: 'Where are you staying in Korea?',

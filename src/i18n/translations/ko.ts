@@ -283,7 +283,7 @@ export interface Translations {
     close: string;
   };
   languageModal: {
-    title: string;
+    title: Record<LanguageCode, string>;
     subtitle: Record<LanguageCode, string>;
     cancel: string;
     confirm: string;
@@ -832,10 +832,13 @@ export const ko: Translations = {
     close: '가이드 닫기',
   },
   languageModal: {
-    title: '언어를 변경할까요?',
+    title: {
+      EN: '영어로 변경할까요?',
+      KO: '한국어로 변경할까요?',
+    },
     subtitle: {
-      EN: '앱 언어를 English로 전환할까요? \n변경 후 일부 화면은 다시 불러올 수 있어요.',
-      KO: '앱 언어를 한국어로 전환할까요? \n변경 후 일부 화면은 다시 불러올 수 있어요.',
+      EN: '앱 언어를 English로 전환할까요?\n변경 후 일부 화면은 다시 불러올 수 있어요.',
+      KO: '앱 언어를 한국어로 전환할까요?\n변경 후 일부 화면은 다시 불러올 수 있어요.',
     },
     cancel: '취소',
     confirm: '변경하기',

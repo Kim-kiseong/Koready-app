@@ -23,9 +23,9 @@ export default function EventGridCard({ event, categoryLabel, width, onPress }: 
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
         )}
-        <View style={styles.badge}>
-          <CustomText style={styles.badgeText}>{categoryLabel}</CustomText>
-        </View>
+        <CustomText style={styles.badge}>
+          {categoryLabel}
+        </CustomText>
       </View>
 
       <View style={styles.content}>
@@ -83,14 +83,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     paddingHorizontal: 10,
     paddingVertical: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  badgeText: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 12,
+    fontSize: 11.6,
     lineHeight: 16.8,
     color: '#ffffff',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',

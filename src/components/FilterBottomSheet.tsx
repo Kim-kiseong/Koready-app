@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -74,12 +74,14 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
   const [draft, setDraft] = useState<EventFilters>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
-  useEffect(() => {
-    if (visible) setDraft(value);
-  }, [visible, value]);
-
   const handleApply = () => {
     onApply(draft);
+    onClose();
+  };
+
+  const handleClose = () => {
+    setDraft(value);
+    setIsDateSheetOpen(false);
     onClose();
   };
 
@@ -91,8 +93,8 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={[styles.sheet, { maxHeight: windowHeight * 0.85 }]} onPress={() => {}}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
@@ -180,7 +182,7 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
           </ScrollView>
 
           <SafeAreaView edges={['bottom']} style={styles.footer}>
-            <Pressable style={styles.cancelButton} onPress={onClose}>
+            <Pressable style={styles.cancelButton} onPress={handleClose}>
               <CustomText style={styles.cancelButtonText}>{t.eventFilter.cancel}</CustomText>
             </Pressable>
             <Pressable style={styles.applyButton} onPress={handleApply}>
@@ -221,6 +223,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 8,
+    paddingBottom:16,
     gap: 16,
   },
   handleArea: {
@@ -241,6 +244,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
+    paddingBottom: 12,
     color: Palette.grey600,
   },
   resetText: {
@@ -319,7 +323,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     gap: 12,
-    paddingTop: 14,
+    paddingTop: 10,
+    marginBottom: 16,
   },
   cancelButton: {
     flex: 1,
