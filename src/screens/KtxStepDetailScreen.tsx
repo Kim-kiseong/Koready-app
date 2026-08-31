@@ -87,7 +87,7 @@ export default function KtxStepDetailScreen() {
           <CustomText style={styles.screenshotCaption}>{detail.screenshotCaption}</CustomText>
         </View>
 
-        <HoriTipCard body={detail.tipBody} />
+        <HoriTipCard variant="inline" body={detail.tipBody} />
 
         <BulletList columns={detail.stationColumns} />
 

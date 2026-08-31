@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
+import RichText from '@/components/RichText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
@@ -10,12 +11,37 @@ export type HoriTipCardProps = {
   title?: string;
   body?: string;
   checklist?: string[];
+  /**
+   * 'summary' — the closing tip at the bottom of a guide (mascot peeking over
+   * the top-left corner, optional checklist). Default, matches the original design.
+   * 'inline' — a tip placed mid-content (KTX step 3, subway/taxi/bus guides):
+   * the full-body magnifying-glass mascot sits inside the card on the right,
+   * and `body` supports `**bold**` markers for inline emphasis.
+   */
+  variant?: 'summary' | 'inline';
 };
 
 // Shared "Hori Tip" callout — mascot badge overlapping a mint tip card. Mirrors
 // the pattern already in RouteDetailScreen's TipCard/SegmentTipContent, pulled
 // out here since every guide detail screen repeats it with static copy.
-export default function HoriTipCard({ title = 'Hori Tip', body, checklist }: HoriTipCardProps) {
+export default function HoriTipCard({ title = 'Hori Tip', body, checklist, variant = 'summary' }: HoriTipCardProps) {
+  if (variant === 'inline') {
+    return (
+      <View style={styles.inlineCard}>
+        <View style={styles.inlineTextGroup}>
+          <View style={styles.header}>
+            <InfoBadgeIcon />
+            <CustomText style={styles.title}>{title}</CustomText>
+          </View>
+
+          {body ? <RichText text={body} style={styles.inlineBody} emphasisStyle={styles.inlineBodyEmphasis} /> : null}
+        </View>
+
+        <Image source={require('@/assets/images/hori-magnify.png')} style={styles.inlineMascot} contentFit="contain" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrap}>
       <Image
@@ -97,6 +123,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey700,
+  },
+  // Inline variant — mascot sits inside the card, to the right.
+  inlineCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Palette.tipBorder,
+    backgroundColor: Palette.secondary,
+  },
+  inlineTextGroup: {
+    flex: 1,
+    gap: 8,
+  },
+  inlineBody: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 22.4,
+    color: Palette.grey600,
+  },
+  inlineBodyEmphasis: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    color: Palette.grey700,
+  },
+  inlineMascot: {
+    width: 68,
+    height: 76,
   },
 });
 

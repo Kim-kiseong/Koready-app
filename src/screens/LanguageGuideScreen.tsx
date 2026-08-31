@@ -23,7 +23,7 @@ function MascotCardView({
   badge: string;
 }) {
   return (
-    <View style={styles.cardBody}>
+    <View style={[styles.cardBody, styles.mascotCardBody]}>
       <View style={styles.mascotHeader}>
         <CustomText style={styles.badge}>{badge}</CustomText>
         <View style={styles.titleGroup}>
@@ -33,11 +33,16 @@ function MascotCardView({
       </View>
 
       <View style={styles.mascotArea}>
-        <View style={styles.bubble}>
-          <CustomText style={styles.bubbleText}>&ldquo;{card.phrase}&rdquo;</CustomText>
+        <View style={styles.mascotImageWrap}>
+          <Image source={card.mascot} style={styles.mascotImage} contentFit="contain" />
+
+          <View style={styles.bubbleGroup}>
+            <Image source={require('@/assets/images/bubble-tail.svg')} style={styles.bubbleTail} contentFit="fill" />
+            <View style={styles.bubble}>
+              <CustomText style={styles.bubbleText}>&ldquo;{card.phrase}&rdquo;</CustomText>
+            </View>
+          </View>
         </View>
-        <View style={styles.bubbleTail} />
-        <Image source={card.mascot} style={styles.mascotImage} contentFit="contain" />
       </View>
     </View>
   );
@@ -51,38 +56,38 @@ function QuestionCardView({
   relatedTitle: string;
 }) {
   return (
-    <View style={styles.cardBody}>
-      <CustomText style={styles.questionTitle}>{card.title}</CustomText>
-      <Image source={card.image} style={styles.questionImage} contentFit="cover" />
-
-      <View style={styles.questionBox}>
-        <CustomText style={styles.questionText}>{card.questionEn}</CustomText>
-      </View>
-      <SymbolView
-        name={{ ios: 'arrow.down', android: 'arrow_downward', web: 'arrow_downward' }}
-        size={20}
-        weight="regular"
-        tintColor={Palette.grey350}
-        style={styles.downArrow}
-      />
-      <View style={styles.answerBox}>
-        <CustomText style={styles.answerKo}>
-          &ldquo;{card.answerKo[0]}
-          <CustomText style={styles.answerKoHighlight}>{card.answerKo[1]}</CustomText>
-          {card.answerKo[2]}&rdquo;
-        </CustomText>
-        <CustomText style={styles.answerRom}>
-          &ldquo;{card.answerRomanized[0]}
-          <CustomText style={styles.answerRomHighlight}>{card.answerRomanized[1]}</CustomText>
-          {card.answerRomanized[2]}&rdquo;
-        </CustomText>
+    <View style={styles.questionCardBody}>
+      <View style={styles.questionHeaderGroup}>
+        <CustomText style={styles.questionTitle}>{card.title}</CustomText>
+        <Image source={card.image} style={styles.questionImage} contentFit="cover" />
       </View>
 
-      {card.related?.length ? (
-        <View style={styles.relatedGroup}>
-          <PhraseCards title={relatedTitle} phrases={card.related} />
+      <View style={styles.questionAnswerGroup}>
+        <View style={styles.questionBox}>
+          <CustomText style={styles.questionText}>{card.questionEn}</CustomText>
         </View>
-      ) : null}
+        <SymbolView
+          name={{ ios: 'arrow.down', android: 'arrow_downward', web: 'arrow_downward' }}
+          size={20}
+          weight="regular"
+          tintColor={Palette.grey350}
+          style={styles.downArrow}
+        />
+        <View style={styles.answerBox}>
+          <CustomText style={styles.answerKo}>
+            &ldquo;{card.answerKo[0]}
+            <CustomText style={styles.answerKoHighlight}>{card.answerKo[1]}</CustomText>
+            {card.answerKo[2]}&rdquo;
+          </CustomText>
+          <CustomText style={styles.answerRom}>
+            &ldquo;{card.answerRomanized[0]}
+            <CustomText style={styles.answerRomHighlight}>{card.answerRomanized[1]}</CustomText>
+            {card.answerRomanized[2]}&rdquo;
+          </CustomText>
+        </View>
+      </View>
+
+      {card.related?.length ? <PhraseCards title={relatedTitle} phrases={card.related} /> : null}
     </View>
   );
 }
@@ -91,7 +96,7 @@ function SummaryCardView({ card }: { card: Extract<LanguageCard, { kind: 'summar
   return (
     <View style={styles.cardBody}>
       <View style={styles.summaryHeader}>
-        <CustomText style={styles.badge}>{card.badge}</CustomText>
+        <CustomText style={styles.summaryBadge}>{card.badge}</CustomText>
         <CustomText style={styles.summaryTitle}>{card.title}</CustomText>
       </View>
 
@@ -99,7 +104,7 @@ function SummaryCardView({ card }: { card: Extract<LanguageCard, { kind: 'summar
         {card.items.map((item) => (
           <View key={item.ko} style={styles.summaryRow}>
             <View style={styles.summaryIcon}>
-              <SymbolView name={item.icon} size={18} weight="regular" tintColor={Palette.primary} />
+              <SymbolView name={item.icon} size={24} weight="regular" tintColor={Palette.primary} />
             </View>
             <View style={styles.summaryTextGroup}>
               <CustomText style={styles.summaryKo}>{item.ko}</CustomText>
@@ -130,7 +135,7 @@ export default function LanguageGuideScreen() {
         rightIcon={null}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {card.kind === 'mascot' && <MascotCardView card={card} badge={t.guideDetail.categoryBadge.LANGUAGE} />}
         {card.kind === 'question' && <QuestionCardView card={card} relatedTitle={t.languageGuide.relatedTitle} />}
         {card.kind === 'summary' && <SummaryCardView card={card} />}
@@ -159,7 +164,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
+    flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 24,
@@ -167,6 +176,9 @@ const styles = StyleSheet.create({
   buttonBar: {
     backgroundColor: '#ffffff',
     paddingTop: 14,
+    // Fallback so the buttons keep breathing room from the screen edge even
+    // when the safe-area bottom inset is 0 (e.g. web preview, gesture-nav Android).
+    paddingBottom: 16,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -228,14 +240,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Palette.grey500,
   },
+  mascotCardBody: {
+    flex: 1,
+  },
   mascotArea: {
-    alignItems: 'center',
-    paddingTop: 16,
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  mascotImageWrap: {
+    width: '100%',
+    position: 'relative',
+  },
+  mascotImage: {
+    width: 186,
+    height: 253,
+    marginLeft: 16,
+  },
+  bubbleGroup: {
+    position: 'absolute',
+    left: 168,
+    top: -32,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  bubbleTail: {
+    width: 16,
+    height: 18,
+    marginRight: -10,
   },
   bubble: {
     backgroundColor: Palette.grey150,
     borderRadius: 16,
-    paddingHorizontal: 19,
+    paddingLeft: 19,
+    paddingRight: 14,
     paddingVertical: 12,
   },
   bubbleText: {
@@ -243,19 +281,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Palette.grey700,
   },
-  bubbleTail: {
-    width: 12,
-    height: 12,
-    backgroundColor: Palette.grey150,
-    transform: [{ rotate: '45deg' }],
-    marginTop: -6,
-    marginBottom: -6,
-    zIndex: -1,
+  questionCardBody: {
+    gap: 32,
   },
-  mascotImage: {
-    width: 186,
-    height: 200,
-    marginTop: 12,
+  questionHeaderGroup: {
+    gap: 16,
   },
   questionTitle: {
     fontFamily: FontFamily.pretendard.semiBold,
@@ -266,11 +296,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 16,
-    marginTop: 16,
     backgroundColor: Palette.grey100,
   },
+  questionAnswerGroup: {
+    gap: 16,
+  },
   questionBox: {
-    marginTop: 16,
     height: 52,
     borderWidth: 1,
     borderColor: Palette.grey200,
@@ -286,7 +317,6 @@ const styles = StyleSheet.create({
   },
   downArrow: {
     alignSelf: 'center',
-    marginVertical: 12,
   },
   answerBox: {
     minHeight: 91,
@@ -317,11 +347,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Palette.primary,
   },
-  relatedGroup: {
-    marginTop: 32,
-  },
   summaryHeader: {
     gap: 8,
+  },
+  summaryBadge: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 14,
+    color: Palette.primary,
   },
   summaryTitle: {
     fontFamily: FontFamily.pretendard.semiBold,
