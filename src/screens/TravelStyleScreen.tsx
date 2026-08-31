@@ -31,17 +31,18 @@ export default function TravelStyleScreen() {
     toggleTravelStyle(style);
   };
 
-  // PUT /users/me/onboarding requires exactly 4 travel styles
-  // (CompletionRequest.travelStyles has minItems: 4, maxItems: 4) — fewer
-  // than 4 submits fine here but fails backend validation on CompleteScreen.
   const handleNext = () => {
-    if (travelStyles.length !== MAX_TRAVEL_STYLES) return;
+    if (travelStyles.length < 1) return;
     router.push('/destinations');
   };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 2, totalSteps: 3 }} />
+      <OnboardingHeader
+        onBack={() => goBackOrRoot(router, '/login')}
+        progress={{ currentStep: 2, totalSteps: 3 }}
+        rightIcon={null}
+      />
 
       <View style={styles.content}>
         <View style={styles.headerGroup}>
@@ -64,7 +65,7 @@ export default function TravelStyleScreen() {
       <View style={styles.footer}>
         <PrimaryButton
           title={t.travelStyle.next}
-          disabled={travelStyles.length !== MAX_TRAVEL_STYLES}
+          disabled={travelStyles.length < 1}
           onPress={handleNext}
         />
       </View>

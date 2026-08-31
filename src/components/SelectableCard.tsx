@@ -46,8 +46,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
+    lineHeight: 22.4,
     color: Palette.text,
   },
   subtitle: {

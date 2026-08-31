@@ -611,12 +611,13 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
           <View style={styles.cardTextGroup}>
             <CustomText style={styles.cardTitle}>{card.title}</CustomText>
             <View style={styles.cardLocationRow}>
-              <SymbolView
-                name={{ ios: 'mappin', android: 'location_on', web: 'location_on' }}
-                size={20}
-                weight="regular"
-                tintColor={Palette.grey600}
-              />
+              <View style={styles.cardLocationIconFrame}>
+                <Image
+                  source={require('@/assets/images/location-pin-detail.svg')}
+                  style={styles.cardLocationIcon}
+                  contentFit="contain"
+                />
+              </View>
               <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
             </View>
           </View>
@@ -634,12 +635,13 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
               <View style={styles.cardTextGroup}>
                 <CustomText style={styles.cardTitle}>{card.title}</CustomText>
                 <View style={styles.cardLocationRow}>
-                  <SymbolView
-                    name={{ ios: 'mappin', android: 'location_on', web: 'location_on' }}
-                    size={20}
-                    weight="regular"
-                    tintColor={Palette.grey600}
-                  />
+                  <View style={styles.cardLocationIconFrame}>
+                    <Image
+                      source={require('@/assets/images/location-pin-detail.svg')}
+                      style={styles.cardLocationIcon}
+                      contentFit="contain"
+                    />
+                  </View>
                   <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
                 </View>
               </View>
@@ -900,6 +902,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  cardLocationIconFrame: {
+    width: 18,
+    height: 18,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+  },
+  cardLocationIcon: {
+    width: 12,
+    height: 14,
   },
   cardLocation: {
     fontFamily: FontFamily.pretendard.regular,

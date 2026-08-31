@@ -1,10 +1,10 @@
+import { isAxiosError } from 'axios';
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { isAxiosError } from 'axios';
 
 import { fetchMyLocations, setDefaultLocation, type UserLocationResponse } from '@/api/address';
 import AddressRow from '@/components/AddressRow';
@@ -54,9 +54,9 @@ export default function AddressScreen() {
       setDefaultAddress(updated.locationId);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) {
-        Alert.alert('오류', '삭제되었거나 존재하지 않는 위치예요.');
+        Alert.alert(t.address.alerts.errorTitle, t.address.alerts.locationMissing);
       } else {
-        Alert.alert('오류', '기본 위치 변경에 실패했습니다.');
+        Alert.alert(t.address.alerts.errorTitle, t.address.alerts.setDefaultFailed);
       }
     } finally {
       setIsSwitching(false);
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 13,
     color: Palette.grey400,
   },
   addHomeRow: {

@@ -41,7 +41,7 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
     id: 'picks',
     label: t.nav.picks,
     href: '/picks',
-    Icon: CompassIcon,
+    Icon: PicksIcon,
   };
 
   const handlePress = (tab: TabConfig) => {
@@ -62,12 +62,12 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
 
         <Pressable style={styles.centerButtonWrap} onPress={() => handlePress(centerTab)}>
           <LinearGradient
-            colors={[Palette.primaryLight, Palette.primary]}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
+            colors={['#79CEB2', '#4FAE98']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.centerButton}
           >
-            <CompassIcon color="#ffffff" />
+            <PicksIcon color="#ffffff" />
             <CustomText style={styles.centerLabel}>{centerTab.label}</CustomText>
           </LinearGradient>
         </Pressable>
@@ -171,11 +171,17 @@ function PersonIcon({ color }: NavIconProps) {
   );
 }
 
-function CompassIcon({ color }: NavIconProps) {
+function PicksIcon({ color }: NavIconProps) {
   return (
-    <Svg width={18} height={18} viewBox="0 0 9.90402 9.90402" fill="none">
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M9.38967 0.0268543L3.89592 2.22435C3.51861 2.37524 3.17589 2.60121 2.88855 2.88855C2.60121 3.17589 2.37524 3.51861 2.22435 3.89592L0.0268543 9.38967C-0.00042375 9.45782 -0.00710096 9.53247 0.00764964 9.60438C0.0224002 9.67629 0.0579305 9.74228 0.109835 9.79419C0.16174 9.84609 0.227737 9.88162 0.299644 9.89637C0.371551 9.91112 0.446207 9.90445 0.514355 9.87717L6.00811 7.67967C6.38541 7.52878 6.72813 7.30281 7.01547 7.01547C7.30281 6.72813 7.52878 6.38541 7.67967 6.00811L9.87717 0.514355C9.90445 0.446207 9.91112 0.371551 9.89637 0.299644C9.88162 0.227737 9.84609 0.16174 9.79419 0.109835C9.74228 0.0579305 9.67629 0.0224002 9.60438 0.00764964C9.53247 -0.00710096 9.45782 -0.00042375 9.38967 0.0268543ZM4.95201 6.07701C4.72951 6.07701 4.512 6.01103 4.327 5.88741C4.14199 5.7638 3.9978 5.5881 3.91265 5.38253C3.8275 5.17696 3.80522 4.95076 3.84863 4.73253C3.89204 4.51431 3.99918 4.31385 4.15652 4.15652C4.31385 3.99918 4.51431 3.89204 4.73253 3.84863C4.95076 3.80522 5.17696 3.8275 5.38253 3.91265C5.5881 3.9978 5.7638 4.14199 5.88741 4.327C6.01103 4.512 6.07701 4.72951 6.07701 4.95201C6.07701 5.25038 5.95848 5.53653 5.74751 5.74751C5.53653 5.95848 5.25038 6.07701 4.95201 6.07701Z"
+        d="M21 12C21 7.03125 16.9688 3 12 3C7.03125 3 3 7.03125 3 12C3 16.9688 7.03125 21 12 21C16.9688 21 21 16.9688 21 12Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeMiterlimit={10}
+      />
+      <Path
+        d="M16.4375 7.07495L10.9438 9.27245C10.5665 9.42334 10.2237 9.64931 9.9364 9.93665C9.64906 10.224 9.42309 10.5667 9.27221 10.944L7.07471 16.4378C7.04743 16.5059 7.04075 16.5806 7.0555 16.6525C7.07025 16.7244 7.10578 16.7904 7.15769 16.8423C7.20959 16.8942 7.27559 16.9297 7.3475 16.9445C7.4194 16.9592 7.49406 16.9525 7.56221 16.9253L13.056 14.7278C13.4333 14.5769 13.776 14.3509 14.0633 14.0636C14.3507 13.7762 14.5766 13.4335 14.7275 13.0562L16.925 7.56245C16.9523 7.4943 16.959 7.41965 16.9442 7.34774C16.9295 7.27583 16.8939 7.20984 16.842 7.15793C16.7901 7.10603 16.7241 7.0705 16.6522 7.05575C16.5803 7.04099 16.5057 7.04767 16.4375 7.07495ZM11.9999 13.1251C11.7774 13.1251 11.5599 13.0591 11.3748 12.9355C11.1898 12.8119 11.0456 12.6362 10.9605 12.4306C10.8753 12.2251 10.8531 11.9989 10.8965 11.7806C10.9399 11.5624 11.047 11.3619 11.2044 11.2046C11.3617 11.0473 11.5622 10.9401 11.7804 10.8967C11.9986 10.8533 12.2248 10.8756 12.4304 10.9607C12.6359 11.0459 12.8116 11.1901 12.9353 11.3751C13.0589 11.5601 13.1249 11.7776 13.1249 12.0001C13.1249 12.2985 13.0063 12.5846 12.7954 12.7956C12.5844 13.0066 12.2982 13.1251 11.9999 13.1251Z"
         fill={color}
       />
     </Svg>
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   sideTab: {
     minWidth: 32,
     alignItems: 'center',
-    gap: 2,
+    gap: 6,
   },
   sideLabel: {
     fontFamily: FontFamily.pretendard.medium,
@@ -208,7 +214,11 @@ const styles = StyleSheet.create({
   centerButtonWrap: {
     width: 66,
     height: 66,
-    marginTop: -13,
+    marginTop: -24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    elevation: 2,
     borderRadius: 33,
   },
   centerButton: {
@@ -220,8 +230,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   centerLabel: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.pretendard.bold,
     fontSize: 12,
+    lineHeight: 16.8,
     color: '#ffffff',
   },
 });

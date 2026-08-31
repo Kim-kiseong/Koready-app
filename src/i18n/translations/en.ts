@@ -10,9 +10,9 @@ export const en: DeepPartial<Translations> = {
     appleButton: 'Continue with Apple',
   },
   language: {
-    title: 'Select Your Language',
-    subtitle: 'Choose your language',
-    next: 'Next',
+    title: 'Choose your language',
+    subtitle: '언어를 선택해주세요',
+    next: 'Continue',
   },
   location: {
     title: 'Search Location',
@@ -21,7 +21,7 @@ export const en: DeepPartial<Translations> = {
     searchPlaceholder: 'Search by city, school, or accommodation',
     roadAddressBadge: 'Road',
     lotNumberBadge: 'Lot',
-    next: 'Next',
+    next: 'Continue',
     alerts: {
       errorTitle: 'Error',
       mapServiceError: 'The map service is having a temporary issue. Please try again shortly.',
@@ -32,7 +32,7 @@ export const en: DeepPartial<Translations> = {
   travelStyle: {
     title: 'What kind of trips do you enjoy?',
     subtitle: 'Choose up to 4.',
-    next: 'Next',
+    next: 'Continue',
     options: {
       LOCAL_FOOD: 'Local Food',
       LOCAL_FESTIVAL: 'Local Festivals',
@@ -50,15 +50,15 @@ export const en: DeepPartial<Translations> = {
   destination: {
     title: 'Choose up to 3\nplaces you’d like to visit.',
     subtitle: 'This helps us personalize your recommendations.',
-    next: 'Next',
+    next: 'Continue',
     loadingText: 'Loading destination picks...',
     errorText: "Couldn't load destination picks.",
     retryButton: 'Try again',
   },
   complete: {
-    title: 'Your preferences are all set',
-    subtitle: 'We’ll recommend destinations\nbased on what you picked!',
-    next: 'Next',
+    title: "You're all set!",
+    subtitle: "We'll recommend places\nbased on your travel preferences.",
+    next: 'Start exploring',
     alerts: {
       errorTitle: 'Error',
       noticeTitle: 'Notice',
@@ -79,7 +79,7 @@ export const en: DeepPartial<Translations> = {
     connector: ' and ',
     requiredSuffix: ' Agreement',
     optionalSuffix: ' (Optional)',
-    next: 'Next',
+    next: 'Continue',
     loadError: "Couldn't load the terms.",
     submitError: 'Failed to submit your agreement.',
     linkOpenError: "Couldn't open the link.",
@@ -286,6 +286,40 @@ export const en: DeepPartial<Translations> = {
         save: 'Save',
       },
     },
+  },
+  address: {
+    title: 'Address Settings',
+    searchPlaceholder: 'Search by road name, building, or lot number',
+    addHome: 'Add Home',
+    currentAddressBadge: 'Current address',
+    alerts: {
+      errorTitle: 'Error',
+      locationMissing: 'This location has been deleted or no longer exists.',
+      setDefaultFailed: 'Failed to change the default address.',
+    },
+  },
+  addressSearch: {
+    title: 'Search Address',
+    alerts: {
+      errorTitle: 'Error',
+      mapServiceError: 'The map service is temporarily unavailable. Please try again in a moment.',
+      searchResultExpired: 'This search result has expired. Please search again with the same term.',
+      saveFailed: 'Failed to save the address.',
+    },
+  },
+  addressEdit: {
+    title: 'Edit Addresses',
+    delete: 'Delete',
+    alerts: {
+      errorTitle: 'Error',
+      deleteFailed: 'Failed to delete the address.',
+      refreshFailed: 'Couldn’t refresh the address list. Please reopen the screen and try again.',
+    },
+  },
+  deleteAddressModal: {
+    suffix: 'from your saved addresses?',
+    cancel: 'Cancel',
+    confirm: 'Delete',
   },
   home: {
     locationPlaceholder: 'No location set',
