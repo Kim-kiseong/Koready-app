@@ -18,17 +18,17 @@ function isDevMockSession() {
   return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
 }
 
-export type FeaturedEventCategory =
-  | 'POPULAR'
-  | 'LOCAL_FESTIVAL'
-  | 'EXHIBITION_MUSEUM'
-  | 'NATURE';
+export type FeaturedEventCategory = 'POPULAR' | TravelStyleId;
 
 export const FEATURED_EVENT_CATEGORIES: readonly FeaturedEventCategory[] = [
   'POPULAR',
+  'LOCAL_FOOD',
   'LOCAL_FESTIVAL',
-  'EXHIBITION_MUSEUM',
+  'TRADITIONAL_MARKET',
+  'CULTURE_EXPERIENCE',
   'NATURE',
+  'EXHIBITION_MUSEUM',
+  'DRAMA_LOCATION',
 ];
 
 export type FeaturedEvent = {

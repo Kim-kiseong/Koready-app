@@ -566,9 +566,13 @@ export const ko: Translations = {
     languageEn: 'English',
     categories: {
       POPULAR: '인기',
+      LOCAL_FOOD: '로컬 맛집',
       LOCAL_FESTIVAL: '지역 축제',
-      EXHIBITION_MUSEUM: '전시/미술관',
+      TRADITIONAL_MARKET: '전통시장',
+      CULTURE_EXPERIENCE: '문화체험',
       NATURE: '자연 명소',
+      EXHIBITION_MUSEUM: '전시/미술관',
+      DRAMA_LOCATION: '드라마 촬영지',
     },
   },
   map: {
