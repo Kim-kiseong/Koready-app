@@ -104,7 +104,6 @@ export interface Translations {
       language: string;
       termsOfService: string;
       privacyPolicy: string;
-      openSourceLicenses: string;
       appVersion: string;
       logOut: string;
       deleteAccount: string;
@@ -122,10 +121,6 @@ export interface Translations {
       logoutFailed: string;
       privacyComingSoonTitle: string;
       privacyComingSoonBody: string;
-      licensesComingSoonTitle: string;
-      licensesComingSoonBody: string;
-      versionTitle: string;
-      versionMessage: string;
       withdrawComingSoonTitle: string;
       withdrawComingSoonBody: string;
     };
@@ -613,7 +608,6 @@ export const ko: Translations = {
       language: '언어 설정',
       termsOfService: '이용약관',
       privacyPolicy: '개인정보 처리방침',
-      openSourceLicenses: '오픈소스 라이선스',
       appVersion: '앱 버전',
       logOut: '로그아웃',
       deleteAccount: '회원 탈퇴',
@@ -634,10 +628,6 @@ export const ko: Translations = {
       logoutFailed: '로그아웃에 실패했습니다.',
       privacyComingSoonTitle: '준비 중',
       privacyComingSoonBody: '개인정보 처리방침 화면은 다음 단계에서 연결됩니다.',
-      licensesComingSoonTitle: '준비 중',
-      licensesComingSoonBody: '오픈소스 라이선스 화면은 다음 단계에서 연결됩니다.',
-      versionTitle: '앱 버전',
-      versionMessage: '현재 버전은 {version}입니다.',
       withdrawComingSoonTitle: '준비 중',
       withdrawComingSoonBody: '회원 탈퇴는 다음 단계에서 연결됩니다.',
     },
@@ -982,8 +972,8 @@ export const ko: Translations = {
         stayRecommended: '숙박 권장',
       },
       fareTitle: '예상 교통비',
-      fareOneWay: 'KTX 편도',
-      fareRoundTrip: 'KTX 왕복',
+      fareOneWay: '편도',
+      fareRoundTrip: '왕복',
       farePrefix: '약',
       fareDisclaimer: '* 전체 경비 기준으로 작성',
       detailButton: '자세한 경로 보기  →',

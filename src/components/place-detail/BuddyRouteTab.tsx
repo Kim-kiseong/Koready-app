@@ -292,10 +292,10 @@ const styles = StyleSheet.create({
   disclaimer: { fontSize: 13, color: Palette.grey500 },
   detailButton: { marginTop: 24, alignItems: 'center', borderRadius: 12, paddingVertical: 17, backgroundColor: Palette.primary },
   detailButtonText: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: '#FFFFFF' },
-  state: { alignItems: 'center', gap: 12, paddingVertical: 52 },
+  state: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 52 },
   stateText: {
     alignSelf: 'stretch',
-    textAlign: 'left',
+    textAlign: 'center',
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     color: Palette.grey600,

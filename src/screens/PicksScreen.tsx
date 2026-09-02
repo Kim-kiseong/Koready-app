@@ -597,7 +597,7 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
   }));
 
   const heartIcon = (
-    <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={24} />
+    <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={20} />
   );
 
   return (

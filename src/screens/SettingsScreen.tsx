@@ -15,8 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { logout } from '@/api/auth';
-import CustomText from '@/components/CustomText';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -30,6 +30,7 @@ type SettingRowProps = {
   onPress?: () => void;
   value?: string;
   showDivider?: boolean;
+  showChevron?: boolean;
 };
 
 const ROW_RIGHT_ICON = {
@@ -140,21 +141,6 @@ export default function SettingsScreen() {
             }
           />
           <SettingRow
-            label={copy.rows.openSourceLicenses}
-            icon={
-              <SymbolView
-                name={{ ios: 'chevron.left.forwardslash.chevron.right', android: 'code', web: 'code' }}
-                size={20}
-                weight="regular"
-                tintColor={Palette.text}
-              />
-            }
-            showDivider
-            onPress={() =>
-              Alert.alert(copy.alerts.licensesComingSoonTitle, copy.alerts.licensesComingSoonBody)
-            }
-          />
-          <SettingRow
             label={copy.rows.appVersion}
             icon={
               <SymbolView
@@ -165,12 +151,7 @@ export default function SettingsScreen() {
               />
             }
             value={appVersion}
-            onPress={() =>
-              Alert.alert(
-                copy.alerts.versionTitle,
-                copy.alerts.versionMessage.replace('{version}', appVersion),
-              )
-            }
+            showChevron={false}
           />
         </SettingsSection>
 
@@ -212,7 +193,14 @@ function SettingsSection({ title, children }: { title: string; children: ReactNo
   );
 }
 
-function SettingRow({ label, icon, value, onPress, showDivider = false }: SettingRowProps) {
+function SettingRow({
+  label,
+  icon,
+  value,
+  onPress,
+  showDivider = false,
+  showChevron = true,
+}: SettingRowProps) {
   return (
     <View style={styles.rowBlock}>
       <Pressable
@@ -227,7 +215,9 @@ function SettingRow({ label, icon, value, onPress, showDivider = false }: Settin
 
         <View style={styles.rowRight}>
           {value ? <CustomText style={styles.rowValue}>{value}</CustomText> : null}
-          <SymbolView name={ROW_RIGHT_ICON} size={14} weight="semibold" tintColor={Palette.grey400} />
+          {showChevron ? (
+            <SymbolView name={ROW_RIGHT_ICON} size={14} weight="semibold" tintColor={Palette.grey400} />
+          ) : null}
         </View>
       </Pressable>
       {showDivider ? <View style={styles.rowDivider} /> : null}
@@ -295,7 +285,7 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
     alignSelf: 'stretch',
-    marginHorizontal: -16,
+    marginHorizontal: 20,
     backgroundColor: Palette.grey150,
   },
   sectionContent: {

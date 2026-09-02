@@ -10,7 +10,6 @@ import { useSavedPlaceStore } from '@/store/saved-place-store';
 
 import {
   DEFAULT_PLACE_DESCRIPTION,
-  fetchPlaceDetail,
   getMockPlaceTitleById,
   normalizePlaceDescription,
   type PlaceDetail,
@@ -370,44 +369,6 @@ function removeSavedPlaceFromCache(placeId: string | number) {
   savedPlaceCache = savedPlaceCache.filter((item) => item.placeId !== key);
 }
 
-const SAVED_PLACE_DETAIL_TAGS_CACHE = new Map<number, string[]>();
-
-async function loadDetailTagsForSavedPlace(placeId: number) {
-  const cachedTags = SAVED_PLACE_DETAIL_TAGS_CACHE.get(placeId);
-  if (cachedTags) {
-    return [...cachedTags];
-  }
-
-  try {
-    const detail = await fetchPlaceDetail(String(placeId));
-    const tags = sanitizeSavedTags(Array.isArray(detail.tags) ? detail.tags : []);
-    SAVED_PLACE_DETAIL_TAGS_CACHE.set(placeId, tags);
-    return [...tags];
-  } catch {
-    return [];
-  }
-}
-
-async function enrichSavedPlacesWithDetailTags(places: SavedPlaceItem[]) {
-  return Promise.all(
-    places.map(async (place) => {
-      if (place.tags.length > 0) {
-        return place;
-      }
-
-      const fallbackTags = await loadDetailTagsForSavedPlace(place.placeId);
-      if (fallbackTags.length === 0) {
-        return place;
-      }
-
-      return {
-        ...place,
-        tags: fallbackTags,
-      };
-    }),
-  );
-}
-
 function shouldUseMockSavedPlaces() {
   const accessToken = useAuthStore.getState().accessToken;
   return !accessToken || (__DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN);
@@ -513,10 +474,9 @@ export async function fetchSavedPlaces(
 ): Promise<SavedPlacesResponse> {
   if (shouldUseMockSavedPlaces()) {
     const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
-    const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
     return {
       ...result,
-      items: enrichedItems,
+      items: result.items,
     };
   }
 
@@ -524,20 +484,17 @@ export async function fetchSavedPlaces(
     const response = await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
       params: { size, ...(cursor ? { cursor } : {}) },
     });
-    const enrichedItems = await enrichSavedPlacesWithDetailTags(
-      response.data.data.items.map(cloneSavedPlaceItem),
-    );
-    mergeSavedPlacesIntoCache(enrichedItems);
+    const items = response.data.data.items.map(cloneSavedPlaceItem);
+    mergeSavedPlacesIntoCache(items);
     return {
       ...response.data.data,
-      items: enrichedItems,
+      items,
     };
   } catch {
     const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
-    const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
     return {
       ...result,
-      items: enrichedItems,
+      items: result.items,
     };
   }
 }
