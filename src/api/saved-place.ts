@@ -16,6 +16,7 @@ import {
 } from './place';
 import type { PicksCard } from './picks';
 import type {
+  PlaceListItem,
   SavedPlaceFestivalOccurrence,
   SavedPlaceItem,
   SavedPlaceSource,
@@ -454,6 +455,29 @@ export function buildSavedPlaceFromPlaceDetail(
     scheduleText: metadata.scheduleText ?? metadata.festivalOccurrence?.dateRangeText ?? null,
     shortDescription,
     overview: safeDescription.shortIntroduction ?? safeDescription.introParagraphs.find((paragraph) => paragraph.trim().length > 0) ?? null,
+    saved: true,
+    savedAt: new Date().toISOString(),
+    source,
+  };
+}
+
+export function buildSavedPlaceFromPlaceListItem(
+  place: PlaceListItem,
+  source: SavedPlaceSource,
+): SavedPlaceItem {
+  return {
+    placeId: place.placeId,
+    title: place.title,
+    serviceRegionCode: place.serviceRegionCode,
+    serviceRegionName: place.serviceRegionName,
+    addressSummary: place.addressSummary,
+    imageUrl: place.imageUrl,
+    festivalOccurrence: place.festivalOccurrence,
+    travelStyle: place.travelStyle,
+    tags: sanitizeSavedTags(place.tags),
+    scheduleText: place.festivalOccurrence?.dateRangeText ?? null,
+    shortDescription: place.shortDescription,
+    overview: place.overview,
     saved: true,
     savedAt: new Date().toISOString(),
     source,

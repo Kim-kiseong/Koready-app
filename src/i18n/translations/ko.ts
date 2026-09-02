@@ -86,6 +86,9 @@ export interface Translations {
     emptyTitle: string;
     emptyDescription: string;
   };
+  placeSearch: {
+    emptyTitle: string;
+  };
   nav: {
     home: string;
     map: string;
@@ -589,6 +592,9 @@ export const ko: Translations = {
     loading: '{region} 장소를 불러오는 중이에요.',
     emptyTitle: '조건에 맞는 장소가 없어요.',
     emptyDescription: '다른 날짜나 관광 유형을 선택해보세요.',
+  },
+  placeSearch: {
+    emptyTitle: '일치하는 검색 결과가 없어요',
   },
   nav: {
     home: '홈',
