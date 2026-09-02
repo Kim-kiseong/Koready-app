@@ -2331,30 +2331,9 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
     const request = (async () => {
       try {
         const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
-        if (__DEV__) {
-          console.info('[place-detail] GET /places/{placeId} response', {
-            placeId: numericId,
-            serviceRegionCode: response.data.data.serviceRegionCode,
-            description: response.data.data.description,
-            missingDescriptionFields: getMissingPlaceDescriptionFields(
-              response.data.data.description,
-            ),
-            relatedPlacesFieldPresent: 'relatedPlaces' in response.data.data,
-            relatedPlacesCount: response.data.data.relatedPlaces?.length ?? 0,
-            relatedPlaces: response.data.data.relatedPlaces ?? [],
-          });
-        }
         return mapPlaceDetailResponse(response.data.data);
       } catch (error) {
         if (!isAxiosError(error)) throw error;
-        if (__DEV__) {
-          console.warn('[place-detail] GET /places/{placeId} failed, using fallback', {
-            placeId: numericId,
-            language,
-            status: error.response?.status,
-            message: error.message,
-          });
-        }
         return buildFallbackPlaceDetail(placeId);
       } finally {
         PLACE_DETAIL_IN_FLIGHT_REQUESTS.delete(cacheKey);

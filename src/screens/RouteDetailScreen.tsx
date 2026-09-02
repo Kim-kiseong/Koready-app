@@ -107,6 +107,14 @@ function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
   return label;
 }
 
+function formatSummaryTimeLabel(label: string, language: 'KO' | 'EN') {
+  if (language !== 'EN') {
+    return label;
+  }
+
+  return label.replace(/\shr\s+/, ' hr\n');
+}
+
 function isRouteExpiredError(error: unknown) {
   return isAxiosError<ApiErrorEnvelope>(error) && error.response?.status === 410 && error.response.data?.code === 'ROUTE_EXPIRED';
 }
@@ -250,7 +258,7 @@ export default function RouteDetailScreen() {
     setMapAreaHeight(e.nativeEvent.layout.height);
   }, []);
 
-  const summaryTimeLabel = route ? route.summary.estimatedOneWayTimeText : '';
+  const summaryTimeLabel = route ? formatSummaryTimeLabel(route.summary.estimatedOneWayTimeText, language) : '';
   const dayTripLabel = route
     ? route.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
       ? routeCopy.dayTripValues.available

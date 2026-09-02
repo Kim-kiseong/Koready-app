@@ -22,17 +22,19 @@ export default function PhraseCards({ title, phrases }: PhraseCardsProps) {
   return (
     <View style={styles.group}>
       {title ? <CustomText style={styles.title}>{title}</CustomText> : null}
-      {phrases.map((phrase) => (
-        <View key={phrase.ko} style={styles.card}>
-          <View style={styles.textGroup}>
-            <CustomText style={styles.ko}>{phrase.ko}</CustomText>
-            <CustomText style={styles.romanized}>{phrase.romanized}</CustomText>
+      <View style={styles.cards}>
+        {phrases.map((phrase) => (
+          <View key={phrase.ko} style={styles.card}>
+            <View style={styles.textGroup}>
+              <CustomText style={styles.ko}>{phrase.ko}</CustomText>
+              <CustomText style={styles.romanized}>{phrase.romanized}</CustomText>
+            </View>
+            <View style={styles.enPill}>
+              <CustomText style={styles.enText}>{phrase.en}</CustomText>
+            </View>
           </View>
-          <View style={styles.enPill}>
-            <CustomText style={styles.enText}>{phrase.en}</CustomText>
-          </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 }
@@ -40,12 +42,16 @@ export default function PhraseCards({ title, phrases }: PhraseCardsProps) {
 const styles = StyleSheet.create({
   group: {
     width: '100%',
-    gap: 16,
   },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 16,
     color: Palette.text,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  cards: {
+    gap: 8,
   },
   card: {
     flexDirection: 'row',

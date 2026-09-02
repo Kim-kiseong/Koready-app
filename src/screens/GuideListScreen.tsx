@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchGuideVideos, GUIDE_CATEGORY_IDS } from '@/api/home';
 import type { GuideCategoryId, GuideVideo } from '@/api/home';
+import { fetchGuideVideos, GUIDE_CATEGORY_IDS } from '@/api/home';
 import CustomText from '@/components/CustomText';
 import GuideVideoCard from '@/components/GuideVideoCard';
 import OnboardingHeader from '@/components/OnboardingHeader';

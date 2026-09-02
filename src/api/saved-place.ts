@@ -40,37 +40,6 @@ type SavedPlaceToggleEnvelope = {
   traceId: string;
 };
 
-export type SavedPlacesFetchMode = 'MOCK' | 'API' | 'FALLBACK';
-
-let lastSavedPlacesFetchMode: SavedPlacesFetchMode = 'MOCK';
-
-export function getSavedPlacesFetchMode() {
-  return lastSavedPlacesFetchMode;
-}
-
-function logSavedPlacesDebug(
-  mode: SavedPlacesFetchMode,
-  items: SavedPlaceItem[],
-  extra?: Record<string, unknown>,
-) {
-  if (!__DEV__) {
-    return;
-  }
-
-  console.info('[saved-places] fetchSavedPlaces', {
-    mode,
-    itemCount: items.length,
-    rawItems: extra?.rawItems,
-    samples: items.slice(0, 5).map((item) => ({
-      placeId: item.placeId,
-      title: item.title,
-      tags: item.tags,
-      saved: item.saved,
-    })),
-    ...extra,
-  });
-}
-
 const savedClient = create({
   baseURL: API_V1_BASE_URL,
 });
@@ -545,8 +514,6 @@ export async function fetchSavedPlaces(
   if (shouldUseMockSavedPlaces()) {
     const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
     const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
-    lastSavedPlacesFetchMode = 'MOCK';
-    logSavedPlacesDebug('MOCK', enrichedItems, { cursor, size, rawItems: result.items });
     return {
       ...result,
       items: enrichedItems,
@@ -560,15 +527,7 @@ export async function fetchSavedPlaces(
     const enrichedItems = await enrichSavedPlacesWithDetailTags(
       response.data.data.items.map(cloneSavedPlaceItem),
     );
-    lastSavedPlacesFetchMode = 'API';
     mergeSavedPlacesIntoCache(enrichedItems);
-    logSavedPlacesDebug('API', enrichedItems, {
-      cursor,
-      size,
-      nextCursor: response.data.data.nextCursor,
-      hasMore: response.data.data.hasMore,
-      rawItems: response.data.data.items,
-    });
     return {
       ...response.data.data,
       items: enrichedItems,
@@ -576,8 +535,6 @@ export async function fetchSavedPlaces(
   } catch {
     const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
     const enrichedItems = await enrichSavedPlacesWithDetailTags(result.items);
-    lastSavedPlacesFetchMode = 'FALLBACK';
-    logSavedPlacesDebug('FALLBACK', enrichedItems, { cursor, size, rawItems: result.items });
     return {
       ...result,
       items: enrichedItems,

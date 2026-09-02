@@ -25,11 +25,23 @@ export default function StepBlock({ number, title, description, descriptionNode 
       </View>
       <View style={styles.textGroup}>
         <CustomText style={styles.title}>{title}</CustomText>
-        {descriptionNode ??
-          (description ? (
-            <RichText text={description} style={styles.description} emphasisStyle={styles.descriptionEmphasis} />
-          ) : null)}
+        {descriptionNode ?? (description ? renderDescription(description) : null)}
       </View>
+    </View>
+  );
+}
+
+function renderDescription(description: string) {
+  if (!description.includes('\n')) {
+    return <RichText text={description} style={styles.description} emphasisStyle={styles.descriptionEmphasis} />;
+  }
+
+  const lines = description.split('\n');
+  return (
+    <View style={styles.descriptionGroup}>
+      {lines.map((line, index) => (
+        <RichText key={`${index}-${line}`} text={line} style={styles.description} emphasisStyle={styles.descriptionEmphasis} />
+      ))}
     </View>
   );
 }
@@ -57,18 +69,23 @@ const styles = StyleSheet.create({
   },
   textGroup: {
     flex: 1,
+    minWidth: 0,
     gap: 6,
   },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 16,
     color: Palette.text,
+    marginTop: 4,
   },
   description: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 13,
     lineHeight: 19.5,
     color: Palette.grey600,
+  },
+  descriptionGroup: {
+    gap: 2,
   },
   descriptionEmphasis: {
     fontFamily: FontFamily.pretendard.semiBold,

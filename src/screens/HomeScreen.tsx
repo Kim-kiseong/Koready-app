@@ -133,12 +133,6 @@ export default function HomeScreen() {
             tintColor={Palette.grey400}
           />
           <CustomText style={styles.searchPlaceholder}>{t.home.searchPlaceholder}</CustomText>
-          <SymbolView
-            name={{ ios: 'xmark.circle.fill', android: 'close', web: 'close' }}
-            size={20}
-            weight="regular"
-            tintColor={Palette.grey350}
-          />
         </View>
 
         <View style={[styles.section, styles.featuredSectionTop]}>

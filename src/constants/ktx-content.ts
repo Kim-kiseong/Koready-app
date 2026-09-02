@@ -113,81 +113,80 @@ export const KTX_INTRO_EN = {
 export const KTX_STEPS_EN: KtxStep[] = [
   {
     id: 1,
-    title: "Open the KORAIL website or the Korail+ app",
-    description: "Use an official channel to book without extra fees.",
+    title: "Open the KORAIL Website or the Korail+ App",
+    description: "Use an official channel to book without\nextra fees.",
   },
   {
     id: 2,
-    title: "Choose your language",
-    description: "English, Japanese, Chinese, and more are supported.",
+    title: "Select Your Language",
+    description: "English, Japanese, Chinese, and other\nlanguages are available.",
   },
   {
     id: 3,
-    title: "Enter your departure and arrival stations",
-    description:
-      "Double-check the exact station name. e.g. Singyeongju, Yeosu-Expo",
+    title: "Enter Your Departure and Arrival Stations",
+    description: "Check the exact station name. e.g.,\nSingyeongju Station, Yeosu Expo Station",
   },
   {
     id: 4,
-    title: "Choose a date and time",
-    description: "Booking opens at 7:00 AM, one month before departure.",
+    title: "Select the Date and Time",
+    description: "Tickets are available from 7:00 AM, one\nmonth before departure.",
   },
   {
     id: 5,
-    title: "Choose passengers and seats",
-    description: "You can select the seat direction and type.",
+    title: "Select Passengers and Seats",
+    description: "You can choose your seat type and direction.",
   },
   {
     id: 6,
-    title: "Enter passenger details",
+    title: "Enter Passenger Information",
     description:
-      "Enter your name exactly as it appears on your passport, and double-check your email.",
+      "Enter your name exactly as it appears on your\npassport and provide a valid email address.",
   },
   {
     id: 7,
-    title: "Pay",
-    description:
-      "If your overseas card is declined, try another payment method.",
+    title: "Make Payment",
+    description: "If your international card doesn't work, try\nanother payment method.",
   },
   {
     id: 8,
-    title: "Check My Ticket",
-    description: "Review your booking and take a screenshot of your ticket.",
+    title: "Check Your Ticket in My Ticket",
+    description: "Check your booking details and save a\nscreenshot of your ticket.",
   },
   {
     id: 9,
-    title: "Board at the station",
-    description: "Check your departure time and platform in advance.",
+    title: "Board at the Station",
+    description: "Check your departure time and platform in\nadvance.",
   },
   {
     id: 10,
-    title: "Change or cancel your trip",
-    description: "Canceling online before departure has a lower fee.",
+    title: "Change or Cancel Your Trip",
+    description: "Cancellation fees are usually lower if you\ncancel online before departure.",
   },
 ];
 
 export const KTX_LIST_WARNING_EN =
-  "KTX and SRT use different booking sites. This guide covers KTX (Korail) only.";
+  "KTX and SRT have different booking websites.\nThis guide is based on KTX (KORAIL).";
 
 export const KTX_STEP3_DETAIL_EN = {
-  title: "Step 3. Enter Departure and Arrival Stations",
-  note: "A tourist destination's name can differ from its KTX station name.\nBe sure to enter the exact station name.",
+  title: "Step 3. Enter Departure & Arrival Stations",
+  note:
+    "The KTX station name may be different from your destination name.\nMake sure to enter the correct station name.",
   screenshot: require("@/assets/images/guides/ktx-step3-korail-en.jpg"),
-  screenshotCaption: "KORAIL ticket reservation screen",
+  screenshotCaption: "Actual KorailTalk App Screen",
   tipBody:
-    'For a trip to Gyeongju, you often need to search **"Singyeongju," not "Gyeongju"**!',
+    'For a trip to Gyeongju, you may need to search for **"Singyeongju"** instead of **"Gyeongju"**!',
   stationColumns: [
     {
-      label: "Major Seoul Departure Stations",
+      label: "Main Stations in Seoul",
       dotColor: "#3B82F6",
       items: [
         "Seoul Station (서울역)",
         "Yongsan Station (용산역)",
-        "Cheongnyangni \n Station (청량리역)",
+        "Cheongnyangni Station (청량리역)",
       ],
     },
     {
-      label: "Popular Arrival Stations",
+      label: "Popular Destination Stations",
       dotColor: "#4FAE98",
       items: [
         "Busan (부산역)",
@@ -197,10 +196,10 @@ export const KTX_STEP3_DETAIL_EN = {
       ],
     },
   ],
-  checklistTitle: "What to check when boarding",
+  checklistTitle: "Check Before Boarding",
   checklistColumns: [
-    ["Train number", "Car number", "Seat number"],
-    ["Platform number", "Departure time"],
+    ["Train Number", "Car Number", "Seat Number"],
+    ["Platform Number", "Departure Time"],
   ],
 };
 

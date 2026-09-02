@@ -176,6 +176,10 @@ function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
   };
 }
 
+function formatPickTagLabel(tag: unknown) {
+  return toDisplayText(tag).replace(/^#+\s*/, '').trim();
+}
+
 export default function PicksScreen() {
   const router = useRouter();
   const t = useTranslation();
@@ -654,7 +658,7 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
             <View style={styles.tagRow}>
               {card.tags.map((tag, index) => (
                 <View key={toStableListKey(tag, index)} style={styles.tagChip}>
-                  <CustomText style={styles.tagLabel}>{toDisplayText(tag)}</CustomText>
+                  <CustomText style={styles.tagLabel}>{formatPickTagLabel(tag)}</CustomText>
                 </View>
               ))}
             </View>
