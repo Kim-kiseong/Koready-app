@@ -44,6 +44,7 @@ const DEV_HOME_SESSION = {
 
 // Reference: Figma frame "로그인" (node 1329:9556), 375x812.
 const FRAME_WIDTH = 375;
+const FRAME_HEIGHT = 812;
 const TITLE_TOP = 177;
 const MASCOT_TOP = 391;
 const MASCOT_WIDTH = 164;
@@ -59,8 +60,17 @@ const BOTTOM_FADE_WHITE_STOP = 0.22722;
 
 export default function LoginScreen() {
   const t = useTranslation();
-  const { width } = useWindowDimensions();
-  const scale = width / FRAME_WIDTH;
+  const { width, height } = useWindowDimensions();
+  // On native the viewport always matches the device's own aspect ratio, so
+  // width-only scaling was fine. On web (this screen opened as a browser tab
+  // instead of the native app) the visible viewport is often much shorter
+  // than the 375x812 Figma reference — mobile browser chrome (address bar,
+  // bottom toolbar) eats into window height — so a width-only scale pushes
+  // the button group below the fold and the page has to scroll to reach it.
+  // Scaling by the smaller of the two ratios keeps the whole screen
+  // (title, mascot, buttons) uniformly shrunk to fit within short viewports
+  // instead of overflowing.
+  const scale = Math.min(width / FRAME_WIDTH, height / FRAME_HEIGHT);
   const router = useRouter();
   const deviceId = useAuthStore((state) => state.deviceId);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
