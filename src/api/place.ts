@@ -2206,6 +2206,69 @@ export async function fetchPlaces(params: FetchPlacesParams): Promise<PlaceListR
   }
 }
 
+function buildMockPlaceSearchResults(
+  query: string,
+  cursor: string | null | undefined,
+  size: number,
+): PlaceListResponse {
+  const normalizedQuery = query.trim().toLowerCase();
+  const allPlaces: MockPlaceListItem[] = [
+    ...MOCK_SEOUL_PLACES,
+    ...MOCK_GYEONGGI_PLACES,
+    ...MOCK_CHUNGCHEONG_PLACES,
+    ...MOCK_JEOLLA_PLACES,
+    ...MOCK_GANGWON_PLACES,
+    ...MOCK_GYEONGSANG_PLACES,
+    ...MOCK_JEJU_PLACES,
+  ];
+  const matches = allPlaces.filter(
+    (place) =>
+      place.title.toLowerCase().includes(normalizedQuery) ||
+      place.serviceRegionName.toLowerCase().includes(normalizedQuery) ||
+      place.addressSummary.toLowerCase().includes(normalizedQuery),
+  );
+  const sorted = sortMockPlaces(matches, 'RECOMMENDED');
+  return paginateMockPlaces(sorted, cursor, size);
+}
+
+// GET /places/search — called from the home search bar. Unlike /places (map
+// region browse), this isn't scoped to a service region or travel style —
+// query is the only required filter, matched server-side against title and
+// region name. Reuses the same PlaceListEnvelope/mapPlaceListResponse shape
+// as fetchPlaces since both endpoints return PlaceCard items.
+export async function searchPlaces(
+  query: string,
+  cursor?: string | null,
+  size = DEFAULT_PLACE_LIST_SIZE,
+  signal?: AbortSignal,
+): Promise<PlaceListResponse> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length === 0) {
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  if (isDevMockSession()) {
+    return buildMockPlaceSearchResults(trimmedQuery, cursor, size);
+  }
+
+  try {
+    const params: Record<string, string> = { query: trimmedQuery, size: String(size) };
+    if (cursor) {
+      params.cursor = cursor;
+    }
+
+    const response = await client.get<PlaceListEnvelope>('/places/search', { params, signal });
+    return mapPlaceListResponse(response.data.data);
+  } catch (error) {
+    const canceled = isAxiosError(error) && error.code === 'ERR_CANCELED';
+    if (__DEV__ && isAxiosError(error) && !canceled) {
+      return buildMockPlaceSearchResults(trimmedQuery, cursor, size);
+    }
+
+    throw error;
+  }
+}
+
 type PlaceDetailApiImage = {
   imageUrl: string;
   order: number;

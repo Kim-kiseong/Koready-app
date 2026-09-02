@@ -369,6 +369,9 @@ export const en: DeepPartial<Translations> = {
     emptyTitle: 'No places match the selected filters.',
     emptyDescription: 'Try a different date or travel type.',
   },
+  placeSearch: {
+    emptyTitle: 'No matching results found',
+  },
   picks: {
     headerTitle: 'Travel Picks for You',
     scopeNearby: 'Nearby',

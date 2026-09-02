@@ -125,7 +125,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={styles.searchBar}>
+        <Pressable style={styles.searchBar} onPress={() => router.push('/place-search')}>
           <SymbolView
             name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
             size={14}
@@ -133,7 +133,7 @@ export default function HomeScreen() {
             tintColor={Palette.grey400}
           />
           <CustomText style={styles.searchPlaceholder}>{t.home.searchPlaceholder}</CustomText>
-        </View>
+        </Pressable>
 
         <View style={[styles.section, styles.featuredSectionTop]}>
           <View style={styles.sectionHeaderRow}>
