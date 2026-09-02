@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   fetchPlaceDetail,
-  getMissingPlaceDescriptionFields,
   type PlaceDetail,
   type PlaceDetailTab,
 } from '@/api/place';
@@ -76,22 +75,6 @@ function resolveVisiblePlaceTabs(tabs?: PlaceDetailTab[]): PlaceDetailTab[] {
   }
 
   return nextTabs;
-}
-
-function formatPlaceDescriptionJson(
-  description: PlaceDetail['description'],
-) {
-  if (description == null) {
-    return String(description);
-  }
-
-  return JSON.stringify(description, null, 2);
-}
-
-function formatRelatedPlacesJson(
-  relatedPlaces: PlaceDetail['relatedPlaces'],
-) {
-  return JSON.stringify(relatedPlaces, null, 2);
 }
 
 export default function PlaceDetailScreen() {
@@ -173,60 +156,6 @@ function PlaceDetailScreenContent({
     : visibleTabs[0] ?? 'DESCRIPTION';
 
   const description = place?.description ?? null;
-  const relatedPlaces = place?.relatedPlaces;
-  const missingDescriptionFields =
-    __DEV__
-      ? getMissingPlaceDescriptionFields(
-          description,
-        )
-      : [];
-  const descriptionDebugJson =
-    __DEV__
-      ? formatPlaceDescriptionJson(description)
-      : '';
-  const relatedPlacesDebugJson =
-    __DEV__
-      ? formatRelatedPlacesJson(relatedPlaces ?? [])
-      : '';
-
-  useEffect(() => {
-    if (!__DEV__ || !place || !hasHydrated) {
-      return;
-    }
-
-    console.info('[place-detail] screen place.description', {
-      placeId,
-      title: place.title,
-      description,
-      missingDescriptionFields:
-        getMissingPlaceDescriptionFields(
-          description,
-        ),
-    });
-  }, [
-    description,
-    hasHydrated,
-    place,
-    placeId,
-  ]);
-
-  useEffect(() => {
-    if (!__DEV__ || !place || !hasHydrated) {
-      return;
-    }
-
-    console.info('[place-detail] screen relatedPlaces', {
-      placeId,
-      title: place.title,
-      relatedPlacesCount: relatedPlaces?.length ?? 0,
-      relatedPlaces: relatedPlaces ?? [],
-    });
-  }, [
-    hasHydrated,
-    place,
-    placeId,
-    relatedPlaces,
-  ]);
 
   useEffect(() => {
     if (!placeId) {
@@ -322,13 +251,6 @@ function PlaceDetailScreenContent({
   const handleViewRouteDetail = (routeId: string) => {
     const placeNumericId = Number(placeId);
     if (deckId && deckId !== 'dev-mock-deck' && Number.isFinite(placeNumericId)) {
-      if (__DEV__) {
-        console.info('[picks] ROUTE_OPENED recording', {
-          routeId,
-          deckId,
-          placeId,
-        });
-      }
       recordRecommendationEvent(deckId, placeNumericId, 'ROUTE_OPENED').catch(() => {});
     }
 
@@ -399,40 +321,6 @@ function PlaceDetailScreenContent({
         {resolvedTab ===
           'DESCRIPTION' && (
           <>
-            {__DEV__ ? (
-              <View
-                style={
-                  styles.debugDescriptionBox
-                }
-              >
-                <CustomText
-                  style={
-                    styles.debugDescriptionTitle
-                  }
-                >
-                  DEV place.description
-                </CustomText>
-
-                <CustomText
-                  style={
-                    styles.debugDescriptionMeta
-                  }
-                >
-                  missing fields: {missingDescriptionFields.length > 0
-                    ? missingDescriptionFields.join(', ')
-                    : 'none'}
-                </CustomText>
-
-                <CustomText
-                  style={
-                    styles.debugDescriptionJson
-                  }
-                >
-                  {descriptionDebugJson}
-                </CustomText>
-              </View>
-            ) : null}
-
             <PlaceDescription
               description={description}
               images={place.images}
@@ -457,38 +345,6 @@ function PlaceDetailScreenContent({
                     .nearbyTitle
                 }
               </CustomText>
-
-              {__DEV__ ? (
-                <View
-                  style={
-                    styles.debugDescriptionBox
-                  }
-                >
-                  <CustomText
-                    style={
-                      styles.debugDescriptionTitle
-                    }
-                  >
-                    DEV place.relatedPlaces
-                  </CustomText>
-
-                  <CustomText
-                    style={
-                      styles.debugDescriptionMeta
-                    }
-                  >
-                  count: {relatedPlaces?.length ?? 0}
-                </CustomText>
-
-                  <CustomText
-                    style={
-                      styles.debugDescriptionJson
-                    }
-                  >
-                    {relatedPlacesDebugJson}
-                  </CustomText>
-                </View>
-              ) : null}
 
               {place.relatedPlaces.map(
                 (relatedPlace) => (
@@ -587,43 +443,6 @@ const styles = StyleSheet.create({
   nearbySection: {
     paddingHorizontal: 24,
     marginTop: 40,
-  },
-
-  debugDescriptionBox: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#f0c36c',
-    borderRadius: 12,
-    backgroundColor: '#fffaf0',
-  },
-
-  debugDescriptionTitle: {
-    marginBottom: 8,
-    fontFamily:
-      FontFamily.pretendard.semiBold,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#996c12',
-  },
-
-  debugDescriptionMeta: {
-    marginBottom: 8,
-    fontFamily:
-      FontFamily.pretendard.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#725108',
-  },
-
-  debugDescriptionJson: {
-    fontFamily:
-      FontFamily.pretendard.regular,
-    fontSize: 11,
-    lineHeight: 16,
-    color: '#4a3a12',
   },
 
   sectionTitle: {

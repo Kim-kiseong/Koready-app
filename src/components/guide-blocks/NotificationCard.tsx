@@ -20,12 +20,12 @@ export default function NotificationCard({ emoji, title, timestamp, body, bodySu
         <View style={styles.iconBadge}>
           <CustomText style={styles.emoji}>{emoji}</CustomText>
         </View>
-        <View>
+        <View style={styles.headerTextGroup}>
           <CustomText style={styles.title}>{title}</CustomText>
           <CustomText style={styles.timestamp}>{timestamp}</CustomText>
         </View>
       </View>
-      <View>
+      <View style={styles.bodyGroup}>
         <CustomText style={styles.body}>{body}</CustomText>
         {bodySub ? <CustomText style={styles.bodySub}>{bodySub}</CustomText> : null}
       </View>
@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.grey700,
     padding: 20,
     gap: 10,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -57,24 +58,34 @@ const styles = StyleSheet.create({
   emoji: {
     fontSize: 14,
   },
+  headerTextGroup: {
+    gap: 4,
+  },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 13,
+    lineHeight: 18.2,
     color: '#ffffff',
   },
   timestamp: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 11,
+    lineHeight: 15.4,
     color: Palette.grey350,
+  },
+  bodyGroup: {
+    gap: 2,
   },
   body: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 13,
+    lineHeight: 18.2,
     color: '#ffffff',
   },
   bodySub: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 12,
+    lineHeight: 16.8,
     color: Palette.grey350,
   },
 });

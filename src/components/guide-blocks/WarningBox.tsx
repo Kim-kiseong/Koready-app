@@ -21,17 +21,20 @@ export default function WarningBox({ text }: WarningBoxProps) {
 const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     padding: 16,
+    width: '100%',
+    alignSelf: 'stretch',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Palette.warningBorder,
     backgroundColor: Palette.warningBg,
   },
   icon: {
-    width: 24,
-    height: 21.3,
+    marginTop:4,
+    width: 16,
+    height: 16,
   },
   text: {
     flex: 1,

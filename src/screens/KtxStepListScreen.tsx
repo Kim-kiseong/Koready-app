@@ -90,7 +90,9 @@ export default function KtxStepListScreen() {
           })}
         </View>
 
-        <WarningBox text={listWarning} />
+        <View style={styles.warningWrap}>
+          <WarningBox text={listWarning} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -192,5 +194,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 13,
     color: Palette.grey600,
+  },
+  warningWrap: {
+    paddingHorizontal: 16,
+    marginTop: 16,
   },
 });

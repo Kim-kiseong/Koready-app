@@ -74,7 +74,7 @@ export default function HoriTipCard({ title = 'Hori Tip', body, checklist, varia
 
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: 38,
+    marginTop: 68,
     position: 'relative',
   },
   mascot: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 16,
+    padding:16,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Palette.tipBorder,
@@ -150,8 +150,9 @@ const styles = StyleSheet.create({
     color: Palette.grey700,
   },
   inlineMascot: {
-    width: 68,
-    height: 76,
+    width: 100,
+    height: 100,
+    left:10,
   },
 });
 
