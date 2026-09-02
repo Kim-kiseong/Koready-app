@@ -26,7 +26,6 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
-import { useSavedPlaceStore } from '@/store/saved-place-store';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
 type SavedSortOrder = 'SAVED_AT' | 'DEADLINE';
@@ -386,10 +385,6 @@ export default function SavedScreen() {
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
   const hasAuthHydrated = useAuthStore((state) => state.hasHydrated);
-  const savedStoreHydrated = useSavedPlaceStore((state) => state.hasHydrated);
-  const savedPlacesByPlaceId = useSavedPlaceStore((state) => state.savedPlacesByPlaceId);
-  const replaceSavedPlaces = useSavedPlaceStore((state) => state.replaceSavedPlaces);
-  const removeSavedPlace = useSavedPlaceStore((state) => state.removeSavedPlace);
 
   const [sortOrder, setSortOrder] = useState<SavedSortOrder>('SAVED_AT');
   const [cursor, setCursor] = useState<string | null>(null);
@@ -397,10 +392,11 @@ export default function SavedScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSortSheetVisible, setIsSortSheetVisible] = useState(false);
+  const [savedPlacesSnapshot, setSavedPlacesSnapshot] = useState<SavedPlaceItem[]>([]);
 
   const loadSavedPlaces = useCallback(
     async (nextCursor: string | null = null, isMore = false) => {
-      if (!hasAuthHydrated || !savedStoreHydrated) {
+      if (!hasAuthHydrated) {
         return;
       }
 
@@ -412,7 +408,16 @@ export default function SavedScreen() {
 
       try {
         const result = await fetchSavedPlaces(nextCursor, 20);
-        replaceSavedPlaces(result.items);
+        setSavedPlacesSnapshot((current) => {
+          const nextItems = isMore ? [...current, ...result.items] : [...result.items];
+          const deduped = new Map<number, SavedPlaceItem>();
+
+          for (const item of nextItems) {
+            deduped.set(item.placeId, item);
+          }
+
+          return [...deduped.values()];
+        });
         setCursor(result.nextCursor);
         setHasMore(result.hasMore);
       } finally {
@@ -423,13 +428,17 @@ export default function SavedScreen() {
         }
       }
     },
-    [hasAuthHydrated, replaceSavedPlaces, savedStoreHydrated],
+    [hasAuthHydrated],
   );
 
   useEffect(() => {
-    if (!hasAuthHydrated || !savedStoreHydrated) {
+    if (!hasAuthHydrated) {
       return;
     }
+
+    setSavedPlacesSnapshot([]);
+    setCursor(null);
+    setHasMore(false);
 
     const timeout = setTimeout(() => {
       void loadSavedPlaces(null, false);
@@ -438,10 +447,10 @@ export default function SavedScreen() {
     return () => {
       clearTimeout(timeout);
     };
-  }, [language, hasAuthHydrated, loadSavedPlaces, savedStoreHydrated]);
+  }, [language, hasAuthHydrated, loadSavedPlaces]);
 
   const savedPlaces = useMemo(() => {
-    const items = Object.values(savedPlacesByPlaceId).filter((item) => item.saved !== false);
+    const items = savedPlacesSnapshot.filter((item) => item.saved !== false);
 
     return items.sort((left, right) => {
       if (sortOrder === 'DEADLINE') {
@@ -468,7 +477,7 @@ export default function SavedScreen() {
 
       return right.placeId - left.placeId;
     });
-  }, [savedPlacesByPlaceId, sortOrder]);
+  }, [savedPlacesSnapshot, sortOrder]);
 
   const sortOptions = [
     { value: 'SAVED_AT', label: t.saved.sortOptions.savedAt },
@@ -482,7 +491,9 @@ export default function SavedScreen() {
     : ({ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' } as const);
 
   const handleToggleSave = (place: SavedPlaceItem) => {
-    removeSavedPlace(place.placeId);
+    setSavedPlacesSnapshot((current) =>
+      current.filter((item) => item.placeId !== place.placeId),
+    );
     void unsavePlace(place.placeId).catch(() => {});
   };
 
@@ -579,7 +590,7 @@ function SavedPlaceCard({
   onToggleSave: () => void;
 }) {
   const subtitleText = formatSavedPlaceSubtitle(place, language);
-  const heartIcon = <HeartIcon filled color={Palette.red300} size={24} />;
+  const heartIcon = <HeartIcon filled color={Palette.red300} size={20} />;
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
