@@ -33,7 +33,7 @@ const DEV_MOCK_CANDIDATE_SET: OnboardingCandidateSetResponse = {
       title: '경주 문화유산 나들이',
       imageUrl: 'https://picsum.photos/seed/gyeongju/600/600',
       serviceRegionCode: 'GYEONGSANG',
-      serviceRegionName: '경상',
+      serviceRegionName: '경상도',
       travelStyle: 'CULTURE_EXPERIENCE',
       tags: ['역사', '전통'],
       curatorMessage: '경주의 문화유산을 느껴보세요.',
@@ -44,7 +44,7 @@ const DEV_MOCK_CANDIDATE_SET: OnboardingCandidateSetResponse = {
       title: '전주 한옥마을 나들이',
       imageUrl: 'https://picsum.photos/seed/jeonju/600/600',
       serviceRegionCode: 'JEOLLA',
-      serviceRegionName: '전라',
+      serviceRegionName: '전라도',
       travelStyle: 'TRADITIONAL_MARKET',
       tags: ['한옥', '전통시장'],
       curatorMessage: '전주의 정취를 느껴보세요.',
@@ -55,7 +55,7 @@ const DEV_MOCK_CANDIDATE_SET: OnboardingCandidateSetResponse = {
       title: '부산 해운대 나들이',
       imageUrl: 'https://picsum.photos/seed/haeundae/600/600',
       serviceRegionCode: 'GYEONGSANG',
-      serviceRegionName: '경상',
+      serviceRegionName: '경상도',
       travelStyle: 'NATURE',
       tags: ['바다', '산책'],
       curatorMessage: '해운대 바다를 즐겨보세요.',
@@ -140,9 +140,12 @@ export default function DestinationScreen() {
   }, [setCandidateSet, isDevMockSession, language]);
 
   useEffect(() => {
-    loadCandidateSet();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDevMockSession, language]);
+    const frameId = requestAnimationFrame(() => {
+      loadCandidateSet();
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [loadCandidateSet]);
 
   const handleNext = () => {
     if (selectedPreferencePlaceIds.length === 0) return;
@@ -158,7 +161,11 @@ export default function DestinationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} progress={{ currentStep: 2, totalSteps: 2 }} />
+      <OnboardingHeader
+        onBack={() => goBackOrRoot(router, '/login')}
+        progress={{ currentStep: 3, totalSteps: 3 }}
+        rightIcon={null}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerGroup}>

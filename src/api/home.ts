@@ -1,12 +1,13 @@
 import { Asset } from 'expo-asset';
 
-import { client } from './client';
-import { API_BASE_URL } from '@/constants/env';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { API_BASE_URL } from '@/constants/env';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
+import { formatPlaceRegionName } from '@/utils/place-i18n';
+import { client } from './client';
 
 // The dev-bypass session's token isn't real — sending it to GET /home or GET
 // /monthly-recommendations 401s, which trips client.ts's refresh-then-logout
@@ -17,17 +18,17 @@ function isDevMockSession() {
   return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
 }
 
-export type FeaturedEventCategory =
-  | 'POPULAR'
-  | 'LOCAL_FESTIVAL'
-  | 'EXHIBITION_MUSEUM'
-  | 'NATURE';
+export type FeaturedEventCategory = 'POPULAR' | TravelStyleId;
 
 export const FEATURED_EVENT_CATEGORIES: readonly FeaturedEventCategory[] = [
   'POPULAR',
+  'LOCAL_FOOD',
   'LOCAL_FESTIVAL',
-  'EXHIBITION_MUSEUM',
+  'TRADITIONAL_MARKET',
+  'CULTURE_EXPERIENCE',
   'NATURE',
+  'EXHIBITION_MUSEUM',
+  'DRAMA_LOCATION',
 ];
 
 export type FeaturedEvent = {
@@ -56,7 +57,7 @@ const MOCK_GUIDES: GuideArticle[] = [
     badge: '이동 가이드',
     title: 'KTX 쉽게 예매하기',
     description: '공식 예매 방법부터 좌석 선택, 결제,\n티켓 확인까지 한 번에!',
-    tags: ['KTX', '교통', '공식예매', '외국인 가능'],
+    tags: ['KTX', '교통'],
     imageKey: 'KTX_GUIDE',
   },
 ];
@@ -67,7 +68,7 @@ const MOCK_GUIDES_EN: GuideArticle[] = [
     badge: 'Transportation Guide',
     title: 'How to Book KTX Tickets',
     description:
-      'From booking and choosing your seat to payment and\nticket confirmation—all in one guide.',
+      'From booking and choosing your seat to payment\nand ticket confirmation—all in one guide.',
     tags: ['KTX', 'Transportation'],
     imageKey: 'KTX_GUIDE',
   },
@@ -134,22 +135,22 @@ const MOCK_GUIDE_VIDEOS: Record<GuideCategoryId, GuideVideo[]> = {
 
 const MOCK_GUIDE_VIDEOS_EN: Record<GuideCategoryId, GuideVideo[]> = {
   TRANSPORT: [
-    { id: 'ktx-booking', title: 'Easily Book\nKTX Tickets', tags: ['Transport', 'Payment'], imageKey: 'KTX_GUIDE', category: 'TRANSPORT' },
-    { id: 'subway-transfer', title: 'How to Transfer\nSubway Lines', tags: ['Transport', 'Payment'], imageKey: 'SUBWAY_TRANSFER', category: 'TRANSPORT' },
-    { id: 'taxi-call', title: 'How to Call\na Taxi', tags: ['Transport', 'Payment'], imageKey: 'TAXI_CALL', category: 'TRANSPORT' },
-    { id: 'intercity-bus', title: 'Book Intercity\nBus Tickets', tags: ['Transport', 'Payment'], imageKey: 'INTERCITY_BUS', category: 'TRANSPORT' },
+    { id: 'ktx-booking', title: 'Book KTX\nTickets Easily', tags: ['Transport', 'Payment'], imageKey: 'KTX_GUIDE', category: 'TRANSPORT' },
+    { id: 'subway-transfer', title: 'How to Transfer\non the Subway', tags: ['Transport', 'Payment'], imageKey: 'SUBWAY_TRANSFER', category: 'TRANSPORT' },
+    { id: 'taxi-call', title: 'How to\nCall a Taxi', tags: ['Transport', 'Payment'], imageKey: 'TAXI_CALL', category: 'TRANSPORT' },
+    { id: 'intercity-bus', title: 'Book an Intercity\nBus Ticket', tags: ['Transport', 'Payment'], imageKey: 'INTERCITY_BUS', category: 'TRANSPORT' },
   ],
   ORDER: [
     { id: 'order-restaurant', title: 'How to Order at a\nKorean Restaurant', tags: ['Order', 'Dining'], imageKey: 'ORDER_RESTAURANT', category: 'ORDER' },
-    { id: 'order-waiting', title: 'How to Wait or\nReserve a Table', tags: ['Order', 'Reservation'], imageKey: 'ORDER_WAITING', category: 'ORDER' },
+    { id: 'order-waiting', title: 'How to Reserve\nor Join a Waitlist', tags: ['Order', 'Reservation'], imageKey: 'ORDER_WAITING', category: 'ORDER' },
     { id: 'order-delivery', title: 'How to Order\nFood Delivery', tags: ['Order', 'Delivery'], imageKey: 'ORDER_DELIVERY', category: 'ORDER' },
     { id: 'order-kiosk', title: 'How to Order\nat a Kiosk', tags: ['Order', 'Payment'], imageKey: 'ORDER_KIOSK', category: 'ORDER' },
   ],
   SAFETY: [
     { id: 'safety-emergency', title: 'How to Get Help\nin an Emergency', tags: ['Safety', 'Emergency'], imageKey: 'SAFETY_EMERGENCY', category: 'SAFETY' },
     { id: 'safety-lost', title: 'If You Lose Your\nPassport or Phone', tags: ['Safety', 'Lost & Found'], imageKey: 'SAFETY_LOST', category: 'SAFETY' },
-    { id: 'safety-hospital', title: 'How to See a Doctor\nWhen You Get Sick', tags: ['Safety', 'Hospital'], imageKey: 'SAFETY_HOSPITAL', category: 'SAFETY' },
-    { id: 'safety-hiking', title: 'Safety Tips for\nHiking in Korea', tags: ['Safety', 'Hiking'], imageKey: 'SAFETY_HIKING', category: 'SAFETY' },
+    { id: 'safety-hospital', title: 'How to Visit a Hospital When\nYou’re Sick', tags: ['Safety', 'Hospital'], imageKey: 'SAFETY_HOSPITAL', category: 'SAFETY' },
+    { id: 'safety-hiking', title: 'How to Hike\nSafely in Korea', tags: ['Safety', 'Hiking'], imageKey: 'SAFETY_HIKING', category: 'SAFETY' },
   ],
   LANGUAGE: [],
 };
@@ -190,13 +191,24 @@ export type EventDateFilterId = 'THIS_WEEK' | 'THIS_MONTH' | 'NEXT_MONTH';
 
 export const EVENT_DATE_FILTER_IDS: readonly EventDateFilterId[] = ['THIS_WEEK', 'THIS_MONTH', 'NEXT_MONTH'];
 
+export type EventDateRange = {
+  startDate: string | null;
+  endDate: string | null;
+};
+
 export type EventFilters = {
   region: EventRegionId | 'ALL';
   date: EventDateFilterId | 'ALL';
+  dateRange: EventDateRange;
   type: TravelStyleId | 'ALL';
 };
 
-export const DEFAULT_EVENT_FILTERS: EventFilters = { region: 'ALL', date: 'ALL', type: 'ALL' };
+export const DEFAULT_EVENT_FILTERS: EventFilters = {
+  region: 'ALL',
+  date: 'ALL',
+  dateRange: { startDate: null, endDate: null },
+  type: 'ALL',
+};
 
 // --- Real backend integration: GET /home, GET /monthly-recommendations ---
 // (see the staging Swagger spec — these are the only two home-area endpoints
@@ -222,6 +234,7 @@ export type PlaceCard = {
   // expected to substitute its own default (see api-docs' imageUrl description).
   imageUrl: string | null;
   festivalOccurrence: FestivalOccurrence | null;
+  operatingHours?: string | null;
   travelStyle: TravelStyleId;
   tags: string[];
   shortDescription: string;
@@ -242,6 +255,7 @@ export type HomeResponse = {
     totalCount: number;
     items: PlaceCard[];
   };
+  unreadMessageCount?: number;
 };
 
 type HomeEnvelope = {
@@ -257,7 +271,7 @@ const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
     placeId: 9001,
     title: '[전주] 이팝나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전북특별자치도 전주시 완산구 일대',
     imageUrl: 'https://picsum.photos/seed/jeonju-ipap/800/1000',
     festivalOccurrence: {
@@ -277,7 +291,7 @@ const DEV_MOCK_PLACE_CARDS: PlaceCard[] = [
     placeId: 9002,
     title: '[담양] 대나무 축제',
     serviceRegionCode: 'JEOLLA',
-    serviceRegionName: '전라',
+    serviceRegionName: '전라도',
     addressSummary: '전라남도 담양군 담양읍 죽녹원로 119',
     imageUrl: 'https://picsum.photos/seed/damyang-bamboo/800/1000',
     festivalOccurrence: {
@@ -379,6 +393,7 @@ export async function fetchHome(): Promise<HomeResponse> {
         totalCount: items.length,
         items,
       },
+      unreadMessageCount: useAuthStore.getState().unreadMessageCount,
     };
   }
   const response = await client.get<HomeEnvelope>('/home');
@@ -460,21 +475,72 @@ export async function fetchMonthlyRecommendations(
   return response.data.data;
 }
 
+function formatFeaturedEventDateRangeLabel(
+  festivalOccurrence: Pick<FestivalOccurrence, 'startDate' | 'endDate'> | null | undefined,
+  language: LanguageCode,
+) {
+  if (!festivalOccurrence?.startDate || !festivalOccurrence.endDate) {
+    return '';
+  }
+
+  const formatKoreanDate = (value: string) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    const parts = new Intl.DateTimeFormat('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+      weekday: 'short',
+      timeZone: 'UTC',
+    }).formatToParts(date);
+    const month = parts.find((part) => part.type === 'month')?.value ?? '';
+    const day = parts.find((part) => part.type === 'day')?.value ?? '';
+    const weekday = parts.find((part) => part.type === 'weekday')?.value ?? '';
+    return `${month}.${day}(${weekday})`;
+  };
+
+  const formatEnglishDate = (value: string) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+      timeZone: 'UTC',
+    }).formatToParts(date);
+    const month = parts.find((part) => part.type === 'month')?.value ?? '';
+    const day = parts.find((part) => part.type === 'day')?.value ?? '';
+    const weekday = parts.find((part) => part.type === 'weekday')?.value ?? '';
+    return `${month} ${day} (${weekday})`;
+  };
+
+  if (language === 'EN') {
+    return `${formatEnglishDate(festivalOccurrence.startDate)} – ${formatEnglishDate(festivalOccurrence.endDate)}`;
+  }
+
+  return `${formatKoreanDate(festivalOccurrence.startDate)}~${formatKoreanDate(festivalOccurrence.endDate)}`;
+}
+
 function toFeaturedEvent(card: PlaceCard): FeaturedEvent {
+  const language = useLanguageStore.getState().language;
   return {
     id: String(card.placeId),
     title: card.title,
-    dateRangeLabel: card.festivalOccurrence?.dateRangeText ?? '',
+    dateRangeLabel:
+      formatFeaturedEventDateRangeLabel(card.festivalOccurrence, language) ||
+      card.festivalOccurrence?.dateRangeText ||
+      '',
     imageUrl: normalizeImageUrl(card.imageUrl, DEFAULT_FEATURED_EVENT_IMAGE_URI),
   };
 }
 
 function toEventListing(card: PlaceCard): EventListing {
+  const language = useLanguageStore.getState().language;
   return {
     id: String(card.placeId),
     title: card.title,
-    location: card.serviceRegionName,
-    dateRangeLabel: card.festivalOccurrence?.dateRangeText ?? '',
+    location: formatPlaceRegionName(card.serviceRegionCode, language),
+    dateRangeLabel:
+      formatFeaturedEventDateRangeLabel(card.festivalOccurrence, language) ||
+      card.festivalOccurrence?.dateRangeText ||
+      '',
     category: card.travelStyle,
     imageUrl: normalizeImageUrl(card.imageUrl, DEFAULT_FEATURED_EVENT_IMAGE_URI),
   };
@@ -534,12 +600,15 @@ export async function fetchEventListings(
   sort: EventSortOrder = 'RECOMMENDED',
   filters: EventFilters = DEFAULT_EVENT_FILTERS,
 ): Promise<EventListing[]> {
+  const hasCustomDateRange = Boolean(filters.dateRange.startDate && filters.dateRange.endDate);
   try {
     const result = await fetchMonthlyRecommendations({
       year: new Date().getFullYear(),
       month,
       serviceRegionCode: filters.region === 'ALL' ? undefined : filters.region,
-      dateFilterType: filters.date === 'ALL' ? undefined : filters.date,
+      dateFilterType: hasCustomDateRange ? 'CUSTOM' : filters.date === 'ALL' ? undefined : filters.date,
+      customStartDate: hasCustomDateRange ? filters.dateRange.startDate! : undefined,
+      customEndDate: hasCustomDateRange ? filters.dateRange.endDate! : undefined,
       travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
       sort,
     });

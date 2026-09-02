@@ -1,4 +1,5 @@
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { isAxiosError } from 'axios';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchMockRouteDetail, type BuddyRoute, type DayTripStatus, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
+import type { ApiErrorEnvelope } from '@/api/client';
+import { createBuddyRoute, fetchBuddyRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import {
   Component13,
@@ -27,7 +29,10 @@ import {
 } from '@/components/place-detail/RouteIcons';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useAuthStore } from '@/store/auth-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import { useLanguageStore } from '@/store/language-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
 
@@ -35,61 +40,214 @@ const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: 
   WALK: { Icon: Component13, width: 40, height: 40 },
   SUBWAY: { Icon: Component15, width: 40, height: 40 },
   BUS: { Icon: Component17, width: 40, height: 40 },
+  EXPRESS_BUS: { Icon: Component17, width: 40, height: 40 },
   TRAIN: { Icon: Component15, width: 40, height: 40 },
-  KTX: { Icon: Component15, width: 40, height: 40 },
-  SHUTTLE: { Icon: Component17, width: 40, height: 40 },
+  AIRPLANE: { Icon: Component15, width: 40, height: 40 },
+  FERRY: { Icon: Component15, width: 40, height: 40 },
+  SHUTTLE_BUS: { Icon: Component17, width: 40, height: 40 },
 };
 
 const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; borderColor: string }> = {
   WALK: { backgroundColor: '#F1F7FF', borderColor: '#D9E9FF' },
   SUBWAY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
   BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
+  EXPRESS_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
   TRAIN: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
-  KTX: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
-  SHUTTLE: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
-};
-
-const DAY_TRIP_TEXT: Record<DayTripStatus, string> = {
-  DAY_TRIP_AVAILABLE: '당일치기 가능',
-  DAY_TRIP_UNAVAILABLE: '숙박 권장',
+  AIRPLANE: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
+  FERRY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
+  SHUTTLE_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
 const HANDLE_OVERLAP = 180;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
+function formatTemplate(template: string, values: Record<string, string>) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.split(`{${key}}`).join(value),
+    template,
+  );
+}
+
+function formatRouteDurationText(
+  minutes: number,
+  formats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  },
+) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours <= 0) {
+    return formatTemplate(formats.minuteOnly, { minutes: String(mins) });
+  }
+
+  if (mins <= 0) {
+    return formatTemplate(formats.hourOnly, { hours: String(hours) });
+  }
+
+  return formatTemplate(formats.hourMinute, { hours: String(hours), minutes: String(mins) });
+}
+
+function formatFareValue(amount: number | null, language: 'KO' | 'EN') {
+  if (amount == null) {
+    return '-';
+  }
+
+  const formatted = amount.toLocaleString(language === 'EN' ? 'en-US' : 'ko-KR');
+  return language === 'EN' ? `₩${formatted}` : `${formatted}원`;
+}
+
+function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
+  if (language === 'EN' && label === 'Overnight Stay') {
+    return 'Overnight\nStay';
+  }
+
+  return label;
+}
+
+function formatSummaryTimeLabel(label: string, language: 'KO' | 'EN') {
+  if (language !== 'EN') {
+    return label;
+  }
+
+  return label.replace(/\shr\s+/, ' hr\n');
+}
+
+function isRouteExpiredError(error: unknown) {
+  return isAxiosError<ApiErrorEnvelope>(error) && error.response?.status === 410 && error.response.data?.code === 'ROUTE_EXPIRED';
+}
+
 export default function RouteDetailScreen() {
   const router = useRouter();
-  const { routeId, placeName, placeAddress } = useLocalSearchParams<{
+  const { routeId, placeName, placeAddress, destinationPlaceId } = useLocalSearchParams<{
     routeId: string;
     placeName?: string;
     placeAddress?: string;
+    destinationPlaceId?: string;
   }>();
   const [route, setRoute] = useState<BuddyRoute | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const language = useLanguageStore((state) => state.language);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
+  const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
+  const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
+  const isEnglish = language === 'EN';
+  const t = useTranslation();
+  const routeCopy = t.placeDetail.routeTab;
+  const destination = useMemo(() => {
+    if (typeof placeName === 'string' && typeof placeAddress === 'string') {
+      return {
+        name: placeName,
+        address: placeAddress,
+      };
+    }
+
+    if (typeof placeName === 'string') {
+      return {
+        name: placeName,
+        address: placeName,
+      };
+    }
+
+    return {
+      name: isEnglish ? 'Destination' : '목적지',
+      address: isEnglish ? 'Destination' : '목적지',
+    };
+  }, [isEnglish, placeAddress, placeName]);
+  const resolvedDestinationPlaceId = useMemo(() => {
+    const value = Array.isArray(destinationPlaceId) ? destinationPlaceId[0] : destinationPlaceId;
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [destinationPlaceId]);
+
   const handleKtxCtaPress = useCallback(() => {
-    Alert.alert('준비 중', 'KTX 예매 안내는 추후 연결될 예정입니다.');
-  }, []);
+    Alert.alert(
+      isEnglish ? 'Coming soon' : '준비 중',
+      isEnglish
+        ? 'KTX booking information will be connected in a future step.'
+        : 'KTX 예매 안내는 추후 연결될 예정입니다.',
+    );
+  }, [isEnglish]);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const dayTripLabel =
-    route?.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
-      ? DAY_TRIP_TEXT.DAY_TRIP_AVAILABLE
-      : DAY_TRIP_TEXT.DAY_TRIP_UNAVAILABLE;
+
+  const handleRetry = useCallback(() => {
+    setReloadToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
-    if (!routeId || typeof placeName !== 'string' || typeof placeAddress !== 'string') return;
+    if (!routeId || !authHasHydrated || !onboardingHasHydrated) return;
+
     let active = true;
-    fetchMockRouteDetail(routeId, {
-      name: placeName,
-      address: placeAddress,
-    }).then((value) => {
-      if (active) setRoute(value);
-    });
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setHasError(false);
+    setRoute(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    const loadRoute = async () => {
+      try {
+        const value = await fetchBuddyRouteDetail(routeId, destination);
+        if (active) {
+          setRoute(value);
+        }
+        return;
+      } catch (error) {
+        if (active && isRouteExpiredError(error) && resolvedDestinationPlaceId != null) {
+          try {
+            const recreated = await createBuddyRoute(
+              {
+                originLocationId: currentLocationId ?? resolvedDestinationPlaceId,
+                destinationPlaceId: resolvedDestinationPlaceId,
+              },
+              destination,
+            );
+
+            if (!active) {
+              return;
+            }
+
+            setRoute(recreated);
+            router.replace({
+              pathname: '/routes/[routeId]',
+              params: {
+                routeId: recreated.routeId,
+                placeName: destination.name,
+                placeAddress: destination.address,
+                destinationPlaceId: String(resolvedDestinationPlaceId),
+              },
+            });
+            return;
+          } catch {
+            if (!active) {
+              return;
+            }
+
+            setHasError(true);
+            return;
+          }
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setHasError(true);
+      }
+    };
+
+    void loadRoute();
     return () => {
       active = false;
     };
-  }, [language, routeId, placeName, placeAddress]);
+  }, [authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
 
   const snapPoints = useMemo(() => {
     if (!mapAreaHeight) return ['50%', '100%'];
@@ -100,7 +258,26 @@ export default function RouteDetailScreen() {
     setMapAreaHeight(e.nativeEvent.layout.height);
   }, []);
 
+  const summaryTimeLabel = route ? formatSummaryTimeLabel(route.summary.estimatedOneWayTimeText, language) : '';
+  const dayTripLabel = route
+    ? route.summary.dayTripStatus === 'DAY_TRIP_AVAILABLE'
+      ? routeCopy.dayTripValues.available
+      : routeCopy.dayTripValues.stayRecommended
+    : '';
+  const summaryDayTripLabel = formatSummaryDayTripLabel(dayTripLabel, language);
+
   if (!route) {
+    if (hasError) {
+      return (
+        <SafeAreaView style={styles.loading} edges={['top']}>
+          <CustomText style={styles.errorText}>{routeCopy.error}</CustomText>
+          <Pressable style={styles.retryButton} onPress={handleRetry}>
+            <CustomText style={styles.retryText}>{routeCopy.retry}</CustomText>
+          </Pressable>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.loading} edges={['top']}>
         <ActivityIndicator color={Palette.primary} />
@@ -114,7 +291,7 @@ export default function RouteDetailScreen() {
         <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
           <CustomText style={styles.back}>‹</CustomText>
         </Pressable>
-        <CustomText style={styles.headerTitle}>상세 이동 경로</CustomText>
+        <CustomText style={styles.headerTitle}>{isEnglish ? 'Detailed Route' : '상세 이동 경로'}</CustomText>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -149,9 +326,9 @@ export default function RouteDetailScreen() {
             contentContainerStyle={styles.sheetContent}
           >
             <View style={styles.summaryBox}>
-              <SummaryItem label="교통수단" value={route.summary.recommendedTransportText} />
-              <SummaryItem label="예상 시간" value={route.summary.estimatedOneWayTimeText} />
-              <SummaryItem label="여행 판단" value={dayTripLabel} highlight />
+              <SummaryItem label={routeCopy.summaryLabels.transport} value={route.summary.recommendedTransportText} />
+              <SummaryItem label={routeCopy.summaryLabels.time} value={summaryTimeLabel} />
+              <SummaryItem label={routeCopy.statLabels.dayTrip} value={summaryDayTripLabel} highlight />
             </View>
 
             {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} /> : null}
@@ -166,6 +343,8 @@ export default function RouteDetailScreen() {
                     tip={tip}
                     onCtaPress={handleKtxCtaPress}
                     language={language}
+                    timeFormats={routeCopy.timeFormats}
+                    isEnglish={isEnglish}
                   />
                 );
               })}
@@ -184,18 +363,22 @@ export default function RouteDetailScreen() {
               </View>
             </View>
 
-            <CustomText style={styles.sectionTitle}>예상 교통비</CustomText>
+            <CustomText style={styles.sectionTitle}>{routeCopy.fareTitle}</CustomText>
             <View style={styles.fareCard}>
               <View style={styles.fareRow}>
-                <CustomText style={styles.fareLabel}>KTX 편도</CustomText>
-                <CustomText style={styles.fareValue}>약 {route.summary.fare.oneWayEstimated.toLocaleString('ko-KR')}원</CustomText>
+                <CustomText style={styles.fareLabel}>{routeCopy.fareOneWay}</CustomText>
+                <CustomText style={styles.fareValue}>
+                  {routeCopy.farePrefix} {formatFareValue(route.summary.fare.oneWayEstimated, language)}
+                </CustomText>
               </View>
               <View style={[styles.fareRow, styles.fareRowSpaced]}>
-                <CustomText style={styles.fareLabel}>KTX 왕복</CustomText>
-                <CustomText style={styles.fareValue}>약 {route.summary.fare.roundTripEstimated.toLocaleString('ko-KR')}원</CustomText>
+                <CustomText style={styles.fareLabel}>{routeCopy.fareRoundTrip}</CustomText>
+                <CustomText style={styles.fareValue}>
+                  {routeCopy.farePrefix} {formatFareValue(route.summary.fare.roundTripEstimated, language)}
+                </CustomText>
               </View>
               <View style={styles.fareDivider} />
-              <CustomText style={styles.disclaimer}>* 전체 경비 기준으로 작성</CustomText>
+              <CustomText style={styles.disclaimer}>{route.summary.fare.disclaimer}</CustomText>
             </View>
           </BottomSheetScrollView>
         </BottomSheet>
@@ -259,10 +442,18 @@ function SegmentCardBody({
   segment,
   onCtaPress,
   language,
+  timeFormats,
+  isEnglish,
 }: {
   segment: RouteSegment;
   onCtaPress: () => void;
   language: 'KO' | 'EN';
+  timeFormats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  };
+  isEnglish: boolean;
 }) {
   return (
     <>
@@ -271,7 +462,7 @@ function SegmentCardBody({
         <RouteMetaIcon type={segment.mode} />
         <CustomText style={styles.segmentMeta}>{formatTransportModeLabel(segment.mode, language)}</CustomText>
         <RouteMetaClock />
-        <CustomText style={styles.segmentMeta}>약 {segment.durationMinutes}분</CustomText>
+        <CustomText style={styles.segmentMeta}>{formatRouteDurationText(segment.durationMinutes, timeFormats)}</CustomText>
       </View>
       {segment.instruction ? (
         <>
@@ -279,9 +470,9 @@ function SegmentCardBody({
           <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
         </>
       ) : null}
-      {segment.mode === 'KTX' ? (
+      {segment.routeName?.toUpperCase() === 'KTX' ? (
         <Pressable style={styles.ctaButton} onPress={onCtaPress}>
-          <CustomText style={styles.ctaButtonText}>KTX 예매하는 법 확인하기</CustomText>
+          <CustomText style={styles.ctaButtonText}>{isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}</CustomText>
         </Pressable>
       ) : null}
     </>
@@ -304,11 +495,19 @@ function TimelineItem({
   tip,
   onCtaPress,
   language,
+  timeFormats,
+  isEnglish,
 }: {
   segment: RouteSegment;
   tip?: RouteTip;
   onCtaPress: () => void;
   language: 'KO' | 'EN';
+  timeFormats: {
+    minuteOnly: string;
+    hourOnly: string;
+    hourMinute: string;
+  };
+  isEnglish: boolean;
 }) {
   const Icon = SEGMENT_ICON[segment.mode].Icon;
 
@@ -324,7 +523,13 @@ function TimelineItem({
       <View style={styles.timelineContent}>
         {tip ? <SegmentTipContent tip={tip} /> : null}
         <View style={styles.segmentCard}>
-          <SegmentCardBody segment={segment} onCtaPress={onCtaPress} language={language} />
+          <SegmentCardBody
+            segment={segment}
+            onCtaPress={onCtaPress}
+            language={language}
+            timeFormats={timeFormats}
+            isEnglish={isEnglish}
+          />
         </View>
       </View>
     </View>
@@ -333,7 +538,7 @@ function TimelineItem({
 
 function RouteMetaIcon({ type }: { type: TransportMode }) {
   if (type === 'WALK') return <RouteWalkDot width={20} height={20} />;
-  if (type === 'BUS' || type === 'SHUTTLE') return <Directions_bus />;
+  if (type === 'BUS' || type === 'EXPRESS_BUS' || type === 'SHUTTLE_BUS') return <Directions_bus />;
   return <Directions_railway_2 width={11} height={16} />;
 }
 
@@ -343,7 +548,26 @@ function RouteMetaClock() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 12 },
+  errorText: {
+    alignSelf: 'stretch',
+    textAlign: 'left',
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: Palette.grey700,
+  },
+  retryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: Palette.primary,
+  },
+  retryText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   back: { fontFamily: FontFamily.pretendard.regular, fontSize: 36, lineHeight: 36, color: Palette.text },
   headerTitle: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },

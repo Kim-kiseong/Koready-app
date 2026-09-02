@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, ListRenderItemInfo, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, ListRenderItemInfo, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -24,6 +24,7 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
+import { useTranslation } from '@/i18n/useTranslation';
 import { getCountryDisplayName, getCountryFlag, normalizeCountryCode } from '@/utils/country';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { resolveProfileImageUri } from '@/utils/profile-image';
@@ -64,7 +65,7 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
         nationality: 'France',
       },
       preview: '안녕하세요! 연락 주셔서 반가워요 😊 같이 가기...',
-      updatedAt: '2026-08-05T10:40:00.000Z',
+      lastSentAt: '2026-08-05T10:40:00.000Z',
       unreadCount: 2,
       blocked: false,
       canReply: true,
@@ -86,7 +87,7 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
         nationality: 'United States',
       },
       preview: '안녕하세요! 저도 다음 주말에 거기 가볼까 해요.',
-      updatedAt: '2026-08-04T03:20:00.000Z',
+      lastSentAt: '2026-08-04T03:20:00.000Z',
       unreadCount: 1,
       blocked: false,
       canReply: true,
@@ -108,7 +109,7 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
         nationality: 'United Kingdom',
       },
       preview: '추천해주실 만한 찻집이 있을까요?',
-      updatedAt: '2026-08-03T16:10:00.000Z',
+      lastSentAt: '2026-08-03T16:10:00.000Z',
       unreadCount: 0,
       blocked: false,
       canReply: true,
@@ -130,7 +131,7 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
         nationality: 'Japan',
       },
       preview: '좋네요! 다녀오면 어땠는지 알려주세요.',
-      updatedAt: '2026-08-01T05:15:00.000Z',
+      lastSentAt: '2026-08-01T05:15:00.000Z',
       unreadCount: 0,
       blocked: false,
       canReply: true,
@@ -141,26 +142,81 @@ const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
   unreadTotal: 3,
 };
 
-function cloneMockItems() {
+const ENGLISH_THREAD_SUMMARY_COPY: Record<
+  string,
+  {
+    title: string;
+    address: string;
+    preview: string;
+  }
+> = {
+  'mock-thread-emma': {
+    title: 'Gimcheon Gimbap Festival',
+    address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+    preview: 'Hi! Thanks for reaching out 😊 I’d love to join.',
+  },
+  'mock-thread-liam': {
+    title: 'Seongsan Ilchulbong',
+    address: '78 Seongsan-ri, Seongsan-eup, Seogwipo-si, Jeju-do',
+    preview: "Hi! I'm thinking of going there next weekend too.",
+  },
+  'mock-thread-sophie': {
+    title: 'Insadong',
+    address: 'Insadong-gil area, Jongno-gu, Seoul',
+    preview: 'Do you know any tea houses you would recommend?',
+  },
+  'mock-thread-yuki': {
+    title: 'N Seoul Tower',
+    address: '105 Namsan Park-gil, Yongsan-gu, Seoul',
+    preview: 'Sounds great! Please let me know how it was when you go.',
+  },
+};
+
+function cloneMockItems(language: 'KO' | 'EN' = useLanguageStore.getState().language) {
   return MOCK_THREAD_SUMMARY.items.map((item) => ({
     ...item,
-    place: { ...item.place },
+    place:
+      language === 'EN'
+        ? {
+            ...item.place,
+            title: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.title ?? item.place.title,
+            address: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.address ?? item.place.address,
+          }
+        : { ...item.place },
     otherProfile: { ...item.otherProfile },
+    preview:
+      language === 'EN'
+        ? ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.preview ?? item.preview
+        : item.preview,
   }));
+}
+
+function createMockThreadState(language: 'KO' | 'EN'): MessageThreadsScreenState {
+  const items = cloneMockItems(language);
+  return {
+    items,
+    nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
+    hasMore: MOCK_THREAD_SUMMARY.hasMore,
+    unreadTotal: items.reduce((total, item) => total + item.unreadCount, 0),
+  };
 }
 
 export default function MessageThreadsScreen() {
   const router = useRouter();
   const language = useLanguageStore((state) => state.language);
+  const t = useTranslation();
   const storeThreads = useMessageThreadStore((state) => state.threads);
 
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [threadState, setThreadState] = useState<MessageThreadsScreenState>({
-    items: cloneMockItems(),
-    nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
-    hasMore: MOCK_THREAD_SUMMARY.hasMore,
-    unreadTotal: MOCK_THREAD_SUMMARY.unreadTotal,
+    items: [],
+    nextCursor: null,
+    hasMore: false,
+    unreadTotal: 0,
   });
   const countryOptions = profileOptions?.countries?.length ? profileOptions.countries : FALLBACK_COUNTRY_OPTIONS;
   const selectedProfileFallback = useMemo(
@@ -172,48 +228,59 @@ export default function MessageThreadsScreen() {
     let cancelled = false;
 
     (async () => {
-      try {
-        const [loadedOptions, loadedThreads] = await Promise.all([
-          fetchProfileOptions(),
-          fetchMessageThreads(),
-        ]);
+      const [optionsResult, threadsResult] = await Promise.allSettled([
+        fetchProfileOptions(),
+        fetchMessageThreads(),
+      ]);
 
-        if (cancelled) {
-          return;
-        }
+      if (cancelled) {
+        return;
+      }
 
-        setProfileOptions(loadedOptions);
-        setThreadState({
-          items: loadedThreads.items.length > 0 ? loadedThreads.items : cloneMockItems(),
-          nextCursor: loadedThreads.nextCursor,
-          hasMore: loadedThreads.hasMore,
-          unreadTotal: loadedThreads.unreadTotal,
-        });
-      } catch {
-        if (!cancelled) {
-          setProfileOptions(null);
+      if (optionsResult.status === 'fulfilled') {
+        setProfileOptions(optionsResult.value);
+      } else {
+        setProfileOptions(null);
+      }
+
+      if (threadsResult.status === 'fulfilled') {
+        const nextThreads = threadsResult.value;
+        setThreadState(
+          __DEV__ && nextThreads.items.length === 0 ? createMockThreadState(language) : nextThreads,
+        );
+        setLoadError(null);
+      } else {
+        if (__DEV__) {
+          setThreadState(createMockThreadState(language));
+          setLoadError(null);
+        } else {
           setThreadState({
-            items: cloneMockItems(),
-            nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
-            hasMore: MOCK_THREAD_SUMMARY.hasMore,
-            unreadTotal: MOCK_THREAD_SUMMARY.unreadTotal,
+            items: [],
+            nextCursor: null,
+            hasMore: false,
+            unreadTotal: 0,
           });
+          setLoadError(
+            extractErrorMessage(threadsResult.reason, t.messages.threads.errorDescriptionFallback),
+          );
         }
       }
+
+      setIsLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [language, reloadToken, t.messages.threads.errorDescriptionFallback]);
 
   const displayItems = useMemo(() => {
-    const baseItems = threadState.items.length > 0 ? threadState.items : cloneMockItems();
+    const baseItems = threadState.items;
     const apiMap = new Map(baseItems.map((item) => [item.threadId, item]));
 
     const storeItems = Object.values(storeThreads)
       .map((thread) => convertStoredThreadToListItem(thread, countryOptions))
-      .sort(compareThreadsByUpdatedAt);
+      .sort(compareThreadsByLastSentAt);
 
     const prependItems: MessageThreadListItem[] = [];
     storeItems.forEach((item) => {
@@ -252,6 +319,38 @@ export default function MessageThreadsScreen() {
     [router],
   );
 
+  if (isLoading && !loadError) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={Palette.primary} />
+          <CustomText style={styles.loadingText}>{t.messages.threads.loading}</CustomText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+        <View style={styles.errorState}>
+          <CustomText style={styles.errorTitle}>{t.messages.threads.errorTitle}</CustomText>
+          <CustomText style={styles.errorDescription}>{loadError}</CustomText>
+
+          <Pressable
+            style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            onPress={() => {
+              setIsLoading(true);
+              setLoadError(null);
+              setReloadToken((prev) => prev + 1);
+            }}>
+            <CustomText style={styles.retryButtonText}>{t.messages.threads.retry}</CustomText>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -265,7 +364,7 @@ export default function MessageThreadsScreen() {
         </Pressable>
 
         <View style={styles.headerTitleWrap}>
-          <CustomText style={styles.headerTitle}>쪽지함</CustomText>
+          <CustomText style={styles.headerTitle}>{t.messages.threads.title}</CustomText>
           {unreadTotal > 0 ? (
             <View style={styles.unreadBadge}>
               <CustomText style={styles.unreadBadgeText}>{unreadTotal}</CustomText>
@@ -279,7 +378,10 @@ export default function MessageThreadsScreen() {
       <FlatList
         data={displayItems}
         keyExtractor={(item) => item.threadId}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          displayItems.length === 0 ? styles.listContentEmpty : null,
+        ]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }: ListRenderItemInfo<MessageThreadListItem>) => (
           <MessageThreadCard
@@ -291,6 +393,12 @@ export default function MessageThreadsScreen() {
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <CustomText style={styles.emptyTitle}>{t.messages.threads.emptyTitle}</CustomText>
+            <CustomText style={styles.emptyDescription}>{t.messages.threads.emptyDescription}</CustomText>
+          </View>
+        }
         ListFooterComponent={<View style={styles.footerSpacer} />}
       />
 
@@ -375,7 +483,7 @@ function MessageThreadCard({
           </View>
         </View>
 
-        <CustomText style={styles.time}>{formatRelativeDate(item.updatedAt, language)}</CustomText>
+        <CustomText style={styles.time}>{formatRelativeDate(item.lastSentAt, language)}</CustomText>
       </View>
 
       <CustomText style={styles.preview} numberOfLines={1} ellipsizeMode="tail">
@@ -411,10 +519,10 @@ function PlacePinIcon() {
   );
 }
 
-function compareThreadsByUpdatedAt(left: MessageThreadListItem, right: MessageThreadListItem) {
-  const updatedDiff = right.updatedAt.localeCompare(left.updatedAt);
-  if (updatedDiff !== 0) {
-    return updatedDiff;
+function compareThreadsByLastSentAt(left: MessageThreadListItem, right: MessageThreadListItem) {
+  const lastSentDiff = right.lastSentAt.localeCompare(left.lastSentAt);
+  if (lastSentDiff !== 0) {
+    return lastSentDiff;
   }
 
   return right.threadId.localeCompare(left.threadId);
@@ -428,9 +536,9 @@ function buildThreadFromSummary(item: MessageThreadListItem): MessageThreadRespo
     receiverProfileId: item.otherProfile.profileId,
     placeId: item.place.placeId,
     content: item.preview,
-    sentAt: item.updatedAt,
+    sentAt: item.lastSentAt,
     read: item.unreadCount === 0,
-    readAt: item.unreadCount === 0 ? item.updatedAt : null,
+    readAt: item.unreadCount === 0 ? item.lastSentAt : null,
   };
 
   return {
@@ -450,7 +558,7 @@ function convertStoredThreadToListItem(
 ): MessageThreadListItem {
   const latestMessage = [...thread.messages].sort((left, right) => left.sentAt.localeCompare(right.sentAt)).at(-1);
   const preview = normalizePreviewText(latestMessage?.content ?? '');
-  const updatedAt = latestMessage?.sentAt ?? new Date().toISOString();
+  const lastSentAt = latestMessage?.sentAt ?? new Date().toISOString();
   const unreadCount = thread.messages.reduce((count, message) => {
     return count + (message.senderProfileId === thread.otherProfile.profileId && !message.read ? 1 : 0);
   }, 0);
@@ -467,11 +575,40 @@ function convertStoredThreadToListItem(
         getCountryDisplayName(thread.otherProfile.nationalityCode ?? '', countryOptions),
     },
     preview,
-    updatedAt,
+    lastSentAt,
     unreadCount,
     blocked: false,
     canReply: thread.canReply,
   };
+}
+
+function extractErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as {
+      response?: {
+        data?: {
+          message?: string;
+          code?: string;
+        };
+      };
+    }).response;
+
+    const message = response?.data?.message?.trim();
+    if (message) {
+      return message;
+    }
+
+    const code = response?.data?.code?.trim();
+    if (code) {
+      return code;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function normalizePreviewText(value: string) {
@@ -501,6 +638,10 @@ function formatRelativeDate(value: string, language: 'KO' | 'EN') {
   }
 
   const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) {
+    return language === 'KO' ? '어제' : 'Yesterday';
+  }
+
   return language === 'KO' ? `${diffDays}일 전` : `${diffDays} days ago`;
 }
 
@@ -554,8 +695,32 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 28,
   },
+  listContentEmpty: {
+    flexGrow: 1,
+  },
   itemSeparator: {
     height: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    lineHeight: 25.2,
+    color: Palette.text,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey600,
+    textAlign: 'center',
   },
   card: {
     width: '100%',
@@ -658,6 +823,60 @@ const styles = StyleSheet.create({
   footerLoading: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  loadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey600,
+  },
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+  },
+  errorTitle: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 20,
+    lineHeight: 28,
+    color: Palette.text,
+    textAlign: 'center',
+  },
+  errorDescription: {
+    marginTop: 10,
+    marginBottom: 24,
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey600,
+    textAlign: 'center',
+  },
+  retryButton: {
+    minWidth: 120,
+    borderRadius: 14,
+    backgroundColor: Palette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonPressed: {
+    opacity: 0.9,
+  },
+  retryButtonText: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 15,
+    lineHeight: 21,
+    color: '#FFFFFF',
   },
   footerSpacer: {
     height: 8,

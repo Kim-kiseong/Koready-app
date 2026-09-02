@@ -92,14 +92,17 @@ const styles = StyleSheet.create({
   tag: {
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: '#ffffff',
-    backgroundColor: '#000000',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
     paddingHorizontal: 12,
     paddingVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tagText: {
     fontSize: 12,
-    fontFamily: FontFamily.pretendard.medium,
+    lineHeight: 16.8,
+    fontFamily: FontFamily.inter.medium,
     color: '#ffffff',
   },
 });

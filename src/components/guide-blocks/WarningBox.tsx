@@ -1,4 +1,4 @@
-import { SymbolView } from 'expo-symbols';
+import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
@@ -12,16 +12,7 @@ export type WarningBoxProps = {
 export default function WarningBox({ text }: WarningBoxProps) {
   return (
     <View style={styles.box}>
-      <SymbolView
-        name={{
-          ios: 'exclamationmark.triangle.fill',
-          android: 'warning',
-          web: 'warning',
-        }}
-        size={24}
-        weight="regular"
-        tintColor={Palette.warningText}
-      />
+      <Image source={require('@/assets/images/warning-triangle.svg')} style={styles.icon} contentFit="contain" />
       <CustomText style={styles.text}>{text}</CustomText>
     </View>
   );
@@ -30,13 +21,20 @@ export default function WarningBox({ text }: WarningBoxProps) {
 const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     padding: 16,
+    width: '100%',
+    alignSelf: 'stretch',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Palette.warningBorder,
     backgroundColor: Palette.warningBg,
+  },
+  icon: {
+    marginTop:4,
+    width: 16,
+    height: 16,
   },
   text: {
     flex: 1,

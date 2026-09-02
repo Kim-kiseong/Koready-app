@@ -21,8 +21,8 @@ export default function EventCard({ event, onPress }: EventCardProps) {
         <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
       )}
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
-        start={{ x: 0.5, y: 0.12 }}
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)']}
+        start={{ x: 0.5, y: 0.434 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
@@ -50,6 +50,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.bold,
     fontSize: 16,
     color: '#ffffff',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   dateRange: {
     fontFamily: FontFamily.pretendard.regular,

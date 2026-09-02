@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,19 +9,21 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
-  type NativeSyntheticEvent,
   type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchFeaturedEvents, fetchTravelGuides, FEATURED_EVENT_CATEGORIES } from '@/api/home';
 import type { FeaturedEvent, FeaturedEventCategory, GuideArticle } from '@/api/home';
+import { FEATURED_EVENT_CATEGORIES, fetchFeaturedEvents, fetchTravelGuides } from '@/api/home';
 import type { LanguageCode } from '@/api/types';
 import { updateMyLanguage } from '@/api/user';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import EventCard from '@/components/EventCard';
 import GuideCard from '@/components/GuideCard';
+import ArrowDropDownIcon from '@/components/icons/ArrowDropDownIcon';
+import ArrowForwardIosIcon from '@/components/icons/ArrowForwardIosIcon';
 import LanguageSwitchModal from '@/components/LanguageSwitchModal';
 import PillChip from '@/components/PillChip';
 import { Palette } from '@/constants/colors';
@@ -106,64 +108,37 @@ export default function HomeScreen() {
             <CustomText style={styles.locationText} numberOfLines={1}>
               {locationLabel}
             </CustomText>
-            <SymbolView
-              name={{ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' }}
-              size={14}
-              weight="regular"
-              tintColor={Palette.grey400}
-            />
+            <ArrowDropDownIcon />
           </Pressable>
 
-          <View style={styles.languageToggle}>
-            <Pressable
-              style={styles.languageSegment}
-              hitSlop={10}
-              onPress={() => {
-                language !== 'KO' && setPendingLanguage('KO');
-              }}>
-              {language === 'KO' && (
-                <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
-              )}
-              <CustomText style={language === 'KO' ? styles.languageTextActive : styles.languageTextInactive}>
-                {t.home.languageKo}
-              </CustomText>
-            </Pressable>
-            <Pressable
-              style={styles.languageSegment}
-              hitSlop={10}
-              onPress={() => {
-                language !== 'EN' && setPendingLanguage('EN');
-              }}>
-              {language === 'EN' && (
-                <View style={[StyleSheet.absoluteFill, styles.languageSegmentActiveBg]} />
-              )}
-              <CustomText style={language === 'EN' ? styles.languageTextActive : styles.languageTextInactive}>
-                {t.home.languageEn}
-              </CustomText>
-            </Pressable>
+          <View style={[styles.languageToggle, language === 'EN' && styles.languageToggleEnglish]}>
+            <LanguageOption
+              label={t.home.languageKo}
+              active={language === 'KO'}
+              onPress={() => setPendingLanguage('KO')}
+            />
+            <LanguageOption
+              label={t.home.languageEn}
+              active={language === 'EN'}
+              onPress={() => setPendingLanguage('EN')}
+            />
           </View>
         </View>
 
-        <View style={styles.searchBar}>
+        <Pressable style={styles.searchBar} onPress={() => router.push('/place-search')}>
           <SymbolView
             name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-            size={18}
+            size={14}
             weight="regular"
             tintColor={Palette.grey400}
           />
           <CustomText style={styles.searchPlaceholder}>{t.home.searchPlaceholder}</CustomText>
-          <SymbolView
-            name={{ ios: 'xmark.circle.fill', android: 'close', web: 'close' }}
-            size={18}
-            weight="regular"
-            tintColor={Palette.grey350}
-          />
-        </View>
+        </Pressable>
 
-        <View style={styles.section}>
+        <View style={[styles.section, styles.featuredSectionTop]}>
           <View style={styles.sectionHeaderRow}>
             {language === 'EN' ? (
-              <View>
+              <View style={styles.featuredTitleBlock}>
                 <CustomText style={styles.sectionTitleLine1}>Don&apos;t miss these!</CustomText>
                 <CustomText style={styles.sectionTitle}>
                   {'In Korea this '}
@@ -172,11 +147,11 @@ export default function HomeScreen() {
                 </CustomText>
               </View>
             ) : (
-              <View>
-                <View style={styles.sectionTitleRow}>
+              <View style={styles.featuredTitleBlock}>
+                <CustomText style={styles.sectionTitleLine1} numberOfLines={1}>
                   <CustomText style={styles.sectionTitleAccent}>{t.home.featuredTitlePrefix}</CustomText>
-                  <CustomText style={styles.sectionTitleLine1}>{t.home.featuredTitleConnector}</CustomText>
-                </View>
+                  {t.home.featuredTitleConnector}
+                </CustomText>
                 <CustomText style={styles.sectionTitle}>
                   {month}
                   {t.home.featuredTitleSuffix}
@@ -207,7 +182,7 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, styles.guideSection]}>
           <View style={styles.sectionHeaderRow}>
             <CustomText style={styles.sectionTitle}>{t.home.guidesSectionTitle}</CustomText>
             <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/guides')} />
@@ -292,12 +267,29 @@ function SeeAllLink({ label, onPress }: { label: string; onPress?: () => void })
   return (
     <Pressable style={styles.seeAllRow} onPress={onPress}>
       <CustomText style={styles.seeAllText}>{label}</CustomText>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'arrow_forward_ios', web: 'arrow_forward_ios' }}
-        size={12}
-        weight="regular"
-        tintColor={Palette.grey500}
-      />
+      <ArrowForwardIosIcon color={Palette.grey500} />
+    </Pressable>
+  );
+}
+
+// Figma: active language sits in a gradient pill (154deg, primaryLight -> primary);
+// the inactive language is plain text with no background.
+function LanguageOption({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  if (active) {
+    return (
+      <LinearGradient
+        colors={[Palette.primaryLight, Palette.primary]}
+        start={{ x: 0.28, y: 0.05 }}
+        end={{ x: 0.72, y: 0.95 }}
+        style={styles.languageActivePill}>
+        <CustomText style={styles.languageTextActive}>{label}</CustomText>
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <Pressable hitSlop={10} onPress={onPress}>
+      <CustomText style={styles.languageTextInactive}>{label}</CustomText>
     </Pressable>
   );
 }
@@ -309,24 +301,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
-    gap: 24,
+    gap: 16,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop:24,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 6,
     flexShrink: 1,
   },
   locationText: {
     flexShrink: 1,
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 16,
     color: Palette.text,
   },
@@ -339,29 +331,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Palette.grey150,
     backgroundColor: '#ffffff',
-    padding: 4,
+    paddingLeft: 4,
+    paddingRight: 12,
+    paddingVertical: 4,
   },
-  languageSegment: {
+  languageToggleEnglish: {
+    paddingLeft: 12,
+    paddingRight: 4,
+  },
+  languageActivePill: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  languageSegmentActiveBg: {
-    backgroundColor: Palette.primary,
-    borderRadius: 100,
   },
   languageTextActive: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 13,
     color: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
   },
   languageTextInactive: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 13,
     color: Palette.grey600,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
   },
   searchBar: {
     marginHorizontal: 16,
@@ -384,14 +377,21 @@ const styles = StyleSheet.create({
   section: {
     gap: 16,
   },
+  featuredSectionTop: {
+    paddingTop: 16,
+  },
+  guideSection: {
+    paddingTop: 16,
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
+  featuredTitleBlock: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   sectionTitleAccent: {
     fontFamily: FontFamily.pretendard.semiBold,
@@ -416,7 +416,6 @@ const styles = StyleSheet.create({
   seeAllRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
   },
   seeAllText: {
     fontFamily: FontFamily.pretendard.regular,

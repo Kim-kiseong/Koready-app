@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as Crypto from 'expo-crypto';
 
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
@@ -30,18 +29,6 @@ function isDevMockSession() {
   return __DEV__ && useAuthStore.getState().accessToken === DEV_MOCK_ACCESS_TOKEN;
 }
 
-function hasMockThread(threadId: string) {
-  return getMockMessageThreadById(threadId) !== null;
-}
-
-function shouldFallbackToMock(error: unknown, threadId?: string) {
-  if (threadId && hasMockThread(threadId)) {
-    return true;
-  }
-
-  return axios.isAxiosError(error);
-}
-
 export function createMessageThreadIdempotencyKey() {
   return Crypto.randomUUID().replace(/-/g, '');
 }
@@ -64,7 +51,7 @@ export async function sendMessageThread(
 
     return response.data.data;
   } catch (error) {
-    if (shouldFallbackToMock(error)) {
+    if (__DEV__) {
       return createOrAppendMockMessageThread(payload, payload.content, idempotencyKey, context);
     }
 
@@ -91,9 +78,14 @@ export async function fetchMessageThreads({
       },
     });
 
-    return response.data.data;
+    const data = response.data.data;
+    if (__DEV__ && data.items.length === 0) {
+      return getMockMessageThreadsResponse(cursor, size);
+    }
+
+    return data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
+    if (__DEV__) {
       return getMockMessageThreadsResponse(cursor, size);
     }
 
@@ -128,9 +120,11 @@ export async function fetchMessageThread(
 
     return response.data.data;
   } catch (error) {
-    const mockThread = getMockMessageThreadById(threadId, cursor, size);
-    if (mockThread) {
-      return mockThread;
+    if (__DEV__) {
+      const mockThread = getMockMessageThreadById(threadId, cursor, size);
+      if (mockThread) {
+        return mockThread;
+      }
     }
 
     throw error;
@@ -162,9 +156,11 @@ export async function replyMessageThread(
 
     return response.data.data;
   } catch (error) {
-    const mockMessage = replyToMockMessageThread(threadId, payload);
-    if (mockMessage) {
-      return mockMessage;
+    if (__DEV__) {
+      const mockMessage = replyToMockMessageThread(threadId, payload, idempotencyKey);
+      if (mockMessage) {
+        return mockMessage;
+      }
     }
 
     throw error;
@@ -183,9 +179,11 @@ export async function markMessageThreadRead(threadId: string): Promise<MessageTh
     const response = await client.put<MessageThreadReadEnvelope>(`/message-threads/${threadId}/read`);
     return response.data.data;
   } catch (error) {
-    const mockRead = markMockMessageThreadRead(threadId);
-    if (mockRead) {
-      return mockRead;
+    if (__DEV__) {
+      const mockRead = markMockMessageThreadRead(threadId);
+      if (mockRead) {
+        return mockRead;
+      }
     }
 
     throw error;

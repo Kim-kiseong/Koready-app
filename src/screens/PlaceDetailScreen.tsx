@@ -43,6 +43,40 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
+function normalizePlaceDetailTab(tab?: string): PlaceDetailTab {
+  if (tab === 'ROUTE' || tab === 'MATES') {
+    return tab;
+  }
+
+  if (tab === 'MATE') {
+    return 'MATES';
+  }
+
+  return 'DESCRIPTION';
+}
+
+function resolveVisiblePlaceTabs(tabs?: PlaceDetailTab[]): PlaceDetailTab[] {
+  const baseTabs: PlaceDetailTab[] =
+    tabs?.length
+      ? tabs
+      : ['DESCRIPTION', 'ROUTE', 'MATES'];
+
+  if (baseTabs.includes('ROUTE')) {
+    return baseTabs;
+  }
+
+  const nextTabs: PlaceDetailTab[] = [...baseTabs];
+  const descriptionIndex = nextTabs.indexOf('DESCRIPTION');
+
+  if (descriptionIndex >= 0) {
+    nextTabs.splice(descriptionIndex + 1, 0, 'ROUTE');
+  } else {
+    nextTabs.unshift('ROUTE');
+  }
+
+  return nextTabs;
+}
+
 export default function PlaceDetailScreen() {
   const { placeId, tab, deckId } =
     useLocalSearchParams<{
@@ -79,10 +113,7 @@ function PlaceDetailScreenContent({
   const [place, setPlace] =
     useState<PlaceDetail | null>(null);
 
-  const initialTab: PlaceDetailTab =
-    normalizedTab === 'ROUTE' || normalizedTab === 'MATE'
-      ? normalizedTab
-      : 'DESCRIPTION';
+  const initialTab: PlaceDetailTab = normalizePlaceDetailTab(normalizedTab);
 
   const [activeTab, setActiveTab] =
     useState<PlaceDetailTab>(initialTab);
@@ -118,6 +149,13 @@ function PlaceDetailScreenContent({
     localSavedState ??
     place?.isSaved ??
     false;
+
+  const visibleTabs = resolveVisiblePlaceTabs(place?.availableTabs);
+  const resolvedTab = visibleTabs.includes(activeTab)
+    ? activeTab
+    : visibleTabs[0] ?? 'DESCRIPTION';
+
+  const description = place?.description ?? null;
 
   useEffect(() => {
     if (!placeId) {
@@ -182,8 +220,6 @@ function PlaceDetailScreenContent({
     );
   }
 
-  const description = place.description;
-
   const handleToggleSave = () => {
     if (!placeId) {
       return;
@@ -215,13 +251,6 @@ function PlaceDetailScreenContent({
   const handleViewRouteDetail = (routeId: string) => {
     const placeNumericId = Number(placeId);
     if (deckId && deckId !== 'dev-mock-deck' && Number.isFinite(placeNumericId)) {
-      if (__DEV__) {
-        console.info('[picks] ROUTE_OPENED recording', {
-          routeId,
-          deckId,
-          placeId,
-        });
-      }
       recordRecommendationEvent(deckId, placeNumericId, 'ROUTE_OPENED').catch(() => {});
     }
 
@@ -232,6 +261,7 @@ function PlaceDetailScreenContent({
         placeId,
         placeName: place.title,
         placeAddress: place.address,
+        destinationPlaceId: place.numericId != null ? String(place.numericId) : undefined,
         deckId: deckId ?? undefined,
       },
     });
@@ -283,11 +313,12 @@ function PlaceDetailScreenContent({
         />
 
         <PlaceDetailTabs
-          activeTab={activeTab}
+          activeTab={resolvedTab}
+          tabs={visibleTabs}
           onChange={setActiveTab}
         />
 
-        {activeTab ===
+        {resolvedTab ===
           'DESCRIPTION' && (
           <>
             <PlaceDescription
@@ -296,7 +327,7 @@ function PlaceDetailScreenContent({
             />
 
             <EnjoyPoints
-              points={description.enjoyPoints}
+              points={description?.enjoyPoints ?? []}
             />
 
             <View
@@ -341,9 +372,10 @@ function PlaceDetailScreenContent({
           </>
         )}
 
-        {activeTab === 'ROUTE' && placeId && (
+        {resolvedTab === 'ROUTE' && placeId && (
           <BuddyRouteTab
             placeId={placeId}
+            destinationPlaceId={place.numericId ?? null}
             destination={{
               name: place.title,
               address: place.address,
@@ -352,7 +384,7 @@ function PlaceDetailScreenContent({
           />
         )}
 
-        {activeTab === 'MATE' && placeId ? (
+        {resolvedTab === 'MATES' && placeId ? (
           <MateTab
             placeId={placeId}
             placeTitle={place.title}

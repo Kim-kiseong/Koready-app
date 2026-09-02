@@ -3,6 +3,10 @@ import type { TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 
 export interface Translations {
+  login: {
+    googleButton: string;
+    appleButton: string;
+  };
   language: {
     title: string;
     subtitle: string;
@@ -10,9 +14,9 @@ export interface Translations {
   };
   location: {
     title: string;
+    headline: string;
+    headlineSubtitle: string;
     searchPlaceholder: string;
-    currentLocationButton: string;
-    currentLocationValue: string;
     roadAddressBadge: string;
     lotNumberBadge: string;
     next: string;
@@ -81,6 +85,9 @@ export interface Translations {
     loading: string;
     emptyTitle: string;
     emptyDescription: string;
+  };
+  placeSearch: {
+    emptyTitle: string;
   };
   nav: {
     home: string;
@@ -197,10 +204,6 @@ export interface Translations {
         title: string;
         subtitle: string;
       };
-      buddyStyles: {
-        title: string;
-        subtitle: string;
-      };
       socialAccounts: {
         title: string;
         subtitle: string;
@@ -283,7 +286,7 @@ export interface Translations {
     close: string;
   };
   languageModal: {
-    title: string;
+    title: Record<LanguageCode, string>;
     subtitle: Record<LanguageCode, string>;
     cancel: string;
     confirm: string;
@@ -293,13 +296,29 @@ export interface Translations {
     searchPlaceholder: string;
     addHome: string;
     currentAddressBadge: string;
+    alerts: {
+      errorTitle: string;
+      locationMissing: string;
+      setDefaultFailed: string;
+    };
   };
   addressSearch: {
     title: string;
+    alerts: {
+      errorTitle: string;
+      mapServiceError: string;
+      searchResultExpired: string;
+      saveFailed: string;
+    };
   };
   addressEdit: {
     title: string;
     delete: string;
+    alerts: {
+      errorTitle: string;
+      deleteFailed: string;
+      refreshFailed: string;
+    };
   };
   deleteAddressModal: {
     suffix: string;
@@ -329,6 +348,12 @@ export interface Translations {
     cancel: string;
     apply: string;
   };
+  dateRangePicker: {
+    title: string;
+    reset: string;
+    cancel: string;
+    apply: string;
+  };
   saved: {
     title: string;
     loading: string;
@@ -345,7 +370,7 @@ export interface Translations {
     tabs: {
       description: string;
       route: string;
-      mate: string;
+      mates: string;
     };
     enjoyTitle: string;
     nearbyTitle: string;
@@ -378,7 +403,7 @@ export interface Translations {
       };
       dayTripValues: {
         available: string;
-        unavailable: string;
+        stayRecommended: string;
       };
       fareTitle: string;
       fareOneWay: string;
@@ -415,9 +440,60 @@ export interface Translations {
     guideTapText: string;
     guideSwipeText: string;
   };
+  messages: {
+    threads: {
+      title: string;
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      retry: string;
+      emptyTitle: string;
+      emptyDescription: string;
+    };
+    compose: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      retry: string;
+      title: string;
+      sectionMessage: string;
+      placeholder: string;
+      safetyNotice: string;
+      delayNotice: string;
+      send: string;
+      sentTitle: string;
+      sentDescription: string;
+      viewMessages: string;
+      sendAgain: string;
+      unsavedMessage: string;
+      unsavedCancel: string;
+      unsavedLeave: string;
+      bioFallback: string;
+      sendFailedTitle: string;
+    };
+    thread: {
+      loading: string;
+      errorTitle: string;
+      errorDescriptionFallback: string;
+      back: string;
+      note: string;
+      viewDestination: string;
+      loadMore: string;
+      replySection: string;
+      replyPlaceholder: string;
+      replyPlaceholderDisabled: string;
+      send: string;
+      me: string;
+    };
+  };
 }
 
 export const ko: Translations = {
+  login: {
+    googleButton: 'Google로 시작하기',
+    appleButton: 'Apple로 시작하기',
+  },
   language: {
     title: '언어를 선택해주세요',
     subtitle: 'Choose your language',
@@ -425,9 +501,9 @@ export const ko: Translations = {
   },
   location: {
     title: '위치 검색',
+    headline: '지금 머무는 곳은 어디인가요?',
+    headlineSubtitle: '현재 위치를 기준으로 가까운 로컬 여행지를 추천해드려요.',
     searchPlaceholder: '도시 · 학교 · 동네를 검색해보세요',
-    currentLocationButton: '현재 위치로 찾기',
-    currentLocationValue: '현재 위치',
     roadAddressBadge: '도로명',
     lotNumberBadge: '지번',
     next: '다음',
@@ -493,9 +569,13 @@ export const ko: Translations = {
     languageEn: 'English',
     categories: {
       POPULAR: '인기',
+      LOCAL_FOOD: '로컬 맛집',
       LOCAL_FESTIVAL: '지역 축제',
-      EXHIBITION_MUSEUM: '전시/미술관',
+      TRADITIONAL_MARKET: '전통시장',
+      CULTURE_EXPERIENCE: '문화체험',
       NATURE: '자연 명소',
+      EXHIBITION_MUSEUM: '전시/미술관',
+      DRAMA_LOCATION: '드라마 촬영지',
     },
   },
   map: {
@@ -503,12 +583,12 @@ export const ko: Translations = {
     instruction: '원하는 지역을 선택해 추천 여행지를 둘러보세요.',
     regionLabels: {
       seoul: '서울',
-      gyeonggi: '경기',
-      gangwon: '강원',
-      chungcheong: '충청',
-      jeolla: '전라',
-      gyeongsang: '경상',
-      jeju: '제주',
+      gyeonggi: '경기도',
+      gangwon: '강원도',
+      chungcheong: '충청도',
+      jeolla: '전라도',
+      gyeongsang: '경상도',
+      jeju: '제주도',
     },
     countPrefix: '전체',
     countSuffix: '개',
@@ -517,6 +597,9 @@ export const ko: Translations = {
     loading: '{region} 장소를 불러오는 중이에요.',
     emptyTitle: '조건에 맞는 장소가 없어요.',
     emptyDescription: '다른 날짜나 관광 유형을 선택해보세요.',
+  },
+  placeSearch: {
+    emptyTitle: '일치하는 검색 결과가 없어요',
   },
   nav: {
     home: '홈',
@@ -662,10 +745,6 @@ export const ko: Translations = {
         title: '관심 여행 스타일',
         subtitle: '중복 선택이 가능해요',
       },
-      buddyStyles: {
-        title: '동행 스타일',
-        subtitle: '중복 선택이 가능해요',
-      },
       socialAccounts: {
         title: '공개 SNS',
         subtitle: '최대 2개까지 공개할 수 있어요.',
@@ -763,10 +842,13 @@ export const ko: Translations = {
     close: '가이드 닫기',
   },
   languageModal: {
-    title: '언어를 변경할까요?',
+    title: {
+      EN: '영어로 변경할까요?',
+      KO: '한국어로 변경할까요?',
+    },
     subtitle: {
-      EN: '앱 언어를 English로 전환할까요? \n변경 후 일부 화면은 다시 불러올 수 있어요.',
-      KO: '앱 언어를 한국어로 전환할까요? \n변경 후 일부 화면은 다시 불러올 수 있어요.',
+      EN: '앱 언어를 English로 전환할까요?\n변경 후 일부 화면은 다시 불러올 수 있어요.',
+      KO: '앱 언어를 한국어로 전환할까요?\n변경 후 일부 화면은 다시 불러올 수 있어요.',
     },
     cancel: '취소',
     confirm: '변경하기',
@@ -776,13 +858,29 @@ export const ko: Translations = {
     searchPlaceholder: '도로명, 건물명, 지번으로 검색해 보세요',
     addHome: '우리집 추가',
     currentAddressBadge: '현재 설정된 주소',
+    alerts: {
+      errorTitle: '오류',
+      locationMissing: '삭제되었거나 존재하지 않는 위치예요.',
+      setDefaultFailed: '기본 위치 변경에 실패했습니다.',
+    },
   },
   addressSearch: {
     title: '주소 검색',
+    alerts: {
+      errorTitle: '오류',
+      mapServiceError: '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.',
+      searchResultExpired: '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.',
+      saveFailed: '위치 저장에 실패했습니다.',
+    },
   },
   addressEdit: {
     title: '주소 편집',
     delete: '삭제',
+    alerts: {
+      errorTitle: '오류',
+      deleteFailed: '위치 삭제에 실패했습니다.',
+      refreshFailed: '위치 목록을 새로고침하지 못했어요. 화면을 다시 열어 확인해 주세요.',
+    },
   },
   deleteAddressModal: {
     suffix: '주소를 삭제하시나요?',
@@ -804,12 +902,12 @@ export const ko: Translations = {
     regionAll: '전체',
     regionOptions: {
       SEOUL: '서울',
-      GYEONGGI: '경기',
-      GANGWON: '강원',
-      CHUNGCHEONG: '충청',
-      JEOLLA: '전라',
-      GYEONGSANG: '경상',
-      JEJU: '제주',
+      GYEONGGI: '경기도',
+      GANGWON: '강원도',
+      CHUNGCHEONG: '충청도',
+      JEOLLA: '전라도',
+      GYEONGSANG: '경상도',
+      JEJU: '제주도',
     },
     dateLabel: '날짜',
     dateAll: '전체',
@@ -832,6 +930,12 @@ export const ko: Translations = {
     cancel: '취소',
     apply: '적용하기',
   },
+  dateRangePicker: {
+    title: '날짜 선택',
+    reset: '초기화',
+    cancel: '취소',
+    apply: '적용하기',
+  },
   saved: {
     title: '저장',
     loading: '저장한 여행지를 불러오는 중이에요.',
@@ -848,7 +952,7 @@ export const ko: Translations = {
     tabs: {
       description: '설명',
       route: '이동',
-      mate: '메이트',
+      mates: '메이트',
     },
     enjoyTitle: '이렇게 즐겨보세요',
     nearbyTitle: '같이 가보면 좋은 명소',
@@ -881,7 +985,7 @@ export const ko: Translations = {
       },
       dayTripValues: {
         available: '당일치기 가능',
-        unavailable: '숙박 권장',
+        stayRecommended: '숙박 권장',
       },
       fareTitle: '예상 교통비',
       fareOneWay: 'KTX 편도',
@@ -917,5 +1021,52 @@ export const ko: Translations = {
     detailButton: '여행 코스 확인하기',
     guideTapText: '이미지를 터치하여\n여행 정보를 확인하세요',
     guideSwipeText: '카드를 옆으로 밀어\n다른 여행지를 구경해보세요',
+  },
+  messages: {
+    threads: {
+      title: '쪽지함',
+      loading: '쪽지함을 불러오는 중이에요',
+      errorTitle: '쪽지함을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      retry: '다시 시도',
+      emptyTitle: '쪽지함이 비어 있어요',
+      emptyDescription: '아직 받은 쪽지가 없어요. 여행지에서 쪽지를 보내면 여기에서 확인할 수 있어요.',
+    },
+    compose: {
+      loading: '쪽지 화면을 불러오는 중이에요',
+      errorTitle: '쪽지 화면을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      retry: '다시 시도',
+      title: '쪽지 보내기',
+      sectionMessage: '메시지',
+      placeholder: '전하고 싶은 내용을 작성해보세요.',
+      safetyNotice: '안전을 위해 전화번호, 주소, 금융정보 등 민감한 개인정보는 공유하지 마세요.',
+      delayNotice: '실시간 채팅이 아니라 답장이 조금 늦을 수 있어요.',
+      send: '쪽지 보내기',
+      sentTitle: '쪽지를 보냈어요!',
+      sentDescription: '답장은 바로 오지 않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.',
+      viewMessages: '쪽지함 보기',
+      sendAgain: '쪽지 보내기',
+      unsavedMessage: '아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?',
+      unsavedCancel: '취소',
+      unsavedLeave: '나가기',
+      bioFallback: '소개가 아직 없어요.',
+      sendFailedTitle: '쪽지를 보내지 못했어요',
+    },
+    thread: {
+      loading: '쪽지 내용을 불러오는 중이에요',
+      errorTitle: '쪽지 내용을 불러오지 못했어요',
+      errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
+      back: '돌아가기',
+      note: '이메일처럼 주고받는 쪽지예요. 답장이 늦을 수 있어요.',
+      viewDestination: '여행지 보기',
+      loadMore: '이전 메시지 더보기',
+      replySection: '답변 작성하기',
+      replyPlaceholder: '전하고 싶은 내용을 작성해보세요.',
+      replyPlaceholderDisabled: '답장을 보낼 수 없는 쪽지예요.',
+      send: '쪽지 보내기',
+      me: '나',
+    },
   },
 };

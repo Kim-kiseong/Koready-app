@@ -1,10 +1,10 @@
+import { isAxiosError } from 'axios';
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { isAxiosError } from 'axios';
 
 import { fetchMyLocations, setDefaultLocation, type UserLocationResponse } from '@/api/address';
 import AddressRow from '@/components/AddressRow';
@@ -54,9 +54,9 @@ export default function AddressScreen() {
       setDefaultAddress(updated.locationId);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) {
-        Alert.alert('오류', '삭제되었거나 존재하지 않는 위치예요.');
+        Alert.alert(t.address.alerts.errorTitle, t.address.alerts.locationMissing);
       } else {
-        Alert.alert('오류', '기본 위치 변경에 실패했습니다.');
+        Alert.alert(t.address.alerts.errorTitle, t.address.alerts.setDefaultFailed);
       }
     } finally {
       setIsSwitching(false);
@@ -89,13 +89,6 @@ export default function AddressScreen() {
             tintColor={Palette.grey400}
           />
           <CustomText style={styles.searchPlaceholder}>{t.address.searchPlaceholder}</CustomText>
-        </Pressable>
-
-        <Pressable
-          style={styles.currentLocationButton}
-          onPress={() => router.push('/address-search')}>
-          <Image source={require('@/assets/images/my_location.svg')} style={styles.myLocationIcon} />
-          <CustomText style={styles.currentLocationText}>{t.location.currentLocationButton}</CustomText>
         </Pressable>
 
         <Pressable style={styles.addHomeRow} onPress={() => router.push('/address-search')}>
@@ -163,24 +156,8 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 13,
     color: Palette.grey400,
-  },
-  currentLocationButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Palette.grey200,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  currentLocationText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.text,
   },
   addHomeRow: {
     flexDirection: 'row',
@@ -199,10 +176,6 @@ const styles = StyleSheet.create({
   pencilIcon: {
     width: 24,
     height: 24,
-  },
-  myLocationIcon: {
-    width: 18,
-    height: 18,
   },
   myHomeIcon: {
     width: 17,

@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, type TextStyle, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import StepProgressIndicator, {
@@ -24,6 +24,7 @@ export type OnboardingHeaderProps = {
   progress?: StepProgressIndicatorProps;
   rightIcon?: ReactNode;
   onRightPress?: () => void;
+  titleStyle?: TextStyle;
 };
 
 export default function OnboardingHeader({
@@ -32,6 +33,7 @@ export default function OnboardingHeader({
   progress,
   rightIcon = DEFAULT_RIGHT_ICON,
   onRightPress,
+  titleStyle,
 }: OnboardingHeaderProps) {
   return (
     <View style={styles.header}>
@@ -48,7 +50,7 @@ export default function OnboardingHeader({
         {progress ? (
           <StepProgressIndicator {...progress} />
         ) : (
-          <CustomText style={styles.title}>{title}</CustomText>
+          <CustomText style={[styles.title, titleStyle]}>{title}</CustomText>
         )}
       </View>
 

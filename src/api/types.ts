@@ -41,7 +41,6 @@ export type ProfileOptionsResponse = {
   languages: ProfileOptionItem[];
   koreanLevels: ProfileOptionItem[];
   travelStyles: ProfileOptionItem[];
-  buddyStyles: ProfileOptionItem[];
   socialPlatforms: ProfileOptionItem[];
 };
 
@@ -59,9 +58,10 @@ export type ProfileImageUploadUrlRequest = {
 };
 
 export type ProfileImageUploadUrlResponse = {
-  imageId?: string;
-  uploadUrl?: string;
-  requiredHeaders?: Record<string, string>;
+  imageId: string;
+  uploadUrl: string;
+  expiresAt: string;
+  requiredHeaders: Record<string, string>;
   profileImageUrl?: string | null;
 };
 
@@ -78,8 +78,10 @@ export type ProfileImageCompleteRequest = {
 };
 
 export type ProfileImageCompleteResponse = {
-  imageId?: string;
-  profileImageUrl?: string | null;
+  imageId: string;
+  profileImageUrl: string;
+  size: number;
+  completedAt: string;
   profile?: {
     profileImageUrl?: string | null;
   } | null;
@@ -115,7 +117,6 @@ export type PlaceMate = {
   koreanLevel: string;
   travelStyles: string[];
   bio: string;
-  buddyStyles: string[];
   socialLinks: PlaceMateSocialLink[];
   profilePublic: boolean;
   snsPublic: boolean;
@@ -187,6 +188,7 @@ export type PlaceListItem = {
   addressSummary: string;
   imageUrl: string;
   festivalOccurrence: SavedPlaceFestivalOccurrence | null;
+  operatingHours?: string | null;
   travelStyle: string;
   tags: string[];
   shortDescription: string | null;
@@ -199,6 +201,7 @@ export type PlaceListResponse = {
   items: PlaceListItem[];
   nextCursor: string | null;
   hasMore: boolean;
+  totalCount?: number | null;
 };
 
 export type SavedPlaceToggleResponse = {
@@ -248,7 +251,7 @@ export type MessageThreadListItem = {
   place: MessageThreadPlace;
   otherProfile: MessageThreadListProfile;
   preview: string;
-  updatedAt: string;
+  lastSentAt: string;
   unreadCount: number;
   blocked: boolean;
   canReply: boolean;
@@ -342,7 +345,6 @@ export type BuddyProfile = {
   koreanLevel: string;
   travelStyles: string[];
   bio: string;
-  buddyStyles: string[];
   socialLinks: BuddyProfileSocialLink[];
   profilePublic: boolean;
   snsPublic: boolean;
@@ -360,7 +362,6 @@ export type BuddyProfileUpdateRequest = {
   koreanLevel: string;
   bio: string;
   travelStyles: string[];
-  buddyStyles: string[];
   socialLinks: BuddyProfileSocialLinkRequest[];
   profilePublic: boolean;
   snsPublic: boolean;

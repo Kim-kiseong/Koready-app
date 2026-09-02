@@ -1,10 +1,9 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
+import { isAxiosError } from 'axios';
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { isAxiosError } from 'axios';
 
 import { createMyLocation } from '@/api/address';
 import { searchLocations, type LocationSearchItem } from '@/api/onboarding';
@@ -22,6 +21,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 export default function AddressSearchScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const addressSearchAlerts = t.addressSearch.alerts;
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const addSavedAddress = useAddressStore((state) => state.addSavedAddress);
@@ -30,23 +30,19 @@ export default function AddressSearchScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [results, setResults] = useState<LocationSearchItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const trimmedQuery = query.trim();
 
   useEffect(() => {
-    const q = query.trim();
     // The API accepts 1 char, but 2+ keeps result quality reasonable.
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
+    if (trimmedQuery.length < 2) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchLocations(q, 10, controller.signal)
+      searchLocations(trimmedQuery, 10, controller.signal)
         .then((items) => setResults(items))
         .catch((error) => {
           if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
-          setResults([]);
           if (isAxiosError(error) && error.response?.status === 503) {
-            Alert.alert('오류', '지도 서비스에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요.');
+            Alert.alert(addressSearchAlerts.errorTitle, addressSearchAlerts.mapServiceError);
           }
         });
     }, SEARCH_DEBOUNCE_MS);
@@ -54,7 +50,7 @@ export default function AddressSearchScreen() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [addressSearchAlerts, trimmedQuery]);
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;
@@ -76,31 +72,20 @@ export default function AddressSearchScreen() {
       goBackOrRoot(router);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 410) {
-        Alert.alert('오류', '검색 결과가 만료됐어요. 같은 검색어로 다시 검색해 주세요.');
+        Alert.alert(addressSearchAlerts.errorTitle, addressSearchAlerts.searchResultExpired);
       } else {
-        Alert.alert('오류', '위치 저장에 실패했습니다.');
+        Alert.alert(addressSearchAlerts.errorTitle, addressSearchAlerts.saveFailed);
       }
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    setLocation({
-      displayAddress: t.location.currentLocationValue,
-      latitude: null,
-      longitude: null,
-      source: 'current',
-    });
-    setCurrentLocationId(null);
-    goBackOrRoot(router);
-  };
-
-  const showResults = query.length > 0 && results.length > 0;
+  const showResults = trimmedQuery.length >= 2 && results.length > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressSearch.title} rightIcon={null} />
 
       <View style={styles.content}>
         <View
@@ -123,7 +108,7 @@ export default function AddressSearchScreen() {
           />
         </View>
 
-        {showResults ? (
+        {showResults && (
           <View style={styles.resultList}>
             {results.map((result) => (
               <View key={result.searchResultToken} style={styles.resultGroup}>
@@ -152,13 +137,6 @@ export default function AddressSearchScreen() {
               </View>
             ))}
           </View>
-        ) : (
-          <Pressable style={styles.currentLocationButton} onPress={handleUseCurrentLocation}>
-            <Image source={require('@/assets/images/my_location.svg')} style={styles.myLocationIcon} />
-            <CustomText style={styles.currentLocationText}>
-              {t.location.currentLocationButton}
-            </CustomText>
-          </Pressable>
         )}
       </View>
     </SafeAreaView>
@@ -195,29 +173,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 13,
     color: Palette.text,
     padding: 0,
-  },
-  currentLocationButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Palette.grey200,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  currentLocationText: {
-    fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
-    color: Palette.text,
-  },
-  myLocationIcon: {
-    width: 18,
-    height: 18,
   },
   resultList: {
     gap: 8,

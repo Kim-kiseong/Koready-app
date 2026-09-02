@@ -12,10 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchSavedPlaces, unsavePlace } from '@/api/saved-place';
+import {
+  fetchSavedPlaces,
+  unsavePlace,
+} from '@/api/saved-place';
 import type { LanguageCode, SavedPlaceItem } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
+import HeartIcon from '@/components/HeartIcon';
 import DetailTag from '@/components/place-detail/DetailTag';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -171,11 +175,13 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['대나무', 'Bamboo'],
   ['도심', 'Urban'],
   ['동굴', 'Cave'],
+  ['드라마 촬영지', 'Drama Filming Sites'],
   ['드라이브', 'Drive'],
   ['디저트', 'Dessert'],
   ['랜드마크', 'Landmark'],
   ['로컬', 'Local'],
-  ['로컬맛집', 'Local Eats'],
+  ['로컬맛집', 'Local Food'],
+  ['로컬 맛집', 'Local Food'],
   ['막국수', 'Makguksu'],
   ['매화', 'Plum Blossom'],
   ['먹거리', 'Food'],
@@ -184,6 +190,8 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['모노레일', 'Monorail'],
   ['목장', 'Ranch'],
   ['문화', 'Culture'],
+  ['문화 체험', 'Cultural Experience'],
+  ['문화체험', 'Cultural Experience'],
   ['미술관', 'Art'],
   ['미식', 'Gourmet'],
   ['바다', 'Ocean'],
@@ -194,6 +202,7 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['분식', 'Korean Snack'],
   ['빵', 'Bread'],
   ['사진', 'Photography'],
+  ['재미', 'Fun'],
   ['사찰', 'Temple'],
   ['산', 'Mountain'],
   ['산책', 'Walking'],
@@ -221,13 +230,18 @@ const TAG_TRANSLATION_ENTRIES: Array<[string, string]> = [
   ['일몰', 'Sunset'],
   ['일출', 'Sunrise'],
   ['자연', 'Nature'],
-  ['자연명소', 'Natural Spot'],
+  ['자연 명소', 'Nature'],
+  ['자연명소', 'Nature'],
   ['전망', 'View'],
+  ['전시 / 미술관', 'Exhibitions & Museums'],
+  ['전시/미술관', 'Exhibitions & Museums'],
   ['전시', 'Exhibition'],
   ['전통', 'Tradition'],
   ['전통마을', 'Traditional Village'],
+  ['전통시장', 'Traditional Market'],
   ['절경', 'Scenic View'],
   ['정원', 'Garden'],
+  ['지역 축제', 'Local Festival'],
   ['지역축제', 'Local Festival'],
   ['체험', 'Experience'],
   ['축제', 'Festival'],
@@ -417,7 +431,13 @@ export default function SavedScreen() {
       return;
     }
 
-    void loadSavedPlaces(null, false);
+    const timeout = setTimeout(() => {
+      void loadSavedPlaces(null, false);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeout);
+    };
   }, [language, hasAuthHydrated, loadSavedPlaces, savedStoreHydrated]);
 
   const savedPlaces = useMemo(() => {
@@ -559,14 +579,7 @@ function SavedPlaceCard({
   onToggleSave: () => void;
 }) {
   const subtitleText = formatSavedPlaceSubtitle(place, language);
-  const heartIcon = (
-    <SymbolView
-      name={{ ios: 'heart.fill', android: 'favorite', web: 'favorite' }}
-      size={24}
-      weight="regular"
-      tintColor={Palette.red300}
-    />
-  );
+  const heartIcon = <HeartIcon filled color={Palette.red300} size={24} />;
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -609,9 +622,13 @@ function SavedPlaceCard({
         </View>
 
         <View style={styles.tagRow}>
-          {place.tags.slice(0, 3).map((tag, index) => (
-            <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(formatSavedTag(tag, language))} />
-          ))}
+          {place.tags
+            .map((tag) => formatSavedTag(tag, language))
+            .filter((tag) => !isHiddenSavedTag(tag))
+            .slice(0, 3)
+            .map((tag, index) => (
+              <DetailTag key={toStableListKey(tag, index)} label={toDisplayText(tag)} />
+            ))}
         </View>
       </View>
     </Pressable>
@@ -708,7 +725,13 @@ function formatTravelStyle(value: string, language: LanguageCode) {
 }
 
 function formatSavedTag(value: string, language: LanguageCode) {
-  return TAG_TRANSLATIONS[language][value] ?? value;
+  const normalized = value.trim().replace(/^#+\s*/, '');
+  return TAG_TRANSLATIONS[language][normalized] ?? normalized;
+}
+
+function isHiddenSavedTag(value: string) {
+  const normalized = value.trim().replace(/^#+\s*/, '').replace(/[\s_]+/g, '').toLowerCase();
+  return normalized === '지역축제' || normalized === 'localfestival';
 }
 
 function translateKoreanTitleToEnglish(title: string) {
@@ -742,13 +765,13 @@ function applyPhraseMap(title: string, replacements: Array<[RegExp, string]>) {
 const EN_TO_KO_TITLE_PREFIXES: Array<[string, string]> = [
   ['Daegwallyeong', '대관령'],
   ['Gimcheon', '김천'],
-  ['Gyeonggi', '경기'],
-  ['Gangwon', '강원'],
-  ['Chungcheong', '충청'],
-  ['Gyeongsang', '경상'],
-  ['Jeolla', '전라'],
+  ['Gyeonggi', '경기도'],
+  ['Gangwon', '강원도'],
+  ['Chungcheong', '충청도'],
+  ['Gyeongsang', '경상도'],
+  ['Jeolla', '전라도'],
   ['Seoul', '서울'],
-  ['Jeju', '제주'],
+  ['Jeju', '제주도'],
   ['Jeonju', '전주'],
   ['Damyang', '담양'],
   ['Gwangju', '광주'],
@@ -827,12 +850,12 @@ function preserveParentheticalSegments(sourceTitle: string, translatedTitle: str
 function translateRegionName(value: string) {
   const regionMap: Record<string, string> = {
     서울: 'Seoul',
-    경기: 'Gyeonggi',
-    강원: 'Gangwon',
-    충청: 'Chungcheong',
-    전라: 'Jeolla',
-    경상: 'Gyeongsang',
-    제주: 'Jeju',
+    경기도: 'Gyeonggi',
+    강원도: 'Gangwon',
+    충청도: 'Chungcheong',
+    전라도: 'Jeolla',
+    경상도: 'Gyeongsang',
+    제주도: 'Jeju',
     전주: 'Jeonju',
     담양: 'Damyang',
     김천: 'Gimcheon',
@@ -844,12 +867,12 @@ function translateRegionName(value: string) {
 function translateRegionNameToKorean(value: string) {
   const regionMap: Record<string, string> = {
     Seoul: '서울',
-    Gyeonggi: '경기',
-    Gangwon: '강원',
-    Chungcheong: '충청',
-    Jeolla: '전라',
-    Gyeongsang: '경상',
-    Jeju: '제주',
+    Gyeonggi: '경기도',
+    Gangwon: '강원도',
+    Chungcheong: '충청도',
+    Jeolla: '전라도',
+    Gyeongsang: '경상도',
+    Jeju: '제주도',
     Jeonju: '전주',
     Damyang: '담양',
     Gimcheon: '김천',

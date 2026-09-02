@@ -1,15 +1,12 @@
-import { SymbolView } from 'expo-symbols';
-import type { ComponentProps } from 'react';
+import { Image, type ImageSource } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
-
 export type SignCardProps = {
-  icon: SymbolName;
+  icon: ImageSource;
   title: string;
   translations: string[];
   caption?: string;
@@ -17,18 +14,25 @@ export type SignCardProps = {
 
 // Dark real-world-signage example card (subway's "갈아타는 곳 / Transfer" style).
 export default function SignCard({ icon, title, translations, caption }: SignCardProps) {
+  const [primaryTranslation, ...secondaryTranslations] = translations;
+
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
-        <SymbolView name={icon} size={32} weight="regular" tintColor="#ffffff" />
+        <Image source={icon} style={styles.icon} contentFit="contain" />
         <CustomText style={styles.title}>{title}</CustomText>
         <View style={styles.divider} />
         <View style={styles.translations}>
-          {translations.map((line) => (
-            <CustomText key={line} style={styles.translationText}>
-              {line}
-            </CustomText>
-          ))}
+          {primaryTranslation ? <CustomText style={styles.translationPrimary}>{primaryTranslation}</CustomText> : null}
+          {secondaryTranslations.length > 0 ? (
+            <View style={styles.translationSecondaryRow}>
+              {secondaryTranslations.map((line) => (
+                <CustomText key={line} style={styles.translationSecondary}>
+                  {line}
+                </CustomText>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
       {caption ? <CustomText style={styles.caption}>{caption}</CustomText> : null}
@@ -45,33 +49,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
     borderRadius: 16,
     backgroundColor: Palette.grey700,
     padding: 20,
   },
+  icon: {
+    width: 48,
+    height: 48,
+  },
   title: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 24,
+    lineHeight: 33.6,
     color: '#ffffff',
   },
   divider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.24)',
+    backgroundColor: '#ffffff',
   },
   translations: {
+    minWidth: 94,
     gap: 2,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
-  translationText: {
-    fontFamily: FontFamily.pretendard.medium,
+  translationPrimary: {
+    fontFamily: FontFamily.inter.medium,
+    fontSize: 18,
+    lineHeight: 25.2,
+    color: '#ffffff',
+  },
+  translationSecondaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  translationSecondary: {
+    fontFamily: FontFamily.inter.medium,
     fontSize: 14,
+    lineHeight: 19.6,
     color: '#ffffff',
   },
   caption: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.grey500,
     textAlign: 'right',
   },

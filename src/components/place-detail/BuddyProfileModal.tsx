@@ -74,7 +74,6 @@ const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
     { code: 'EXHIBITION_MUSEUM', labelKo: '전시/미술관', labelEn: 'Exhibition / Museum', displayOrder: 6 },
     { code: 'DRAMA_LOCATION', labelKo: '드라마 촬영지', labelEn: 'Drama Location', displayOrder: 7 },
   ],
-  buddyStyles: [],
   socialPlatforms: [
     { code: 'INSTAGRAM', labelKo: 'Instagram', labelEn: 'Instagram', displayOrder: 1 },
     { code: 'TIKTOK', labelKo: 'TikTok', labelEn: 'TikTok', displayOrder: 2 },
@@ -148,13 +147,13 @@ const PROFILE_MODAL_COPY: Record<
     loading: 'Loading profile...',
     errorTitle: "Couldn't load the profile.",
     retry: 'Try again',
-    subtitle: 'This Buddy is interested in the same destination.',
-    sectionAbout: 'About',
+    subtitle: "You're both interested in this destination.",
+    sectionAbout: 'About Me',
     aboutEmpty: 'No bio yet.',
-    sectionTravelStyle: 'Travel interests',
-    sectionContact: 'Contact info',
+    sectionTravelStyle: 'Travel Interests',
+    sectionContact: 'Contact Info',
     contactDescription: 'Only information set to public will be shown.',
-    canMessage: 'Send message',
+    canMessage: 'Send Message',
     cannotMessage: 'Not available',
     linkErrorTitle: 'Couldn’t open the link',
     linkErrorBody: 'Please try again in a moment.',
@@ -277,6 +276,10 @@ export default function BuddyProfileModal({
   const [reloadKey, setReloadKey] = useState(0);
   const language = useLanguageStore((state) => state.language);
   const copy = PROFILE_MODAL_COPY[language];
+  const resolvedFallbackProfile = useMemo(
+    () => fallbackProfile ?? (profileId != null ? getMockBuddyProfileDetailById(profileId) : null),
+    [fallbackProfile, language, profileId],
+  );
 
   const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const languageOptions = resolvedOptions.languages;
@@ -303,7 +306,7 @@ export default function BuddyProfileModal({
 
     setIsLoading(true);
     setError(null);
-    setProfile(fallbackProfile ?? null);
+    setProfile(resolvedFallbackProfile);
 
     (async () => {
       try {
@@ -319,9 +322,8 @@ export default function BuddyProfileModal({
         }
 
         if (loadError instanceof BuddyProfileNotFoundError) {
-          const mockProfile = fallbackProfile ?? getMockBuddyProfileDetailById(profileId);
-          if (mockProfile) {
-            setProfile(mockProfile);
+          if (resolvedFallbackProfile) {
+            setProfile(resolvedFallbackProfile);
             setError(null);
             return;
           }
@@ -330,9 +332,8 @@ export default function BuddyProfileModal({
           return;
         }
 
-        const mockProfile = fallbackProfile ?? getMockBuddyProfileDetailById(profileId);
-        if (mockProfile) {
-          setProfile(mockProfile);
+        if (resolvedFallbackProfile) {
+          setProfile(resolvedFallbackProfile);
           setError(null);
           return;
         }
@@ -348,7 +349,7 @@ export default function BuddyProfileModal({
     return () => {
       cancelled = true;
     };
-  }, [copy.errorTitle, fallbackProfile, handleClose, language, profileId, reloadKey, visible]);
+  }, [copy.errorTitle, handleClose, language, profileId, reloadKey, resolvedFallbackProfile, visible]);
 
   const languageChips = useMemo(() => {
     if (!profile) {
@@ -364,6 +365,8 @@ export default function BuddyProfileModal({
       normalizeKoreanLevel(profile.koreanLevel),
       (code) => getLabel(code, languageOptions, language, languageFallbacks),
       (level) => getLabel(level, koreanLevelOptions, language, levelFallbacks),
+      '',
+      { koreanLevelPlacement: 'append' },
     );
   }, [language, koreanLevelOptions, languageOptions, profile]);
 
@@ -407,20 +410,7 @@ export default function BuddyProfileModal({
         <Pressable style={styles.backdrop} onPress={handleClose} />
 
         <View style={styles.card}>
-          {isLoading ? (
-            <View style={styles.loadingState}>
-              <ActivityIndicator color={Palette.primary} />
-              <CustomText style={styles.loadingText}>{copy.loading}</CustomText>
-            </View>
-          ) : error ? (
-            <View style={styles.loadingState}>
-              <CustomText style={styles.errorTitle}>{copy.errorTitle}</CustomText>
-              <CustomText style={styles.errorDescription}>{error}</CustomText>
-              <Pressable style={styles.retryButton} onPress={() => setReloadKey((value) => value + 1)}>
-                <CustomText style={styles.retryButtonText}>{copy.retry}</CustomText>
-              </Pressable>
-            </View>
-          ) : profile ? (
+          {profile ? (
             <>
               <ScrollView
                 style={styles.scrollArea}
@@ -543,6 +533,19 @@ export default function BuddyProfileModal({
                 </CustomText>
               </Pressable>
             </>
+          ) : isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={Palette.primary} />
+              <CustomText style={styles.loadingText}>{copy.loading}</CustomText>
+            </View>
+          ) : error ? (
+            <View style={styles.loadingState}>
+              <CustomText style={styles.errorTitle}>{copy.errorTitle}</CustomText>
+              <CustomText style={styles.errorDescription}>{error}</CustomText>
+              <Pressable style={styles.retryButton} onPress={() => setReloadKey((value) => value + 1)}>
+                <CustomText style={styles.retryButtonText}>{copy.retry}</CustomText>
+              </Pressable>
+            </View>
           ) : null}
 
           <Pressable style={styles.closeButton} onPress={handleClose}>

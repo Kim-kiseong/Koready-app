@@ -22,9 +22,11 @@ import CustomText from '@/components/CustomText';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import { formatCountryDisplay } from '@/utils/country';
 import { resolveProfileImageUri } from '@/utils/profile-image';
@@ -47,6 +49,8 @@ const FALLBACK_COUNTRY_OPTIONS: ProfileOptionItem[] = [
 export default function MessageThreadScreen() {
   const router = useRouter();
   const { threadId } = useLocalSearchParams<MessageThreadParams>();
+  const language = useLanguageStore((state) => state.language);
+  const t = useTranslation();
   const normalizedThreadId = Array.isArray(threadId) ? threadId[0] : threadId;
   const storedThread = useMessageThreadStore((state) => {
     if (!normalizedThreadId) {
@@ -72,7 +76,7 @@ export default function MessageThreadScreen() {
   const visibleThread = threadState ?? storedThread;
   const selectedProfileFallback = useMemo(
     () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
-    [selectedProfileId],
+    [language, selectedProfileId],
   );
   const placeRouteId = visibleThread?.place.routeId ?? (visibleThread ? String(visibleThread.place.placeId) : '');
 
@@ -82,7 +86,7 @@ export default function MessageThreadScreen() {
 
   useEffect(() => {
     if (!normalizedThreadId) {
-      setLoadError('쪽지 내용을 불러오지 못했어요');
+      setLoadError(t.messages.thread.errorTitle);
       setIsLoading(false);
       return;
     }
@@ -122,7 +126,7 @@ export default function MessageThreadScreen() {
         }
       } catch (error) {
         if (!cancelled) {
-          setLoadError(extractErrorMessage(error));
+          setLoadError(extractErrorMessage(error, t.messages.thread.errorDescriptionFallback));
         }
       } finally {
         if (!cancelled) {
@@ -134,7 +138,7 @@ export default function MessageThreadScreen() {
     return () => {
       cancelled = true;
     };
-  }, [normalizedThreadId]);
+  }, [language, normalizedThreadId]);
 
   useEffect(() => {
     if (!normalizedThreadId || !visibleThread) {
@@ -275,7 +279,7 @@ export default function MessageThreadScreen() {
       pathname: '/places/[placeId]',
       params: {
         placeId: visibleThread.place.routeId ?? String(visibleThread.place.placeId),
-        tab: 'MATE',
+        tab: 'MATES',
       },
     } as never);
   }, [router, visibleThread]);
@@ -285,7 +289,7 @@ export default function MessageThreadScreen() {
       <ScreenShell>
         <View style={styles.loadingState}>
           <ActivityIndicator color={Palette.primary} />
-          <CustomText style={styles.loadingText}>쪽지 내용을 불러오는 중이에요</CustomText>
+          <CustomText style={styles.loadingText}>{t.messages.thread.loading}</CustomText>
         </View>
       </ScreenShell>
     );
@@ -295,13 +299,13 @@ export default function MessageThreadScreen() {
     return (
       <ScreenShell>
         <View style={styles.errorState}>
-          <CustomText style={styles.errorTitle}>쪽지 내용을 불러오지 못했어요</CustomText>
+          <CustomText style={styles.errorTitle}>{t.messages.thread.errorTitle}</CustomText>
           <CustomText style={styles.errorDescription}>
-            {loadError ?? '잠시 후 다시 시도해 주세요.'}
+            {loadError ?? t.messages.thread.errorDescriptionFallback}
           </CustomText>
 
           <Pressable style={styles.backButton} onPress={() => goBackOrRoot(router, '/message-threads')}>
-            <CustomText style={styles.backButtonText}>돌아가기</CustomText>
+            <CustomText style={styles.backButtonText}>{t.messages.thread.back}</CustomText>
           </Pressable>
         </View>
       </ScreenShell>
@@ -362,7 +366,7 @@ export default function MessageThreadScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <View style={styles.noteCard}>
-              <CustomText style={styles.noteText}>이메일처럼 주고받는 쪽지예요. 답장이 늦을 수 있어요.</CustomText>
+              <CustomText style={styles.noteText}>{t.messages.thread.note}</CustomText>
             </View>
 
             <View style={styles.placeCard}>
@@ -383,7 +387,7 @@ export default function MessageThreadScreen() {
                 </View>
 
                 <Pressable style={styles.placeButton} onPress={handleOpenPlace}>
-                  <CustomText style={styles.placeButtonText}>여행지 보기</CustomText>
+                  <CustomText style={styles.placeButtonText}>{t.messages.thread.viewDestination}</CustomText>
                 </Pressable>
               </View>
             </View>
@@ -400,7 +404,7 @@ export default function MessageThreadScreen() {
                 {isLoadingOlder ? (
                   <ActivityIndicator color={Palette.primary} />
                 ) : (
-                  <CustomText style={styles.loadMoreText}>이전 메시지 더보기</CustomText>
+                  <CustomText style={styles.loadMoreText}>{t.messages.thread.loadMore}</CustomText>
                 )}
               </Pressable>
             ) : null}
@@ -412,7 +416,7 @@ export default function MessageThreadScreen() {
                   <View key={message.messageId} style={styles.messageCard}>
                     <View style={styles.messageHeader}>
                       {isMine ? (
-                        <CustomText style={styles.mineLabel}>나</CustomText>
+                        <CustomText style={styles.mineLabel}>{t.messages.thread.me}</CustomText>
                       ) : (
                         <Pressable
                           hitSlop={10}
@@ -434,7 +438,7 @@ export default function MessageThreadScreen() {
                         </Pressable>
                       )}
 
-                      <CustomText style={styles.messageTime}>{formatMessageTime(message.sentAt)}</CustomText>
+                      <CustomText style={styles.messageTime}>{formatMessageTime(message.sentAt, language)}</CustomText>
                     </View>
 
                     <CustomText style={styles.messageContent}>{message.content}</CustomText>
@@ -444,14 +448,16 @@ export default function MessageThreadScreen() {
             </View>
 
             <View style={styles.replySection}>
-              <CustomText style={styles.sectionTitle}>답변 작성하기</CustomText>
+              <CustomText style={styles.sectionTitle}>{t.messages.thread.replySection}</CustomText>
 
               <View style={[styles.replyBox, !visibleThread.canReply && styles.replyBoxDisabled]}>
                 <TextInput
                   value={content}
                   onChangeText={setContent}
                   placeholder={
-                    visibleThread.canReply ? '전하고 싶은 내용을 작성해보세요.' : '답장을 보낼 수 없는 쪽지예요.'
+                    visibleThread.canReply
+                      ? t.messages.thread.replyPlaceholder
+                      : t.messages.thread.replyPlaceholderDisabled
                   }
                   placeholderTextColor={Palette.grey400}
                   cursorColor={Palette.primary}
@@ -490,7 +496,7 @@ export default function MessageThreadScreen() {
                       styles.sendButtonText,
                       sendDisabled(visibleThread, content, isSending) && styles.sendButtonTextDisabled,
                     ]}>
-                    쪽지 보내기
+                    {t.messages.thread.send}
                   </CustomText>
                 )}
               </Pressable>
@@ -545,10 +551,25 @@ function resolvePlaceImageSource(place: PlaceDetail) {
   return place.images[0]?.source ?? null;
 }
 
-function formatMessageTime(value: string) {
+function formatMessageTime(value: string, language: 'KO' | 'EN') {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return '';
+  }
+
+  if (language === 'EN') {
+    const dateLabel = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
+    const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
+    const time = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date);
+
+    return `${dateLabel} (${weekday}) · ${time}`;
   }
 
   const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
@@ -594,8 +615,8 @@ function sendDisabled(thread: MessageThreadResponse, content: string, isSending:
   return !thread.canReply || !content.trim() || isSending;
 }
 
-function extractErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '잠시 후 다시 시도해 주세요.';
+function extractErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 const styles = StyleSheet.create({

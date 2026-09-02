@@ -8,6 +8,40 @@ import type { SavedPlaceItem } from '@/api/types';
 
 import { secureStorage } from './secure-storage';
 
+function sanitizeSavedPlaceTags(tags: readonly unknown[] = []) {
+  const seen = new Set<string>();
+  const nextTags: string[] = [];
+
+  for (const tag of tags) {
+    if (typeof tag !== 'string') {
+      continue;
+    }
+
+    const trimmed = tag.trim().replace(/^#+\s*/, '');
+    if (!trimmed) {
+      continue;
+    }
+
+    const normalized = trimmed.replace(/[\s_]+/g, '').toLowerCase();
+
+    if (seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    nextTags.push(trimmed);
+  }
+
+  return nextTags;
+}
+
+function sanitizeSavedPlace(place: SavedPlaceItem): SavedPlaceItem {
+  return {
+    ...place,
+    tags: sanitizeSavedPlaceTags(place.tags),
+  };
+}
+
 interface SavedPlaceState {
   savedByPlaceId: Record<string, boolean>;
   savedPlacesByPlaceId: Record<string, SavedPlaceItem>;
@@ -60,7 +94,7 @@ export const useSavedPlaceStore =
                 ? {
                     savedPlacesByPlaceId: {
                       ...state.savedPlacesByPlaceId,
-                      [placeId]: snapshot,
+                      [placeId]: sanitizeSavedPlace(snapshot),
                     },
                   }
                 : null),
@@ -87,18 +121,19 @@ export const useSavedPlaceStore =
 
         upsertSavedPlace: (place) => {
           const placeId = String(place.placeId);
+          const normalizedPlace = sanitizeSavedPlace(place);
 
           set((state) => {
             const existing = state.savedPlacesByPlaceId[placeId];
             const nextPlace = existing
               ? {
                   ...existing,
-                  ...place,
+                  ...normalizedPlace,
                   saved: true,
                   savedAt: existing.savedAt,
-                  source: existing.source ?? place.source,
+                  source: existing.source ?? normalizedPlace.source,
                 }
-              : { ...place, saved: true };
+              : { ...normalizedPlace, saved: true };
 
             return {
               savedByPlaceId: {
@@ -153,6 +188,7 @@ export const useSavedPlaceStore =
             };
 
             for (const place of places) {
+              const normalizedPlace = sanitizeSavedPlace(place);
               const key = String(place.placeId);
 
               if (nextSavedByPlaceId[key] === false) {
@@ -164,12 +200,12 @@ export const useSavedPlaceStore =
               nextSavedPlacesByPlaceId[key] = existing
                 ? {
                     ...existing,
-                    ...place,
+                    ...normalizedPlace,
                     saved: true,
                     savedAt: existing.savedAt,
-                    source: existing.source ?? place.source,
+                    source: existing.source ?? normalizedPlace.source,
                   }
-                : { ...place, saved: true };
+                : { ...normalizedPlace, saved: true };
             }
 
             return {
@@ -201,7 +237,22 @@ export const useSavedPlaceStore =
         // Match the app's auth/onboarding stores: hydration completion is
         // tracked outside the persisted payload, so mock defaults never win
         // over an already saved local choice during app startup.
-        onRehydrateStorage: () => () => {
+        onRehydrateStorage: () => (state, error) => {
+          if (state && !error) {
+            const normalizedSavedPlacesByPlaceId = Object.fromEntries(
+              Object.entries(state.savedPlacesByPlaceId).map(([key, place]) => [
+                key,
+                sanitizeSavedPlace(place),
+              ]),
+            );
+
+            useSavedPlaceStore.setState({
+              savedPlacesByPlaceId: normalizedSavedPlacesByPlaceId,
+              hasHydrated: true,
+            });
+            return;
+          }
+
           useSavedPlaceStore.setState({
             hasHydrated: true,
           });

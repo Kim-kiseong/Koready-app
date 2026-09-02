@@ -20,6 +20,12 @@ export const Palette = {
   warningBg: '#FFF7ED',
   warningBorder: '#FFE8C8',
   warningText: '#92400E',
+  warningIcon: '#F59E0B',
+  infoBlue: '#3B82F6',
+  infoBlueBg: '#F1F7FF',
+  infoBlueBorder: '#DBEAFF',
+  infoGreen: '#10B981',
+  red100: '#FFF0F0',
   red300: '#FD4C4D',
   appleBlack: '#242625',
 } as const;

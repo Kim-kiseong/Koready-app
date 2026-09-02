@@ -12,6 +12,7 @@ import type {
 } from '@/api/types';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { normalizeCountryCode } from '@/utils/country';
+import { useLanguageStore } from '@/store/language-store';
 
 type ThreadRecord = {
   threadId: string;
@@ -22,7 +23,7 @@ type ThreadRecord = {
 };
 
 type ListCursor = {
-  updatedAt: string;
+  lastSentAt: string;
   threadId: string;
 };
 
@@ -37,6 +38,61 @@ type IdempotencyRecord =
       fingerprint: string;
       response: MessageThreadMessage;
     };
+
+type MockLanguage = 'KO' | 'EN';
+
+const ENGLISH_THREAD_COPY: Record<
+  string,
+  {
+    place?: {
+      title?: string;
+      address?: string;
+    };
+    messages?: Record<number, string>;
+  }
+> = {
+  'mock-thread-emma': {
+    place: {
+      title: 'Gimcheon Gimbap Festival',
+      address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
+    },
+    messages: {
+      9301: 'Hi Emma! 😊\nI noticed you saved the Gimcheon Gimbap Festival.\nI was thinking about visiting this weekend too.\nWould you like to go together?',
+      9302: 'Hi! Thanks for reaching out 😊 I’d love to join.',
+      9303: 'Would you like to visit N Seoul Tower together?',
+    },
+  },
+  'mock-thread-liam': {
+    place: {
+      title: 'Seongsan Ilchulbong',
+      address: '78 Seongsan-ri, Seongsan-eup, Seogwipo-si, Jeju-do',
+    },
+    messages: {
+      9311: 'I also added Seongsan Ilchulbong to my itinerary. Want to go together?',
+      9312: "Hi! I'm thinking of going there next weekend too.",
+    },
+  },
+  'mock-thread-sophie': {
+    place: {
+      title: 'Insadong',
+      address: 'Insadong-gil area, Jongno-gu, Seoul',
+    },
+    messages: {
+      9321: 'I put together a tea house and alley course in Insadong.',
+      9322: 'Do you know any tea houses you would recommend?',
+    },
+  },
+  'mock-thread-yuki': {
+    place: {
+      title: 'N Seoul Tower',
+      address: '105 Namsan Park-gil, Yongsan-gu, Seoul',
+    },
+    messages: {
+      9331: 'I reached out because I was curious about the N Seoul Tower night-view course.',
+      9332: 'Sounds great! Please let me know how it was when you go.',
+    },
+  },
+} as const;
 
 const PLACE_LOOKUP: Record<number, MessageThreadPlace> = {
   1101: {
@@ -243,6 +299,35 @@ function createMessage(message: MessageThreadMessage): MessageThreadMessage {
   return { ...message };
 }
 
+function getMockLanguage(): MockLanguage {
+  return useLanguageStore.getState().language === 'EN' ? 'EN' : 'KO';
+}
+
+function localizePlace(place: MessageThreadPlace, threadId: string): MessageThreadPlace {
+  if (getMockLanguage() !== 'EN') {
+    return { ...place };
+  }
+
+  const copy = ENGLISH_THREAD_COPY[threadId]?.place;
+  return {
+    ...place,
+    title: copy?.title ?? place.title,
+    address: copy?.address ?? place.address,
+  };
+}
+
+function localizeMessage(threadId: string, message: MessageThreadMessage): MessageThreadMessage {
+  if (getMockLanguage() !== 'EN') {
+    return cloneMessage(message);
+  }
+
+  const copy = ENGLISH_THREAD_COPY[threadId]?.messages?.[message.messageId];
+  return {
+    ...message,
+    content: copy ?? message.content,
+  };
+}
+
 function createNextMessageId() {
   nextMessageId += 1;
   return nextMessageId;
@@ -308,7 +393,7 @@ function getLatestMessage(messages: MessageThreadMessage[]) {
   return sortMessages(messages).at(-1) ?? null;
 }
 
-function getThreadUpdatedAt(record: ThreadRecord) {
+function getThreadLastSentAt(record: ThreadRecord) {
   return getLatestMessage(record.messages)?.sentAt ?? '1970-01-01T00:00:00.000Z';
 }
 
@@ -320,23 +405,25 @@ function getUnreadCount(record: ThreadRecord) {
 
 function buildListItem(record: ThreadRecord): MessageThreadListItem {
   const latestMessage = getLatestMessage(record.messages);
+  const localizedLatestMessage = latestMessage ? localizeMessage(record.threadId, latestMessage) : null;
+  const lastSentAt = getThreadLastSentAt(record);
 
   return {
     threadId: record.threadId,
-    place: { ...record.place },
+    place: localizePlace(record.place, record.threadId),
     otherProfile: {
       ...record.otherProfile,
     },
-    preview: normalizeContent(latestMessage?.content ?? '').slice(0, 100),
-    updatedAt: latestMessage?.sentAt ?? '1970-01-01T00:00:00.000Z',
+    preview: normalizeContent(localizedLatestMessage?.content ?? '').slice(0, 100),
+    lastSentAt,
     unreadCount: getUnreadCount(record),
     blocked: false,
     canReply: record.canReply,
   };
 }
 
-function encodeListCursor(updatedAt: string, threadId: string) {
-  return `${updatedAt}|${threadId}`;
+function encodeListCursor(lastSentAt: string, threadId: string) {
+  return `${lastSentAt}|${threadId}`;
 }
 
 function decodeListCursor(cursor: string): ListCursor | null {
@@ -345,21 +432,21 @@ function decodeListCursor(cursor: string): ListCursor | null {
     return null;
   }
 
-  const updatedAt = cursor.slice(0, separatorIndex);
+  const lastSentAt = cursor.slice(0, separatorIndex);
   const threadId = cursor.slice(separatorIndex + 1);
-  if (!updatedAt || !threadId) {
+  if (!lastSentAt || !threadId) {
     return null;
   }
 
-  return { updatedAt, threadId };
+  return { lastSentAt, threadId };
 }
 
 function paginateList(items: MessageThreadListItem[], cursor?: string | null, size = 20) {
   const normalizedSize = Math.min(50, Math.max(1, size));
   const sorted = [...items].sort((left, right) => {
-    const updatedDiff = right.updatedAt.localeCompare(left.updatedAt);
-    if (updatedDiff !== 0) {
-      return updatedDiff;
+    const lastSentDiff = right.lastSentAt.localeCompare(left.lastSentAt);
+    if (lastSentDiff !== 0) {
+      return lastSentDiff;
     }
 
     return right.threadId.localeCompare(left.threadId);
@@ -372,7 +459,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
       hasMore: sorted.length > normalizedSize,
       nextCursor:
         sorted.length > normalizedSize
-          ? encodeListCursor(page.at(-1)!.updatedAt, page.at(-1)!.threadId)
+          ? encodeListCursor(page.at(-1)!.lastSentAt, page.at(-1)!.threadId)
           : null,
     };
   }
@@ -383,7 +470,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
   }
 
   const cursorIndex = sorted.findIndex(
-    (item) => item.updatedAt === decoded.updatedAt && item.threadId === decoded.threadId,
+    (item) => item.lastSentAt === decoded.lastSentAt && item.threadId === decoded.threadId,
   );
   if (cursorIndex === -1) {
     return null;
@@ -393,7 +480,7 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
   return {
     items: page,
     hasMore: cursorIndex + 1 + normalizedSize < sorted.length,
-    nextCursor: page.length > 0 ? encodeListCursor(page.at(-1)!.updatedAt, page.at(-1)!.threadId) : null,
+    nextCursor: page.length > 0 ? encodeListCursor(page.at(-1)!.lastSentAt, page.at(-1)!.threadId) : null,
   };
 }
 
@@ -423,9 +510,10 @@ function ensureRecordFromRequest(
   }
 
   const profile = getMockBuddyProfileDetailById(payload.receiverProfileId);
+  const mockLanguage = getMockLanguage();
   const basePlace = PLACE_LOOKUP[payload.placeId] ?? {
     placeId: payload.placeId,
-    title: '목업 장소',
+    title: mockLanguage === 'EN' ? 'Mock Place' : '목업 장소',
     imageUrl: `https://picsum.photos/seed/koready-place-${payload.placeId}/600/400`,
   };
   const place = {
@@ -532,9 +620,9 @@ export function getMockMessageThreadById(
 
   return {
     threadId: record.threadId,
-    place: { ...record.place },
+    place: localizePlace(record.place, record.threadId),
     otherProfile: { ...record.otherProfile },
-    messages: page.messages.map(cloneMessage),
+    messages: page.messages.map((message) => localizeMessage(record.threadId, message)),
     nextCursor: page.nextCursor,
     hasMore: page.hasMore,
     canReply: record.canReply,
@@ -587,9 +675,9 @@ export function createOrAppendMockMessageThread(
 
   const response: MessageThreadResponse = {
     threadId,
-    place: { ...record.place },
+    place: localizePlace(record.place, record.threadId),
     otherProfile: { ...record.otherProfile },
-    messages: record.messages.map(cloneMessage),
+    messages: record.messages.map((message) => localizeMessage(record.threadId, message)),
     nextCursor: null,
     hasMore: false,
     canReply: record.canReply,

@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
+    lineHeight: 22.4,
     color: Palette.text,
   },
   subtitle: {

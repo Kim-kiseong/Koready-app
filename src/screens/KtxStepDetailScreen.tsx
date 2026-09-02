@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
 import BulletList from '@/components/guide-blocks/BulletList';
@@ -29,6 +29,20 @@ function NoteBox({ text }: { text: string }) {
   );
 }
 
+function ChecklistCheckIcon() {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 17 17" fill="none">
+      <Path
+        d="M11 5.5L5.5 11.5L3 8.77273"
+        stroke={Palette.grey500}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function ChecklistGrid({ title, columns }: { title: string; columns: string[][] }) {
   return (
     <View style={styles.checklistCard}>
@@ -38,12 +52,7 @@ function ChecklistGrid({ title, columns }: { title: string; columns: string[][] 
           <View key={index} style={styles.checklistColumn}>
             {column.map((item) => (
               <View key={item} style={styles.checklistRow}>
-                <SymbolView
-                  name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                  size={14}
-                  weight="semibold"
-                  tintColor={Palette.text}
-                />
+                <ChecklistCheckIcon />
                 <CustomText style={styles.checklistText}>{item}</CustomText>
               </View>
             ))}
@@ -78,7 +87,12 @@ export default function KtxStepDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={detail.title} rightIcon={null} />
+      <OnboardingHeader
+        onBack={() => goBackOrRoot(router)}
+        title={detail.title}
+        rightIcon={null}
+        titleStyle={language === 'EN' ? styles.englishTitle : undefined}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <NoteBox text={detail.note} />
 
@@ -87,7 +101,7 @@ export default function KtxStepDetailScreen() {
           <CustomText style={styles.screenshotCaption}>{detail.screenshotCaption}</CustomText>
         </View>
 
-        <HoriTipCard body={detail.tipBody} />
+        <HoriTipCard variant="inline" body={detail.tipBody} />
 
         <BulletList columns={detail.stationColumns} />
 
@@ -140,22 +154,27 @@ const styles = StyleSheet.create({
     color: Palette.grey400,
   },
   checklistCard: {
+    width: '100%',
     borderWidth: 1,
     borderColor: Palette.grey200,
     borderRadius: 16,
     padding: 16,
     gap: 14,
+    backgroundColor: '#ffffff',
   },
   checklistTitle: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.grey600,
   },
   checklistColumns: {
     flexDirection: 'row',
     gap: 29,
+    alignItems: 'flex-start',
   },
   checklistColumn: {
+    width: 141,
     gap: 8,
   },
   checklistRow: {
@@ -164,8 +183,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checklistText: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 13,
+    lineHeight: 18.2,
     color: Palette.text,
   },
   emptyState: {
@@ -184,6 +204,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,
     color: Palette.grey600,
+    textAlign: 'center',
+  },
+  englishTitle: {
+    fontSize: 15,
     textAlign: 'center',
   },
 });

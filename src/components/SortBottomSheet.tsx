@@ -1,10 +1,9 @@
-import { SymbolView } from 'expo-symbols';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { EventSortOrder } from '@/api/home';
 import CustomText from '@/components/CustomText';
-import { Palette } from '@/constants/colors';
+import SortCheckIcon from '@/components/icons/SortCheckIcon';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -40,12 +39,7 @@ export default function SortBottomSheet({ visible, value, onSelect, onClose }: S
                     {label}
                   </CustomText>
                   {selected && (
-                    <SymbolView
-                      name={{ ios: 'checkmark', android: 'check', web: 'check' }}
-                      size={16}
-                      weight="semibold"
-                      tintColor={Palette.text}
-                    />
+                    <SortCheckIcon />
                   )}
                 </Pressable>
               );
@@ -66,6 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
+    height:190,
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -74,22 +69,25 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   handleArea: {
+    alignSelf: 'stretch',
     alignItems: 'center',
     paddingVertical: 8,
   },
   handle: {
     width: 48,
     height: 4,
-    borderRadius: 40,
+    borderRadius: 2,
     backgroundColor: '#E5E8EB',
   },
   title: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 14,
-    color: Palette.grey600,
+    lineHeight: 19.6,
+    color: '#4E5968',
   },
   optionGroup: {
     gap: 24,
+    alignSelf: 'stretch',
   },
   optionRow: {
     flexDirection: 'row',
@@ -97,13 +95,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   optionLabel: {
-    fontFamily: FontFamily.pretendard.medium,
+    fontFamily: FontFamily.inter.medium,
     fontSize: 16,
-    color: Palette.text,
+    lineHeight: 22.4,
+    color: '#1C1C1A',
   },
   optionLabelSelected: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 16,
-    color: Palette.text,
+    lineHeight: 22.4,
+    color: '#1C1C1A',
   },
 });

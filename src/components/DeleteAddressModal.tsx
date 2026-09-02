@@ -4,6 +4,7 @@ import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/language-store';
 
 export type DeleteAddressModalProps = {
   visible: boolean;
@@ -19,14 +20,26 @@ export default function DeleteAddressModal({
   onConfirm,
 }: DeleteAddressModalProps) {
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
+  const isEnglish = language === 'EN';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.titleRow}>
-            <CustomText style={styles.titleBold}>{`'${addressTitle}'`}</CustomText>
-            <CustomText style={styles.titleRegular}>{t.deleteAddressModal.suffix}</CustomText>
+            {isEnglish ? (
+              <>
+                <CustomText style={styles.titleRegular}>Delete</CustomText>
+                <CustomText style={styles.titleBold}>{`“${addressTitle}”`}</CustomText>
+                <CustomText style={styles.titleRegular}>{t.deleteAddressModal.suffix}</CustomText>
+              </>
+            ) : (
+              <>
+                <CustomText style={styles.titleBold}>{`'${addressTitle}'`}</CustomText>
+                <CustomText style={styles.titleRegular}>{t.deleteAddressModal.suffix}</CustomText>
+              </>
+            )}
           </View>
 
           <View style={styles.buttonRow}>
