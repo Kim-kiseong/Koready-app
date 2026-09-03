@@ -6,7 +6,9 @@ import { FontFamily } from '@/constants/typography';
 
 type ConfirmationModalProps = {
   visible: boolean;
-  message: string;
+  message?: string;
+  title?: string;
+  body?: string;
   cancelLabel: string;
   confirmLabel: string;
   onCancel: () => void;
@@ -16,6 +18,8 @@ type ConfirmationModalProps = {
 export default function ConfirmationModal({
   visible,
   message,
+  title,
+  body,
   cancelLabel,
   confirmLabel,
   onCancel,
@@ -25,7 +29,14 @@ export default function ConfirmationModal({
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
         <Pressable style={styles.sheet} onPress={() => {}}>
-          <CustomText style={styles.message}>{message}</CustomText>
+          {title || body ? (
+            <View style={styles.copyGroup}>
+              {title ? <CustomText style={styles.title}>{title}</CustomText> : null}
+              {body ? <CustomText style={styles.body}>{body}</CustomText> : null}
+            </View>
+          ) : (
+            <CustomText style={styles.message}>{message}</CustomText>
+          )}
 
           <View style={styles.buttonRow}>
             <Pressable style={styles.cancelButton} onPress={onCancel}>
@@ -53,10 +64,30 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 350,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
     backgroundColor: Palette.white,
     borderRadius: 24,
     gap: 24,
+  },
+  copyGroup: {
+    gap: 12,
+    paddingHorizontal: 6,
+  },
+  title: {
+    fontFamily: FontFamily.pretendard.semiBold,
+    fontSize: 18,
+    lineHeight: 25.2,
+    color: '#1C1C1A',
+    textAlign: 'center',
+  },
+  body: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 22.4,
+    color: '#556174',
+    textAlign: 'center',
   },
   message: {
     fontFamily: FontFamily.pretendard.medium,

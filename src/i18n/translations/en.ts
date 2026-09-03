@@ -124,7 +124,8 @@ export const en: DeepPartial<Translations> = {
     },
     actions: {
       logoutConfirmTitle: 'Are you sure you want to log out?',
-      withdrawConfirmTitle: 'Are you sure you want to delete your\naccount?',
+      withdrawConfirmTitle: 'Are you sure you want to delete your account?',
+      withdrawConfirmBody: 'You have 7 days to cancel. After that, your\naccount will be permanently deleted.',
       logoutConfirmButton: 'Log Out',
       withdrawConfirmButton: 'Delete Account',
       cancel: 'Cancel',

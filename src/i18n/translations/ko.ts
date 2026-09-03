@@ -115,6 +115,7 @@ export interface Translations {
     actions: {
       logoutConfirmTitle: string;
       withdrawConfirmTitle: string;
+      withdrawConfirmBody: string;
       logoutConfirmButton: string;
       withdrawConfirmButton: string;
       cancel: string;
@@ -625,6 +626,7 @@ export const ko: Translations = {
     actions: {
       logoutConfirmTitle: '정말 로그아웃 하시나요?',
       withdrawConfirmTitle: '정말 탈퇴 하시나요?',
+      withdrawConfirmBody: '신청 후 7일 이내에는 탈퇴를 철회할 수 있으며,\n7일이 지나면 탈퇴가 확정되고 회원정보가 삭제됩니다.',
       logoutConfirmButton: '로그아웃',
       withdrawConfirmButton: '탈퇴하기',
       cancel: '취소',
@@ -1020,7 +1022,7 @@ export const ko: Translations = {
       errorDescriptionFallback: '잠시 후 다시 시도해 주세요.',
       retry: '다시 시도',
       emptyTitle: '쪽지함이 비어 있어요',
-      emptyDescription: '아직 받은 쪽지가 없어요. 여행지에서 쪽지를 보내면 여기에서 확인할 수 있어요.',
+      emptyDescription: '아직 받은 쪽지가 없어요.\n여행지에서 쪽지를 보내면 여기에서 확인할 수 있어요',
     },
     compose: {
       loading: '쪽지 화면을 불러오는 중이에요',

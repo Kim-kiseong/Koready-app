@@ -49,18 +49,6 @@ export default function SettingsScreen() {
   const language = useLanguageStore((state) => state.language);
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const [pendingAccountAction, setPendingAccountAction] = useState<'logout' | 'withdraw' | null>(null);
-  const accountActionModalCopy =
-    pendingAccountAction === 'logout'
-      ? {
-          message: copy.actions.logoutConfirmTitle,
-          confirmLabel: copy.actions.logoutConfirmButton,
-        }
-      : pendingAccountAction === 'withdraw'
-        ? {
-            message: copy.actions.withdrawConfirmTitle,
-            confirmLabel: copy.actions.withdrawConfirmButton,
-          }
-        : null;
 
   const handleLogout = async () => {
     if (!refreshToken) {
@@ -170,12 +158,18 @@ export default function SettingsScreen() {
         </SettingsSection>
       </ScrollView>
 
-      {accountActionModalCopy ? (
+      {pendingAccountAction ? (
         <ConfirmationModal
           visible
-          message={accountActionModalCopy.message}
+          message={pendingAccountAction === 'logout' ? copy.actions.logoutConfirmTitle : undefined}
+          title={pendingAccountAction === 'withdraw' ? copy.actions.withdrawConfirmTitle : undefined}
+          body={pendingAccountAction === 'withdraw' ? copy.actions.withdrawConfirmBody : undefined}
           cancelLabel={copy.actions.cancel}
-          confirmLabel={accountActionModalCopy.confirmLabel}
+          confirmLabel={
+            pendingAccountAction === 'logout'
+              ? copy.actions.logoutConfirmButton
+              : copy.actions.withdrawConfirmButton
+          }
           onCancel={closeAccountActionModal}
           onConfirm={handleConfirmAccountAction}
         />
