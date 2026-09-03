@@ -1,13 +1,13 @@
 import { isAxiosError } from 'axios';
 
-import { client } from './client';
-import { fetchMyLocations } from './address';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { useAddressStore } from '@/store/address-store';
-import { useOnboardingStore } from '@/store/onboarding-store';
-import { useLanguageStore } from '@/store/language-store';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
+import { fetchMyLocations } from './address';
+import { client } from './client';
 
 export type TransportMode =
   | 'WALK'

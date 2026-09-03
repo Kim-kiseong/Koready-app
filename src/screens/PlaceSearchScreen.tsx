@@ -271,8 +271,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   emptyImage: {
-    width: 130,
-    height: 220,
+    width: 95,
+    height: 120,
+    aspectRatio: 19 / 24,
+    transform: [{ translateY: -20 }],
   },
   headerSpacer: {
     width: 24,
@@ -284,6 +286,7 @@ const styles = StyleSheet.create({
     lineHeight: 25.2,
     color: Palette.text,
     textAlign: 'center',
+    transform: [{ translateY: -20 }],
   },
   listContent: {
     paddingTop: 8,

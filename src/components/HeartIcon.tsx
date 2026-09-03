@@ -11,7 +11,7 @@ export type HeartIconProps = {
 // FILL=0 instance, so 'favorite' renders as an outline there no matter
 // which name is passed. Drawing the fill ourselves keeps iOS and
 // Android/web pixel-consistent.
-export default function HeartIcon({ filled, color, size = 24 }: HeartIconProps) {
+export default function HeartIcon({ filled, color, size = 22 }: HeartIconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 19.6 17.6" fill="none">
       <Path
