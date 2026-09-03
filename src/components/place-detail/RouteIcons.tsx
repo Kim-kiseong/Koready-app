@@ -157,6 +157,17 @@ export const Component15 = ({ width = 40, height = 40 }: IconProps) => (
   </Svg>
 );
 
+export const RouteAirplane = ({ width = 40, height = 40 }: IconProps) => (
+  <Svg width={width} height={height} viewBox="0 0 40 40" fill="none">
+    <Rect x="0.5" y="0.5" width="39" height="39" rx="19.5" fill="#FAF5FF" />
+    <Rect x="0.5" y="0.5" width="39" height="39" rx="19.5" stroke="#F3E6FF" />
+    <Path
+      d="M24.3924 25.6144L23.0069 19.3024L25.701 16.6082C26.8557 15.4536 27.2406 13.9141 26.8557 13.1443C26.0859 12.7595 24.5464 13.1443 23.3918 14.299L20.6976 16.9931L14.3856 15.6076C14.0007 15.5306 13.6928 15.6845 13.5388 15.9924L13.3079 16.3773C13.154 16.7622 13.2309 17.1471 13.5388 17.378L17.6186 20.0722L16.079 22.3814H13.7698L13 23.1512L15.3093 24.6907L16.8488 27L17.6186 26.2302V23.921L19.9278 22.3814L22.622 26.4612C22.8529 26.7691 23.2378 26.846 23.6227 26.6921L24.0076 26.5381C24.3155 26.3072 24.4694 25.9993 24.3924 25.6144Z"
+      fill="#A74FFF"
+    />
+  </Svg>
+);
+
 export const Component14 = Component15;
 
 export const Directions_railway_2 = ({ width = 11, height = 16 }: IconProps) => (

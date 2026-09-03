@@ -25,9 +25,13 @@ export default function PillChip({ label, selected, onPress, style }: PillChipPr
 
 const styles = StyleSheet.create({
   chip: {
+    minHeight: 36,
     borderRadius: 100,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   unselected: {
     backgroundColor: '#ffffff',
@@ -36,16 +40,21 @@ const styles = StyleSheet.create({
   },
   selected: {
     backgroundColor: Palette.grey700,
+    borderWidth: 1,
+    borderColor: Palette.grey700,
   },
   label: {
     fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   labelUnselected: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey600,
   },
   labelSelected: {
-    fontFamily: FontFamily.pretendard.semiBold,
+    fontFamily: FontFamily.pretendard.medium,
     color: '#ffffff',
   },
 });
