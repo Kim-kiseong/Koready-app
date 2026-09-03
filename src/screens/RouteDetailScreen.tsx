@@ -24,6 +24,7 @@ import {
   Directions_railway_2,
   Location_on,
   Near_me,
+  RouteAirplane,
   RouteTime,
   RouteWalkDot
 } from '@/components/place-detail/RouteIcons';
@@ -32,8 +33,8 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
-import { useOnboardingStore } from '@/store/onboarding-store';
 import { useLanguageStore } from '@/store/language-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
 
 const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number }>; width: number; height: number }> = {
@@ -42,7 +43,7 @@ const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: 
   BUS: { Icon: Component17, width: 40, height: 40 },
   EXPRESS_BUS: { Icon: Component17, width: 40, height: 40 },
   TRAIN: { Icon: Component15, width: 40, height: 40 },
-  AIRPLANE: { Icon: Component15, width: 40, height: 40 },
+  AIRPLANE: { Icon: RouteAirplane, width: 40, height: 40 },
   FERRY: { Icon: Component15, width: 40, height: 40 },
   SHUTTLE_BUS: { Icon: Component17, width: 40, height: 40 },
 };

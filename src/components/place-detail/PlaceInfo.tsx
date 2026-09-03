@@ -22,7 +22,7 @@ export default function PlaceInfo({ title, address, tags, isSaved, onToggleSave 
       <View style={styles.titleRow}>
         <CustomText style={styles.title}>{title}</CustomText>
         <Pressable hitSlop={12} style={styles.saveButton} onPress={onToggleSave}>
-          <HeartIcon filled={isSaved} color={isSaved ? Palette.red300 : Palette.grey400} size={24} />
+          <HeartIcon filled={isSaved} color={isSaved ? Palette.red300 : Palette.grey400} size={20} />
         </Pressable>
       </View>
       <View style={styles.addressRow}>

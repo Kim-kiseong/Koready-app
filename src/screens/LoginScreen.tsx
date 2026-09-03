@@ -17,6 +17,7 @@ import { DEV_TEST_ACCESS_TOKEN, DEV_TEST_REFRESH_TOKEN } from '@/constants/env';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
+import { refreshSavedLocationsAndRestoreCurrentLocation } from '@/utils/location-session';
 
 // Dev-only bypass: lets onboarding be tested before social login keys exist.
 // When EXPO_PUBLIC_DEV_TEST_ACCESS_TOKEN is set, this carries a real staging
@@ -87,6 +88,7 @@ export default function LoginScreen() {
         }
         const session = await googleLogin({ idToken, deviceId });
         setSession(session);
+        await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
         router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
         return;
       }
@@ -94,6 +96,7 @@ export default function LoginScreen() {
       const { idToken, authorizationCode } = await signInWithApple();
       const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
       setSession(session);
+      await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
       router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
     } catch (error) {
       // User backed out of the Google account chooser — not a failure worth alerting on.
