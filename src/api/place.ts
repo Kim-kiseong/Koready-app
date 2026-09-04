@@ -1,21 +1,24 @@
-import { Asset } from 'expo-asset';
-import type { ImageSource } from 'expo-image';
+import { Asset } from "expo-asset";
+import type { ImageSource } from "expo-image";
 
-import { formatPlaceRegionName } from '@/utils/place-i18n';
-import { useLanguageStore } from '@/store/language-store';
-import type { ServiceRegionCode } from './onboarding';
+import { formatPlaceRegionName } from "@/utils/place-i18n";
+import { useLanguageStore } from "@/store/language-store";
+import type { ServiceRegionCode, TravelStyleId } from "./onboarding";
 import type {
   PlaceListItem,
   PlaceListResponse,
   PlaceSortOrder,
   SavedPlaceFestivalOccurrence,
-} from './types';
+} from "./types";
 
-import { client } from './client';
+import { client } from "./client";
 
-export type PlaceDetailTab = 'DESCRIPTION' | 'ROUTE' | 'MATES';
+export type PlaceDetailTab = "DESCRIPTION" | "ROUTE" | "MATES";
 
-export type PlaceDescriptionSourceType = 'KTO_ORIGINAL' | 'AI_GENERATED' | 'MANUAL_EDITED';
+export type PlaceDescriptionSourceType =
+  | "KTO_ORIGINAL"
+  | "AI_GENERATED"
+  | "MANUAL_EDITED";
 
 export type PlaceImage = {
   source: ImageSource;
@@ -36,21 +39,18 @@ export type PlaceDescription = {
 };
 
 const PLACE_DESCRIPTION_FIELDS = [
-  'topic',
-  'oneLineDescription',
-  'shortIntroduction',
-  'enjoyPoints',
-  'contentVersion',
+  "topic",
+  "oneLineDescription",
+  "shortIntroduction",
+  "enjoyPoints",
+  "contentVersion",
 ] as const;
 
-type PlaceDescriptionField =
-  (typeof PLACE_DESCRIPTION_FIELDS)[number];
+type PlaceDescriptionField = (typeof PLACE_DESCRIPTION_FIELDS)[number];
 
-function getNormalizedText(
-  ...values: (string | null | undefined)[]
-) {
+function getNormalizedText(...values: (string | null | undefined)[]) {
   for (const value of values) {
-    if (typeof value === 'string' && value.trim().length > 0) {
+    if (typeof value === "string" && value.trim().length > 0) {
       return value.trim();
     }
   }
@@ -58,19 +58,13 @@ function getNormalizedText(
   return null;
 }
 
-function getNormalizedStringArray(
-  ...values: (string[] | null | undefined)[]
-) {
+function getNormalizedStringArray(...values: (string[] | null | undefined)[]) {
   for (const value of values) {
     if (
       Array.isArray(value) &&
-      value.some(
-        (item) => typeof item === 'string' && item.trim().length > 0,
-      )
+      value.some((item) => typeof item === "string" && item.trim().length > 0)
     ) {
-      return value
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0);
+      return value.map((item) => item.trim()).filter((item) => item.length > 0);
     }
   }
 
@@ -98,10 +92,7 @@ export function normalizePlaceDescription(
   );
 
   return {
-    topic: getNormalizedText(
-      description?.topic,
-      description?.impactTitle,
-    ),
+    topic: getNormalizedText(description?.topic, description?.impactTitle),
     oneLineDescription: getNormalizedText(
       description?.oneLineDescription,
       description?.impactSubtitle,
@@ -132,23 +123,23 @@ export function getMissingPlaceDescriptionFields(
   const missingFields: PlaceDescriptionField[] = [];
 
   if (!normalized.topic) {
-    missingFields.push('topic');
+    missingFields.push("topic");
   }
 
   if (!normalized.oneLineDescription) {
-    missingFields.push('oneLineDescription');
+    missingFields.push("oneLineDescription");
   }
 
   if (!normalized.shortIntroduction) {
-    missingFields.push('shortIntroduction');
+    missingFields.push("shortIntroduction");
   }
 
   if (normalized.enjoyPoints.length === 0) {
-    missingFields.push('enjoyPoints');
+    missingFields.push("enjoyPoints");
   }
 
   if (!normalized.contentVersion) {
-    missingFields.push('contentVersion');
+    missingFields.push("contentVersion");
   }
 
   return missingFields;
@@ -205,7 +196,7 @@ function isWithinRequestedDateRange(
 }
 
 const DEFAULT_PLACE_CARD_IMAGE_URI = Asset.fromModule(
-  require('@/assets/images/destinations/default.jpg'),
+  require("@/assets/images/destinations/default.jpg"),
 ).uri;
 
 type PlaceListApiCard = {
@@ -243,12 +234,15 @@ function mapPlaceListCardResponse(item: PlaceListApiCard): PlaceListItem {
     placeId: item.placeId,
     title: item.title,
     serviceRegionCode: item.serviceRegionCode,
-    serviceRegionName: formatPlaceRegionName(item.serviceRegionCode, useLanguageStore.getState().language),
+    serviceRegionName: formatPlaceRegionName(
+      item.serviceRegionCode,
+      useLanguageStore.getState().language,
+    ),
     addressSummary: item.addressSummary,
     imageUrl: item.imageUrl ?? DEFAULT_PLACE_CARD_IMAGE_URI,
     festivalOccurrence: item.festivalOccurrence,
     operatingHours: item.operatingHours ?? null,
-    travelStyle: item.travelStyle ?? '',
+    travelStyle: item.travelStyle ?? "",
     tags: [...item.tags],
     shortDescription: item.shortDescription,
     overview: null,
@@ -257,7 +251,9 @@ function mapPlaceListCardResponse(item: PlaceListApiCard): PlaceListItem {
   };
 }
 
-function mapPlaceListResponse(response: PlaceListApiResponse): PlaceListResponse {
+function mapPlaceListResponse(
+  response: PlaceListApiResponse,
+): PlaceListResponse {
   return {
     items: response.items.map(mapPlaceListCardResponse),
     nextCursor: response.nextCursor,
@@ -266,26 +262,42 @@ function mapPlaceListResponse(response: PlaceListApiResponse): PlaceListResponse
   };
 }
 
-export async function fetchPlaces(params: FetchPlacesParams): Promise<PlaceListResponse> {
+export type FetchPlacesParams = {
+  serviceRegionCode: ServiceRegionCode;
+  travelStyles?: TravelStyleId[];
+  sort?: PlaceSortOrder;
+  cursor?: string | null;
+  size?: number;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+const DEFAULT_PLACE_LIST_SIZE = 20;
+
+export async function fetchPlaces(
+  params: FetchPlacesParams,
+): Promise<PlaceListResponse> {
   try {
     const query = new URLSearchParams();
-    query.set('serviceRegionCode', params.serviceRegionCode);
+    query.set("serviceRegionCode", params.serviceRegionCode);
     if (params.travelStyles && params.travelStyles.length > 0) {
       // OpenAPI defines travelStyles as a form array with explode=false, so the
       // backend expects a comma-separated list like `NATURE,LOCAL_FESTIVAL`.
-      query.set('travelStyles', params.travelStyles.join(','));
+      query.set("travelStyles", params.travelStyles.join(","));
     }
     if (params.sort) {
-      query.set('sort', params.sort);
+      query.set("sort", params.sort);
     }
     if (params.cursor) {
-      query.set('cursor', params.cursor);
+      query.set("cursor", params.cursor);
     }
     if (params.size != null) {
-      query.set('size', String(params.size));
+      query.set("size", String(params.size));
     }
 
-    const response = await client.get<PlaceListEnvelope>(`/places?${query.toString()}`);
+    const response = await client.get<PlaceListEnvelope>(
+      `/places?${query.toString()}`,
+    );
     const result = mapPlaceListResponse(response.data.data);
 
     // GET /places has no dateFrom/dateTo param — the backend contract only
@@ -324,12 +336,18 @@ export async function searchPlaces(
   }
 
   try {
-    const params: Record<string, string> = { query: trimmedQuery, size: String(size) };
+    const params: Record<string, string> = {
+      query: trimmedQuery,
+      size: String(size),
+    };
     if (cursor) {
       params.cursor = cursor;
     }
 
-    const response = await client.get<PlaceListEnvelope>('/places/search', { params, signal });
+    const response = await client.get<PlaceListEnvelope>("/places/search", {
+      params,
+      signal,
+    });
     return mapPlaceListResponse(response.data.data);
   } catch (error) {
     throw error;
@@ -399,7 +417,7 @@ function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
       })),
     description: response.description,
     relatedPlaces,
-    availableTabs: response.availableTabs ?? ['DESCRIPTION', 'ROUTE', 'MATES'],
+    availableTabs: response.availableTabs ?? ["DESCRIPTION", "ROUTE", "MATES"],
   };
 }
 
@@ -418,7 +436,9 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
 
     const request = (async () => {
       try {
-        const response = await client.get<PlaceDetailEnvelope>(`/places/${numericId}`);
+        const response = await client.get<PlaceDetailEnvelope>(
+          `/places/${numericId}`,
+        );
         return mapPlaceDetailResponse(response.data.data);
       } catch (error) {
         throw error;
