@@ -31,6 +31,7 @@ const DEV_MOCK_SESSION = {
   refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   user: {
     userId: 0,
+    publicId: 'usr_00000000000000000000000000000000',
     email: 'dev@koready.test',
     profileImageUrl: null,
     preferredLanguage: 'KO' as const,
@@ -121,10 +122,10 @@ export default function LoginScreen() {
 
   const handleDevOnboardingBypass = () => {
     setSession(DEV_MOCK_SESSION);
-    // Skips straight past /terms — the mock session's fake token can't call
-    // the real terms API, and TermsScreen's own dev-mock fallback is for
-    // testing that screen specifically, not for this shortcut.
-    router.replace('/language');
+    // TermsScreen has its own dev-mock fallback (DEV_FALLBACK_TERMS) that
+    // works fine with this session's fake token, so route through /terms
+    // like a real login would rather than skipping it.
+    router.replace('/terms');
   };
 
   const handleDevHomeShortcut = () => {

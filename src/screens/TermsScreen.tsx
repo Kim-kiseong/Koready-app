@@ -4,7 +4,7 @@ import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { Fragment, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fetchRequiredTerms, submitTermAgreements, type RequiredTermItem } from '@/api/terms';
 import CustomText from '@/components/CustomText';
@@ -81,6 +81,7 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
 export default function TermsScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const insets = useSafeAreaInsets();
   const accessToken = useAuthStore((state) => state.accessToken);
   // The dev-bypass session's token isn't a real one — sending it to the real
   // backend 401s, which trips client.ts's refresh-then-logout cascade before
@@ -89,6 +90,10 @@ export default function TermsScreen() {
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const [terms, setTerms] = useState<RequiredTermItem[] | null>(null);
   const [agreedMap, setAgreedMap] = useState<Record<number, boolean>>({});
+  // Client-only requirement — there's no backend term or age-verification
+  // logic for this, so it's never sent to submitTermAgreements. We just take
+  // the user's word for it.
+  const [age14Agreed, setAge14Agreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -124,8 +129,12 @@ export default function TermsScreen() {
 
   const requiredTerms = terms?.filter((term) => term.required) ?? [];
   const optionalTerms = terms?.filter((term) => !term.required) ?? [];
-  const requiredAgreed = requiredTerms.every((term) => agreedMap[term.termVersionId]);
-  const allAgreed = terms !== null && terms.length > 0 && terms.every((term) => agreedMap[term.termVersionId]);
+  const requiredTermsAgreed = requiredTerms.every((term) => agreedMap[term.termVersionId]);
+  // Gates the "다음" button — includes the client-only age-14 checkbox
+  // alongside the backend-driven required terms.
+  const requiredAgreed = age14Agreed && requiredTermsAgreed;
+  const allAgreed =
+    age14Agreed && terms !== null && terms.length > 0 && terms.every((term) => agreedMap[term.termVersionId]);
 
   const toggleGroup = (group: RequiredTermItem[]) => {
     const groupAgreed = group.every((term) => agreedMap[term.termVersionId]);
@@ -141,10 +150,16 @@ export default function TermsScreen() {
 
   const handleToggleAll = () => {
     if (!terms) return;
-    toggleGroup(terms);
+    const next = !allAgreed;
+    setAge14Agreed(next);
+    setAgreedMap(Object.fromEntries(terms.map((term) => [term.termVersionId, next])));
   };
 
   const openTerm = (term: RequiredTermItem) => {
+    if (term.code === 'SERVICE_TERMS' || term.code === 'PRIVACY_POLICY') {
+      router.push({ pathname: '/terms/[code]', params: { code: term.code } });
+      return;
+    }
     WebBrowser.openBrowserAsync(term.contentUrl).catch((error) => {
       Alert.alert(t.terms.linkOpenError, extractErrorMessage(error));
     });
@@ -172,7 +187,7 @@ export default function TermsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} title={t.terms.headerTitle} rightIcon={null} />
 
       <View style={styles.content}>
@@ -186,9 +201,14 @@ export default function TermsScreen() {
 
             <View style={styles.divider} />
 
+            <CheckboxRow checked={age14Agreed} onPress={() => setAge14Agreed((prev) => !prev)}>
+              <CustomText style={styles.label}>{t.terms.age14RequiredLabel}</CustomText>
+            </CheckboxRow>
+
             {requiredTerms.length > 0 && (
-              <CheckboxRow checked={requiredAgreed} onPress={() => toggleGroup(requiredTerms)}>
+              <CheckboxRow checked={requiredTermsAgreed} onPress={() => toggleGroup(requiredTerms)}>
                 <CustomText style={styles.label}>
+                  {t.terms.requiredPrefix}
                   {requiredTerms.map((term, index) => (
                     <Fragment key={term.termId}>
                       {index > 0 ? t.terms.connector : null}
@@ -210,6 +230,7 @@ export default function TermsScreen() {
                   setAgreedMap((prev) => ({ ...prev, [term.termVersionId]: !prev[term.termVersionId] }))
                 }>
                 <CustomText style={styles.label}>
+                  {t.terms.optionalPrefix}
                   <CustomText style={styles.link} onPress={() => openTerm(term)}>
                     {term.title}
                   </CustomText>
@@ -221,7 +242,7 @@ export default function TermsScreen() {
         )}
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton
           title={t.terms.next}
           disabled={!terms || !requiredAgreed || isSubmitting}
@@ -302,7 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
   },
   agreeAllLabel: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
   },

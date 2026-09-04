@@ -190,10 +190,10 @@ export default function PicksScreen() {
   const hasSeenGuide = usePicksStore((state) => state.hasSeenGuide);
   const hasSeenGuideHydrated = usePicksStore((state) => state.hasHydrated);
   const dismissGuide = usePicksStore((state) => state.dismissGuide);
-  // There is no GET /users/me on the real backend to source a defaultLocationId
-  // from — onboarding-store's currentLocationId is the real backend location id
-  // for the user's current location, kept current by the onboarding flow and by
-  // LocationScreen's POST /users/me/locations call, and persists across restarts.
+  // onboarding-store's currentLocationId is the real backend location id for
+  // the user's current location. It's kept current by the onboarding flow,
+  // by LocationScreen's POST /users/me/locations call, and — on cold restart
+  // — by app/index.tsx syncing it from GET /users/me's defaultLocationId.
   const originLocationId = useOnboardingStore((state) => state.currentLocationId);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const accessToken = useAuthStore((state) => state.accessToken);

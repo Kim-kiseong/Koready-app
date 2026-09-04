@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fetchCurrentCandidateSet, type OnboardingCandidateSetResponse } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
@@ -105,6 +105,7 @@ const DEV_MOCK_CANDIDATE_SET_EN: OnboardingCandidateSetResponse = {
 
 export default function DestinationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -160,7 +161,7 @@ export default function DestinationScreen() {
   const maxSelection = candidateSet?.maxSelection ?? 3;
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router, '/login')}
         progress={{ currentStep: 3, totalSteps: 3 }}
@@ -203,7 +204,7 @@ export default function DestinationScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton
           title={t.destination.next}
           disabled={isLoading || selectedPreferencePlaceIds.length === 0}
