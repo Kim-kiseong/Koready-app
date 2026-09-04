@@ -2,7 +2,7 @@ import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isAxiosError } from 'axios';
 
 import { createMyLocation } from '@/api/address';
@@ -25,6 +25,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 // cascade. Mirrors TermsScreen's/LanguageScreen's same dev-only bypass.
 export default function LocationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const t = useTranslation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
@@ -143,7 +144,7 @@ export default function LocationScreen() {
   const showResults = query.length > 0 && results.length > 0;
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router, '/login')}
         progress={{ currentStep: 1, totalSteps: 3 }}
@@ -220,7 +221,7 @@ export default function LocationScreen() {
         )}
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton
           title={t.location.next}
           disabled={!location || currentLocationId == null || isSaving}

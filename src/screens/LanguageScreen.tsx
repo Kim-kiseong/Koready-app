@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { updateMyLanguage } from '@/api/user';
 import type { LanguageCode } from '@/api/types';
@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/auth-store';
 export default function LanguageScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const insets = useSafeAreaInsets();
   const accessToken = useAuthStore((state) => state.accessToken);
   const applyLanguageChange = useAuthStore((state) => state.applyLanguageChange);
   // The dev-bypass session's token isn't real — sending it to PATCH
@@ -51,7 +52,7 @@ export default function LanguageScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.content}>
         <View style={styles.headerGroup}>
           <CustomText style={styles.title}>{t.language.title}</CustomText>
@@ -74,7 +75,7 @@ export default function LanguageScreen() {
         </View>
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton
           title={t.language.next}
           disabled={!selected || isSubmitting}
