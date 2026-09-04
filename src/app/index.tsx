@@ -2,8 +2,12 @@ import type { Href } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { fetchMyUser } from '@/api/user';
+import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { resolveOnboardingResumeRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
+import type { NextStep } from '@/api/types';
 import { useAuthStore } from '@/store/auth-store';
+import { useOnboardingStore } from '@/store/onboarding-store';
 
 export default function Index() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -18,20 +22,44 @@ export default function Index() {
       return;
     }
 
-    // There is no GET /users/me on the real backend to refresh this from —
-    // `nextStep` is persisted from login and kept current by every flow that
-    // can change it (language switch, onboarding completion, ...), so the
-    // cached value is already authoritative on a cold restart.
-    if (nextStep === 'ONBOARDING') {
-      // Resume on the exact onboarding screen the server has progress for,
-      // instead of always restarting at /location.
-      resolveOnboardingResumeRoute()
-        .then(setRoute)
-        .catch(() => resolveNextStepRouteSkippingTerms(nextStep).then(setRoute));
+    const routeFromNextStep = (step: NextStep) => {
+      if (step === 'ONBOARDING') {
+        // Resume on the exact onboarding screen the server has progress for,
+        // instead of always restarting at /location.
+        resolveOnboardingResumeRoute()
+          .then(setRoute)
+          .catch(() => resolveNextStepRouteSkippingTerms(step).then(setRoute));
+        return;
+      }
+      resolveNextStepRouteSkippingTerms(step).then(setRoute);
+    };
+
+    // The dev-mock session isn't a real backend user — GET /users/me would
+    // 401, triggering client.ts's refresh-then-logout cascade. Route from the
+    // cached nextStep instead, same as every other mock-aware screen.
+    const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
+    if (isDevMockSession) {
+      routeFromNextStep(nextStep);
       return;
     }
 
-    resolveNextStepRouteSkippingTerms(nextStep).then(setRoute);
+    // GET /users/me is now implemented on the real backend — refresh the
+    // session from it on cold restart instead of trusting the cached
+    // nextStep, and re-sync the fields other screens used to source purely
+    // from local state (buddyProfileExists, unreadMessageCount, the current
+    // location id).
+    fetchMyUser()
+      .then((me) => {
+        useAuthStore.setState((state) => ({
+          nextStep: me.nextStep,
+          buddyProfileExists: me.buddyProfileExists,
+          unreadMessageCount: me.unreadMessageCount,
+          user: state.user ? { ...state.user, ...me.user } : me.user,
+        }));
+        useOnboardingStore.getState().setCurrentLocationId(me.defaultLocationId);
+        routeFromNextStep(me.nextStep);
+      })
+      .catch(() => routeFromNextStep(nextStep));
   }, [hasHydrated, accessToken, nextStep]);
 
   if (!route) return null;

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isAxiosError } from 'axios';
 
 import type { ApiErrorEnvelope } from '@/api/client';
@@ -21,6 +21,7 @@ import { useOnboardingStore } from '@/store/onboarding-store';
 
 export default function CompleteScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const t = useTranslation();
   const accessToken = useAuthStore((state) => state.accessToken);
   // The dev-bypass session's token isn't real — sending it to PUT
@@ -137,7 +138,7 @@ export default function CompleteScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} rightIcon={null} />
 
       <View style={styles.content}>
@@ -152,7 +153,7 @@ export default function CompleteScreen() {
         </View>
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton title={t.complete.next} disabled={isSubmitting} onPress={handleNext} />
       </View>
     </SafeAreaView>

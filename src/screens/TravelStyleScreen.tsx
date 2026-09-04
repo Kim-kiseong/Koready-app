@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TRAVEL_STYLE_IDS, type TravelStyleId } from '@/api/onboarding';
 import Chip from '@/components/Chip';
@@ -18,6 +18,7 @@ const MAX_TRAVEL_STYLES = 4;
 export default function TravelStyleScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const insets = useSafeAreaInsets();
   const travelStyles = useOnboardingStore((state) => state.travelStyles);
   const toggleTravelStyle = useOnboardingStore((state) => state.toggleTravelStyle);
 
@@ -37,7 +38,7 @@ export default function TravelStyleScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router, '/login')}
         progress={{ currentStep: 2, totalSteps: 3 }}
@@ -62,7 +63,7 @@ export default function TravelStyleScreen() {
         </View>
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <PrimaryButton
           title={t.travelStyle.next}
           disabled={travelStyles.length < 1}

@@ -24,6 +24,7 @@ export type RefreshTokenRequest = {
 
 export type AuthUser = {
   userId: number;
+  publicId: string;
   email: string;
   profileImageUrl: string | null;
   preferredLanguage: LanguageCode;
@@ -428,6 +429,30 @@ export type TokenEnvelope = {
   code: string;
   message: string;
   data: TokenResponse;
+  traceId: string;
+};
+
+export type SignupStatus = 'TERMS_REQUIRED' | 'LANGUAGE_REQUIRED' | 'ONBOARDING_REQUIRED' | 'ACTIVE';
+
+export type MyUserResponse = {
+  user: AuthUser;
+  // Server-computed from the current terms/language/onboarding state — the
+  // client must not recompute this itself.
+  signupStatus: SignupStatus;
+  nextStep: NextStep;
+  // null means the user has no default location yet (needs the location screen).
+  defaultLocationId: number | null;
+  onboardingCompleted: boolean;
+  buddyProfileExists: boolean;
+  unreadMessageCount: number;
+  termsNeedReAgreement: boolean;
+};
+
+export type MyUserEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: MyUserResponse;
   traceId: string;
 };
 
