@@ -26,8 +26,8 @@ function MascotCardView({
 }) {
   return (
     <View style={[styles.cardBody, styles.mascotCardBody]}>
-      <View style={[styles.mascotHeader, isEnglish ? styles.mascotHeaderLeft : null]}>
-        <CustomText style={[styles.badge, isEnglish ? styles.badgeLeft : null]}>{badge}</CustomText>
+      <View style={[styles.mascotHeader, styles.mascotHeaderLeft]}>
+        <CustomText style={[styles.badge, styles.badgeLeft]}>{badge}</CustomText>
         <View style={styles.titleGroup}>
           <CustomText style={styles.title}>{card.title}</CustomText>
           <CustomText style={styles.subtitle}>{card.subtitle}</CustomText>

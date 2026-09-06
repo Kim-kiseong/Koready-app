@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
@@ -87,6 +87,7 @@ function InfoRow({
 
 export default function KtxIntroScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
   const intro = language === 'EN' ? KTX_INTRO_EN : KTX_INTRO;
@@ -110,7 +111,7 @@ export default function KtxIntroScreen() {
         </View>
       </ScrollView>
 
-      <SafeAreaView edges={['bottom']} style={styles.buttonBar}>
+      <View style={[styles.buttonBar, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <Pressable style={styles.startButton} onPress={() => router.push('/guides/ktx/steps')}>
           <CustomText style={styles.startButtonText}>{t.guideDetail.startButton}</CustomText>
           <SymbolView
@@ -120,7 +121,7 @@ export default function KtxIntroScreen() {
             tintColor="#ffffff"
           />
         </Pressable>
-      </SafeAreaView>
+      </View>
     </SafeAreaView>
   );
 }

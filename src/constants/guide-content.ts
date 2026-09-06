@@ -878,16 +878,19 @@ export const GUIDE_CONTENT: Record<string, GuideContent> = {
         cards: [
           {
             icon: "taxi-credit-card",
+            orientation: "row",
             title: "해외 신용카드",
             description: "Visa, Mastercard 등 국제 카드로 결제해요.",
           },
           {
             icon: "taxi-credit-card",
+            orientation: "row",
             title: "국내 카드",
             description: "한국 신용·체크카드로 결제해요.",
           },
           {
             icon: "zap",
+            orientation: "row",
             title: "간편결제",
             description: "카카오페이, 네이버페이 등을 사용해요.",
           },

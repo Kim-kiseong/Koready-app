@@ -18,7 +18,7 @@ export type GuideCardProps = {
 
 export default function GuideCard({ guide, width, onPress }: GuideCardProps) {
   return (
-    <View style={[styles.card, { width }]}>
+    <Pressable style={[styles.card, { width }]} onPress={onPress}>
       <View style={styles.photoSection}>
         <Image source={HomeImages[guide.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
@@ -45,16 +45,16 @@ export default function GuideCard({ guide, width, onPress }: GuideCardProps) {
             </View>
           ))}
         </View>
-        <Pressable style={styles.arrowButton} onPress={onPress}>
+        <View style={styles.arrowButton}>
           <SymbolView
             name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}
             size={14}
             weight="semibold"
             tintColor="#ffffff"
           />
-        </Pressable>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

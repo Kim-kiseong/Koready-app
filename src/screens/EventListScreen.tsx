@@ -27,7 +27,6 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { formatPlaceTravelStyle } from '@/utils/place-i18n';
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const EN_MONTH_NAMES = [
   'January',
   'February',
@@ -66,6 +65,10 @@ export default function EventListScreen() {
   const gridCardWidth =
     (windowWidth - SCREEN_PADDING * 2 - WEB_SCROLLBAR_ALLOWANCE - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
+  const orderedMonths = useMemo(() => {
+    const currentMonth = new Date().getMonth() + 1;
+    return Array.from({ length: 12 }, (_, i) => ((currentMonth - 1 + i) % 12) + 1);
+  }, []);
   const [sortOrder, setSortOrder] = useState<EventSortOrder>('RECOMMENDED');
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_EVENT_FILTERS);
   const [isSortSheetOpen, setSortSheetOpen] = useState(false);
@@ -93,7 +96,7 @@ export default function EventListScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthRow}>
-          {MONTHS.map((m) => (
+          {orderedMonths.map((m) => (
             <PillChip
               key={m}
               label={language === 'EN' ? EN_MONTH_NAMES[m - 1].slice(0, 3) : `${m}월`}

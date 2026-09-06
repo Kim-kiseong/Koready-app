@@ -146,7 +146,7 @@ export default function LocationScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
-        onBack={() => goBackOrRoot(router, '/login')}
+        onBack={() => goBackOrRoot(router, '/terms')}
         progress={{ currentStep: 1, totalSteps: 3 }}
         rightIcon={null}
       />
