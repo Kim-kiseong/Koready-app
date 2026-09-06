@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -83,6 +83,8 @@ function formatDateOnly(date: DateOnly) {
   return `${date.year}-${String(date.monthIndex + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 }
 
+const ANIMATION_DURATION = 220;
+
 export default function PlaceFilterBottomSheet({
   visible,
   value,
@@ -93,15 +95,62 @@ export default function PlaceFilterBottomSheet({
   const { height: windowHeight } = useWindowDimensions();
   const [draftFilter, setDraftFilter] = useState<PlaceFilterSelection>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
+  const [translateY] = useState(() => new Animated.Value(windowHeight));
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!visible) return;
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, translateY, overlayOpacity]);
+
+  // onClose() (which flips the `visible` prop) is only called from inside the
+  // finished callback below, so `visible` stays true for the whole exit
+  // animation — no extra "stay mounted a bit longer" state is needed here.
+  const animateOut = (onDone: () => void) => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: windowHeight,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) onDone();
+    });
+  };
 
   const handleClose = () => {
-    setIsDateSheetOpen(false);
-    onClose();
+    animateOut(() => {
+      setIsDateSheetOpen(false);
+      onClose();
+    });
   };
 
   const handleApply = () => {
-    onApply(draftFilter);
-    handleClose();
+    animateOut(() => {
+      onApply(draftFilter);
+      setIsDateSheetOpen(false);
+      onClose();
+    });
   };
 
   const resetFilterDraft = () => {
@@ -142,20 +191,26 @@ export default function PlaceFilterBottomSheet({
     ? formatPlaceDateRangeLabel(draftFilter.dateRange.startDate!, draftFilter.dateRange.endDate!)
     : null;
 
+  if (!visible) return null;
+
   return (
     <>
       <Modal
-        visible={visible}
+        visible
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={handleClose}
         onShow={() => {
           setDraftFilter(value);
           setIsDateSheetOpen(false);
         }}
       >
-        <Pressable style={styles.overlay} onPress={handleClose}>
-          <Pressable style={[styles.sheet, { maxHeight: windowHeight * 0.9 }]} onPress={() => {}}>
+        <View style={styles.overlayContainer}>
+          <Animated.View style={[StyleSheet.absoluteFill, styles.overlayBackground, { opacity: overlayOpacity }]} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+
+          <Animated.View
+            style={[styles.sheet, { maxHeight: windowHeight * 0.9, transform: [{ translateY }] }]}>
             <View style={styles.handleArea}>
               <View style={styles.handle} />
             </View>
@@ -238,8 +293,8 @@ export default function PlaceFilterBottomSheet({
                 <CustomText style={styles.applyButtonText}>{t.eventFilter.apply}</CustomText>
               </Pressable>
             </SafeAreaView>
-          </Pressable>
-        </Pressable>
+          </Animated.View>
+        </View>
         <DateRangeBottomSheet
           key={`date-sheet-${isDateSheetOpen ? 'open' : 'closed'}`}
           visible={isDateSheetOpen}
@@ -289,10 +344,12 @@ function CalendarIcon({ color = Palette.grey500 }: { color?: string }) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  overlayContainer: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  overlayBackground: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     alignSelf: 'stretch',

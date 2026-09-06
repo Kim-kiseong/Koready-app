@@ -153,7 +153,7 @@ export default function HomeScreen() {
                   {t.home.featuredTitleConnector}
                 </CustomText>
                 <CustomText style={styles.sectionTitle}>
-                  {month}
+                  <CustomText style={styles.sectionTitleAccentLarge}>{month}</CustomText>
                   {t.home.featuredTitleSuffix}
                 </CustomText>
               </View>
@@ -392,6 +392,7 @@ const styles = StyleSheet.create({
   featuredTitleBlock: {
     flexShrink: 1,
     minWidth: 0,
+    gap: 8,
   },
   sectionTitleAccent: {
     fontFamily: FontFamily.pretendard.semiBold,
@@ -405,12 +406,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 28,
     color: Palette.text,
   },
   sectionTitleAccentLarge: {
     fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 28,
     color: Palette.primary,
   },
   seeAllRow: {

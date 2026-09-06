@@ -33,7 +33,10 @@ export default function LanguageScreen() {
     if (!selected || isSubmitting) return;
     if (isDevMockSession) {
       applyLanguageChange({ language: selected, nextStep: 'ONBOARDING', updatedAt: new Date().toISOString() });
-      router.push(resolveNextStepRoute('ONBOARDING'));
+      // replace, not push — this screen has no back button of its own, so it
+      // shouldn't linger in history either; the conceptual "back" target from
+      // the next screen is /terms, the step before this one.
+      router.replace(resolveNextStepRoute('ONBOARDING'));
       return;
     }
     setIsSubmitting(true);
@@ -43,7 +46,7 @@ export default function LanguageScreen() {
       // Real backend only advances past TERMS once agreements are actually
       // submitted — if terms still aren't agreed, result.nextStep comes back
       // as 'TERMS' again here. Auto-agree instead of looping back to /language.
-      router.push(await resolveNextStepRouteSkippingTerms(result.nextStep));
+      router.replace(await resolveNextStepRouteSkippingTerms(result.nextStep));
     } catch (error) {
       Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
     } finally {

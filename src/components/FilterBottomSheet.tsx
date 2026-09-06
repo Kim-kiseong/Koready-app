@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -68,21 +68,69 @@ export type FilterBottomSheetProps = {
   onClose: () => void;
 };
 
+const ANIMATION_DURATION = 220;
+
 export default function FilterBottomSheet({ visible, value, onApply, onClose }: FilterBottomSheetProps) {
   const t = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const [draft, setDraft] = useState<EventFilters>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
+  const [translateY] = useState(() => new Animated.Value(windowHeight));
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!visible) return;
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, translateY, overlayOpacity]);
+
+  // onClose() (which flips the `visible` prop) is only called from inside the
+  // finished callback below, so `visible` stays true for the whole exit
+  // animation — no extra "stay mounted a bit longer" state is needed here.
+  const animateOut = (onDone: () => void) => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: windowHeight,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) onDone();
+    });
+  };
 
   const handleApply = () => {
-    onApply(draft);
-    onClose();
+    animateOut(() => {
+      onApply(draft);
+      onClose();
+    });
   };
 
   const handleClose = () => {
-    setDraft(value);
-    setIsDateSheetOpen(false);
-    onClose();
+    animateOut(() => {
+      setDraft(value);
+      setIsDateSheetOpen(false);
+      onClose();
+    });
   };
 
   const hasCustomDateRange = Boolean(draft.dateRange.startDate && draft.dateRange.endDate);
@@ -92,10 +140,16 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
     setDraft((d) => ({ ...d, date: 'ALL', dateRange: toEventDateRange(selection) }));
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={[styles.sheet, { maxHeight: windowHeight * 0.85 }]} onPress={() => {}}>
+    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+      <View style={styles.overlayContainer}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.overlayBackground, { opacity: overlayOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+
+        <Animated.View
+          style={[styles.sheet, { maxHeight: windowHeight * 0.85, transform: [{ translateY }] }]}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
           </View>
@@ -189,8 +243,8 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
               <CustomText style={styles.applyButtonText}>{t.eventFilter.apply}</CustomText>
             </Pressable>
           </SafeAreaView>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
 
       <DateRangeBottomSheet
         key={`event-date-sheet-${isDateSheetOpen ? 'open' : 'closed'}`}
@@ -212,10 +266,12 @@ function FilterChip({ label, selected, onPress }: { label: string; selected: boo
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  overlayContainer: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  overlayBackground: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     backgroundColor: '#ffffff',
