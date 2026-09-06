@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   View,
@@ -169,13 +168,8 @@ export default function RouteDetailScreen() {
   }, [destinationPlaceId]);
 
   const handleKtxCtaPress = useCallback(() => {
-    Alert.alert(
-      isEnglish ? 'Coming soon' : '준비 중',
-      isEnglish
-        ? 'KTX booking information will be connected in a future step.'
-        : 'KTX 예매 안내는 추후 연결될 예정입니다.',
-    );
-  }, [isEnglish]);
+    router.push('/guides/ktx');
+  }, [router]);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -471,9 +465,11 @@ function SegmentCardBody({
           <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
         </>
       ) : null}
-      {segment.routeName?.toUpperCase() === 'KTX' ? (
+      {segment.mode === 'TRAIN' ? (
         <Pressable style={styles.ctaButton} onPress={onCtaPress}>
-          <CustomText style={styles.ctaButtonText}>{isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}</CustomText>
+          <CustomText style={styles.ctaButtonText}>
+            {isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}
+          </CustomText>
         </Pressable>
       ) : null}
     </>
@@ -703,8 +699,24 @@ const styles = StyleSheet.create({
   segmentMeta: { fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: '#6B7684' },
   segmentDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB', marginTop: 12, marginBottom: 12 },
   segmentInstruction: { fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 21, color: '#4E5968' },
-  ctaButton: { alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, backgroundColor: '#59C0A7' },
-  ctaButtonText: { fontFamily: FontFamily.pretendard.medium, fontSize: 14, color: '#FFFFFF' },
+  ctaButton: {
+    alignSelf: 'flex-start',
+    marginTop: 16,
+    height: 36,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#59C0A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaButtonText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
   sectionTitle: { marginTop: 10, marginHorizontal: 16, marginBottom: 12, fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },
   fareCard: { marginHorizontal: 16, padding: 16, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, backgroundColor: '#F6F9FB' },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
