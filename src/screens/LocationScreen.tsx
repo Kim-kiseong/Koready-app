@@ -16,6 +16,7 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -29,6 +30,7 @@ export default function LocationScreen() {
   const t = useTranslation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
+  const language = useLanguageStore((state) => state.language);
   const location = useOnboardingStore((state) => state.location);
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
   const setLocation = useOnboardingStore((state) => state.setLocation);
@@ -70,7 +72,7 @@ export default function LocationScreen() {
     }
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchLocations(q, 10, controller.signal)
+      searchLocations(q, language, 10, controller.signal)
         .then((items) => setResults(items))
         .catch((error) => {
           if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
@@ -85,7 +87,7 @@ export default function LocationScreen() {
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, isDevMockSession]);
+  }, [query, isDevMockSession, language]);
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;

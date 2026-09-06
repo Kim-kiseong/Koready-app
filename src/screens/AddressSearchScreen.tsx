@@ -14,6 +14,7 @@ import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAddressStore } from '@/store/address-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -22,6 +23,7 @@ export default function AddressSearchScreen() {
   const router = useRouter();
   const t = useTranslation();
   const addressSearchAlerts = t.addressSearch.alerts;
+  const language = useLanguageStore((state) => state.language);
   const setLocation = useOnboardingStore((state) => state.setLocation);
   const setCurrentLocationId = useOnboardingStore((state) => state.setCurrentLocationId);
   const addSavedAddress = useAddressStore((state) => state.addSavedAddress);
@@ -37,7 +39,7 @@ export default function AddressSearchScreen() {
     if (trimmedQuery.length < 2) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchLocations(trimmedQuery, 10, controller.signal)
+      searchLocations(trimmedQuery, language, 10, controller.signal)
         .then((items) => setResults(items))
         .catch((error) => {
           if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
@@ -50,7 +52,7 @@ export default function AddressSearchScreen() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [addressSearchAlerts, trimmedQuery]);
+  }, [addressSearchAlerts, trimmedQuery, language]);
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;

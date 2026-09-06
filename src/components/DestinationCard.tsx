@@ -6,7 +6,9 @@ import type { OnboardingCandidateItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useLanguageStore } from '@/store/language-store';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
+import { formatPlaceTag } from '@/utils/place-i18n';
 
 export type DestinationCardProps = {
   item: OnboardingCandidateItem;
@@ -15,6 +17,8 @@ export type DestinationCardProps = {
 };
 
 export default function DestinationCard({ item, selected, onPress }: DestinationCardProps) {
+  const language = useLanguageStore((state) => state.language);
+
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {item.imageUrl ? (
@@ -40,7 +44,7 @@ export default function DestinationCard({ item, selected, onPress }: Destination
         <View style={styles.tagRow}>
           {item.tags.map((tag, index) => (
             <View key={toStableListKey(tag, index)} style={styles.tag}>
-              <CustomText style={styles.tagText}>{toDisplayText(tag)}</CustomText>
+              <CustomText style={styles.tagText}>{formatPlaceTag(toDisplayText(tag), language)}</CustomText>
             </View>
           ))}
         </View>
