@@ -28,6 +28,9 @@ export const Palette = {
   red100: '#FFF0F0',
   red300: '#FD4C4D',
   appleBlack: '#242625',
+  // Darkens a selected photo card so the selection reads clearly against the
+  // image itself, on top of any existing bottom-legibility gradient.
+  selectionOverlay: 'rgba(0, 0, 0, 0.4)',
 } as const;
 
 export type PaletteColor = keyof typeof Palette;

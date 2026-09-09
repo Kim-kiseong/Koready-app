@@ -77,8 +77,8 @@ export default function EventListScreen() {
   const [events, setEvents] = useState<EventListing[]>([]);
 
   useEffect(() => {
-    fetchFeaturedEvents('POPULAR').then(setFeatured);
-  }, [language]);
+    fetchFeaturedEvents('POPULAR', month).then(setFeatured);
+  }, [month, language]);
 
   useEffect(() => {
     fetchEventListings(month, sortOrder, filters).then(setEvents);
