@@ -7,6 +7,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,11 +28,11 @@ import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
+import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels } from '@/utils/language-display';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
 import { resolveProfileImageUri } from '@/utils/profile-image';
-import { useLanguageStore } from '@/store/language-store';
 
 const SOCIAL_PLATFORM_ICON_URIS = {
   INSTAGRAM: Asset.fromModule(require('../../assets/images/social/instagram.svg')).uri,
@@ -739,19 +740,23 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 343,
-    height: '70%',
+    height: Platform.OS === 'web' ? '80%' : '70%',
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
     padding: 16,
     position: 'relative',
     overflow: 'visible',
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: {
-      width: 5,
-      height: 5,
-    },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          shadowOffset: {
+            width: 5,
+            height: 5,
+          },
+        }),
     elevation: 4,
   },
   closeButton: {
@@ -770,7 +775,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 25,
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'web' ? 72 : 16,
   },
   loadingState: {
     minHeight: 420,

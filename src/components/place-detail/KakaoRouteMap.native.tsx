@@ -1,10 +1,11 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import type { RoutePlace } from '@/api/route';
+import type { RoutePlace, RouteSegment } from '@/api/route';
 
 type KakaoMapProps = {
   origin: RoutePlace;
   destination: RoutePlace;
+  segments?: RouteSegment[];
   style?: StyleProp<ViewStyle>;
 };
 

@@ -679,7 +679,7 @@ export default function ProfileEditScreen() {
                   />
                 </Pressable>
               ) : (
-                <View pointerEvents="none" style={[styles.fieldTrailingAction, styles.fieldTrailingPlaceholder]} />
+                <View style={[styles.fieldTrailingAction, styles.fieldTrailingPlaceholder, styles.pointerEventsNone]} />
               )}
             </View>
           </View>
@@ -696,7 +696,7 @@ export default function ProfileEditScreen() {
                 ]}>
                 {currentCountryLabel || form.nationality || copy.placeholders.nationality}
               </CustomText>
-              <View pointerEvents="none" style={styles.fieldTrailingAction}>
+              <View style={[styles.fieldTrailingAction, styles.pointerEventsNone]}>
                 <DropdownArrowIcon />
               </View>
             </Pressable>
@@ -760,7 +760,7 @@ export default function ProfileEditScreen() {
                 returnKeyType="done"
                 numberOfLines={1}
               />
-              <View pointerEvents="none" style={styles.bioIconSpacer} />
+              <View style={[styles.bioIconSpacer, styles.pointerEventsNone]} />
             </View>
             <View style={styles.counterRow}>
               <CustomText style={styles.counterValue}>{form.bio.length}</CustomText>
@@ -1990,7 +1990,7 @@ function SnsEditorOverlay({
                           returnKeyType="done"
                           numberOfLines={1}
                         />
-                        <View pointerEvents="none" style={styles.snsInputTrailingSpacer} />
+                        <View style={[styles.snsInputTrailingSpacer, styles.pointerEventsNone]} />
                       </View>
                     </View>
                   );
@@ -3034,5 +3034,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     color: Palette.grey700,
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
   },
 });

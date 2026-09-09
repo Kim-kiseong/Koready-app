@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { EventSortOrder } from '@/api/home';
@@ -18,6 +18,7 @@ export type SortBottomSheetProps = {
 const OPTIONS: EventSortOrder[] = ['RECOMMENDED', 'DEADLINE'];
 const SHEET_HEIGHT = 190;
 const ANIMATION_DURATION = 220;
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export default function SortBottomSheet({ visible, value, onSelect, onClose }: SortBottomSheetProps) {
   const t = useTranslation();
@@ -43,13 +44,13 @@ export default function SortBottomSheet({ visible, value, onSelect, onClose }: S
           toValue: 0,
           duration: ANIMATION_DURATION,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
         Animated.timing(overlayOpacity, {
           toValue: 1,
           duration: ANIMATION_DURATION,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
       ]).start();
       return;
@@ -62,13 +63,13 @@ export default function SortBottomSheet({ visible, value, onSelect, onClose }: S
         toValue: SHEET_HEIGHT,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start(({ finished }) => {
       if (finished) setIsClosing(false);

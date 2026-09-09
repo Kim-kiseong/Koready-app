@@ -1,15 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import type { RoutePlace } from '@/api/route';
+import CustomText from '@/components/CustomText';
 
-// TODO: Kakao JavaScript 키를 직접 넣고 싶다면 아래 줄에 키를 붙여넣으세요.
-// const KAKAO_MAP_JS_KEY = '여기에 Kakao JavaScript 키를 붙여넣으세요';
+import type { RoutePlace, RouteSegment } from '@/api/route';
+
+// Set this in .env.local and Vercel Environment Variables.
+// EXPO_PUBLIC_KAKAO_MAP_JS_KEY=your-kakao-javascript-key
 const KAKAO_MAP_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAP_JS_KEY ?? '';
+const KAKAO_MAP_INTERACTION_STYLE = {
+  cursor: 'grab',
+  touchAction: 'none',
+  userSelect: 'none',
+} as unknown as ViewStyle;
 
 type KakaoMapProps = {
   origin: RoutePlace;
   destination: RoutePlace;
+  segments?: RouteSegment[];
   style?: StyleProp<ViewStyle>;
 };
 
@@ -88,18 +96,78 @@ function loadKakaoSdk(appKey: string) {
 }
 
 function normalizeSearchText(place: RoutePlace) {
-  return (place.address?.trim() || place.name.trim()).trim();
+  const address = place.address?.trim() ?? '';
+  const name = place.name.trim();
+
+  return isUsableSearchText(address) ? address : name;
+}
+
+function isUsableSearchText(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return !['string', 'null', 'undefined', '-', 'n/a'].includes(normalized);
 }
 
 function createPinDataUri(color: string) {
   const svg = `
-    <svg width="40" height="52" viewBox="0 0 40 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 50C20 50 35 34.8 35 21.4C35 12 28.2843 5 20 5C11.7157 5 5 12 5 21.4C5 34.8 20 50 20 50Z" fill="${color}"/>
-      <circle cx="20" cy="20" r="7.5" fill="white"/>
+    <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 35C14 35 24.5 24.4 24.5 15C24.5 8.4 19.8 3.5 14 3.5C8.2 3.5 3.5 8.4 3.5 15C3.5 24.4 14 35 14 35Z" fill="${color}"/>
+      <circle cx="14" cy="14" r="5" fill="white"/>
     </svg>
   `;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function normalizeSegmentSearchText(value: string) {
+  return value.trim();
+}
+
+function pushUniqueQuery(queries: string[], query: string) {
+  if (!isUsableSearchText(query)) {
+    return;
+  }
+
+  if (queries.at(-1) === query) {
+    return;
+  }
+
+  queries.push(query);
+}
+
+function createRouteSearchQueries(origin: RoutePlace, destination: RoutePlace, segments: RouteSegment[] = []) {
+  const sortedSegments = [...segments].sort((left, right) => left.order - right.order);
+  const queries: string[] = [];
+
+  pushUniqueQuery(queries, normalizeSearchText(origin));
+
+  sortedSegments.forEach((segment) => {
+    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.startName));
+    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.endName));
+  });
+
+  pushUniqueQuery(queries, normalizeSearchText(destination));
+
+  return queries;
+}
+
+function createWaypointSearchQueries(segments: RouteSegment[] = []) {
+  const sortedSegments = [...segments].sort((left, right) => left.order - right.order);
+  const queries: string[] = [];
+
+  sortedSegments.forEach((segment) => {
+    if (!['BUS', 'TRAIN', 'EXPRESS_BUS', 'AIRPLANE', 'FERRY'].includes(segment.mode)) {
+      return;
+    }
+
+    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.startName));
+    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.endName));
+  });
+
+  return queries;
 }
 
 function calculateMidpoint(a: KakaoPoint, b: KakaoPoint): KakaoPoint {
@@ -115,7 +183,96 @@ function resolveDistance(a: KakaoPoint, b: KakaoPoint) {
   return latDistance + lngDistance;
 }
 
-export default function KakaoRouteMap({ origin, destination, style }: KakaoMapProps) {
+function resolveEuclideanDistance(a: KakaoPoint, b: KakaoPoint) {
+  return Math.hypot(a.lat - b.lat, a.lng - b.lng);
+}
+
+function resolvePointProjectionRatio(point: KakaoPoint, start: KakaoPoint, end: KakaoPoint) {
+  const dx = end.lng - start.lng;
+  const dy = end.lat - start.lat;
+  const lengthSquared = dx * dx + dy * dy;
+
+  if (lengthSquared <= 0) {
+    return 0;
+  }
+
+  return ((point.lng - start.lng) * dx + (point.lat - start.lat) * dy) / lengthSquared;
+}
+
+function resolvePointDistanceToLine(point: KakaoPoint, start: KakaoPoint, end: KakaoPoint) {
+  const dx = end.lng - start.lng;
+  const dy = end.lat - start.lat;
+  const lengthSquared = dx * dx + dy * dy;
+
+  if (lengthSquared <= 0) {
+    return resolveEuclideanDistance(point, start);
+  }
+
+  const ratio = Math.max(0, Math.min(1, resolvePointProjectionRatio(point, start, end)));
+  const projection = {
+    lat: start.lat + ratio * dy,
+    lng: start.lng + ratio * dx,
+  };
+
+  return resolveEuclideanDistance(point, projection);
+}
+
+function removeConsecutiveDuplicatePoints(points: KakaoPoint[]) {
+  return points.filter((point, index) => {
+    const previousPoint = points[index - 1];
+    if (!previousPoint) {
+      return true;
+    }
+
+    return resolveDistance(previousPoint, point) > 0.002;
+  });
+}
+
+function filterRoutePoints(originPoint: KakaoPoint | null, destinationPoint: KakaoPoint | null, middlePoints: KakaoPoint[]) {
+  if (!originPoint && !destinationPoint) {
+    return [];
+  }
+
+  if (!originPoint) {
+    return destinationPoint ? [destinationPoint] : [];
+  }
+
+  if (!destinationPoint) {
+    return [originPoint, ...removeConsecutiveDuplicatePoints(middlePoints)];
+  }
+
+  const dedupedMiddlePoints = removeConsecutiveDuplicatePoints(middlePoints);
+
+  if (dedupedMiddlePoints.length === 0) {
+    return [originPoint, destinationPoint];
+  }
+
+  const endpointDistance = resolveEuclideanDistance(originPoint, destinationPoint);
+
+  const maxDetourDistance = Math.min(Math.max(endpointDistance * 0.18, 0.006), 0.06);
+  const filteredMiddlePoints = dedupedMiddlePoints
+    .map((point, index) => ({
+      index,
+      point,
+      projectionRatio: resolvePointProjectionRatio(point, originPoint, destinationPoint),
+      detourDistance: resolvePointDistanceToLine(point, originPoint, destinationPoint),
+    }))
+    .filter(({ projectionRatio, detourDistance }) => {
+      return projectionRatio >= -0.08 && projectionRatio <= 1.08 && detourDistance <= maxDetourDistance;
+    })
+    .sort((left, right) => {
+      if (Math.abs(left.projectionRatio - right.projectionRatio) > 0.03) {
+        return left.projectionRatio - right.projectionRatio;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ point }) => point);
+
+  return [originPoint, ...removeConsecutiveDuplicatePoints(filteredMiddlePoints), destinationPoint];
+}
+
+export default function KakaoRouteMap({ origin, destination, segments = [], style }: KakaoMapProps) {
   const mapContainerRef = useRef<View | null>(null);
   const mapRef = useRef<any>(null);
   const originMarkerRef = useRef<any>(null);
@@ -123,9 +280,25 @@ export default function KakaoRouteMap({ origin, destination, style }: KakaoMapPr
   const polylineRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
   const searchKey = useMemo(
-    () => `${normalizeSearchText(origin)}::${normalizeSearchText(destination)}`,
-    [destination, origin],
+    () => createRouteSearchQueries(origin, destination, segments).join('::'),
+    [destination, origin, segments],
   );
+  const handleZoomIn = () => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    map.setLevel(Math.max(1, map.getLevel() - 1));
+  };
+  const handleZoomOut = () => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    map.setLevel(Math.min(14, map.getLevel() + 1));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -170,13 +343,13 @@ export default function KakaoRouteMap({ origin, destination, style }: KakaoMapPr
         const geocoder = new kakao.services.Geocoder();
         const markerImageStart = new kakao.MarkerImage(
           createPinDataUri('#4FAE98'),
-          new kakao.Size(40, 52),
-          { offset: new kakao.Point(20, 50) },
+          new kakao.Size(28, 36),
+          { offset: new kakao.Point(14, 35) },
         );
         const markerImageEnd = new kakao.MarkerImage(
           createPinDataUri('#FF4D4F'),
-          new kakao.Size(40, 52),
-          { offset: new kakao.Point(20, 50) },
+          new kakao.Size(28, 36),
+          { offset: new kakao.Point(14, 35) },
         );
 
         const searchPoint = (query: string) =>
@@ -217,53 +390,59 @@ export default function KakaoRouteMap({ origin, destination, style }: KakaoMapPr
             });
           });
 
-        const [originPoint, destinationPoint] = await Promise.all([
-          searchPoint(normalizeSearchText(origin)),
-          searchPoint(normalizeSearchText(destination)),
-        ]);
+        const originPoint = await searchPoint(normalizeSearchText(origin));
+        const destinationPoint = await searchPoint(normalizeSearchText(destination));
+        const waypointQueries = createWaypointSearchQueries(segments);
+        const searchedWaypointPoints = await Promise.all(waypointQueries.map((query) => searchPoint(query)));
+        const routePoints = filterRoutePoints(
+          originPoint,
+          destinationPoint,
+          searchedWaypointPoints.filter((point): point is KakaoPoint => point !== null),
+        );
+        const routeStartPoint = originPoint ?? routePoints[0];
+        const routeEndPoint = destinationPoint ?? routePoints.at(-1);
 
         if (cancelled) {
           return;
         }
 
         const initialCenter =
-          originPoint && destinationPoint
-            ? calculateMidpoint(originPoint, destinationPoint)
-            : originPoint ?? destinationPoint ?? { lat: 37.5665, lng: 126.978 };
+          routeStartPoint && routeEndPoint
+            ? calculateMidpoint(routeStartPoint, routeEndPoint)
+            : routeStartPoint ?? routeEndPoint ?? { lat: 37.5665, lng: 126.978 };
 
         const map = new kakao.Map(container, {
           center: new kakao.LatLng(initialCenter.lat, initialCenter.lng),
-          level: originPoint && destinationPoint ? 9 : 6,
-          draggable: false,
-          disableDoubleClickZoom: true,
-          scrollwheel: false,
+          level: routeStartPoint && routeEndPoint ? 9 : 6,
+          draggable: true,
+          disableDoubleClickZoom: false,
+          scrollwheel: true,
         });
 
         mapRef.current = map;
+        map.setDraggable(true);
+        map.setZoomable(true);
 
-        if (originPoint) {
+        if (routeStartPoint) {
           originMarkerRef.current = new kakao.Marker({
             map,
-            position: new kakao.LatLng(originPoint.lat, originPoint.lng),
+            position: new kakao.LatLng(routeStartPoint.lat, routeStartPoint.lng),
             image: markerImageStart,
           });
         }
 
-        if (destinationPoint) {
+        if (routeEndPoint) {
           destinationMarkerRef.current = new kakao.Marker({
             map,
-            position: new kakao.LatLng(destinationPoint.lat, destinationPoint.lng),
+            position: new kakao.LatLng(routeEndPoint.lat, routeEndPoint.lng),
             image: markerImageEnd,
           });
         }
 
-        if (originPoint && destinationPoint) {
+        if (routePoints.length >= 2) {
           const line = new kakao.Polyline({
             map,
-            path: [
-              new kakao.LatLng(originPoint.lat, originPoint.lng),
-              new kakao.LatLng(destinationPoint.lat, destinationPoint.lng),
-            ],
+            path: routePoints.map((point) => new kakao.LatLng(point.lat, point.lng)),
             strokeWeight: 4,
             strokeColor: '#4FAE98',
             strokeOpacity: 0.9,
@@ -273,11 +452,12 @@ export default function KakaoRouteMap({ origin, destination, style }: KakaoMapPr
           polylineRef.current = line;
 
           const bounds = new kakao.LatLngBounds();
-          bounds.extend(new kakao.LatLng(originPoint.lat, originPoint.lng));
-          bounds.extend(new kakao.LatLng(destinationPoint.lat, destinationPoint.lng));
+          routePoints.forEach((point) => {
+            bounds.extend(new kakao.LatLng(point.lat, point.lng));
+          });
           map.setBounds(bounds);
 
-          const distance = resolveDistance(originPoint, destinationPoint);
+          const distance = resolveDistance(routePoints[0], routePoints[routePoints.length - 1]);
           if (distance < 0.05) {
             map.setLevel(7);
             map.setCenter(new kakao.LatLng(initialCenter.lat, initialCenter.lng));
@@ -321,8 +501,28 @@ export default function KakaoRouteMap({ origin, destination, style }: KakaoMapPr
   }, [searchKey]);
 
   return (
-    <View ref={mapContainerRef} style={[styles.container, style]}>
-      <View style={styles.mapSurface} />
+    <View ref={mapContainerRef} style={[styles.container, KAKAO_MAP_INTERACTION_STYLE, style]}>
+      {mapReady ? (
+        <View style={styles.zoomControls}>
+          <Pressable
+            accessibilityLabel="지도 확대"
+            accessibilityRole="button"
+            onPress={handleZoomIn}
+            style={({ pressed }) => [styles.zoomButton, pressed && styles.zoomButtonPressed]}
+          >
+            <CustomText style={styles.zoomButtonText}>+</CustomText>
+          </Pressable>
+          <View style={styles.zoomDivider} />
+          <Pressable
+            accessibilityLabel="지도 축소"
+            accessibilityRole="button"
+            onPress={handleZoomOut}
+            style={({ pressed }) => [styles.zoomButton, pressed && styles.zoomButtonPressed]}
+          >
+            <CustomText style={styles.zoomButtonText}>-</CustomText>
+          </Pressable>
+        </View>
+      ) : null}
       {!mapReady ? <View style={styles.overlay} /> : null}
     </View>
   );
@@ -334,12 +534,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#EAF1F7',
     position: 'relative',
   },
-  mapSurface: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#EAF1F7',
-  },
   overlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(234, 241, 247, 0.35)',
+  },
+  zoomButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  zoomButtonPressed: {
+    backgroundColor: '#F1F4F7',
+  },
+  zoomButtonText: {
+    color: '#1F2428',
+    fontSize: 22,
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  zoomControls: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E1E7EC',
+    borderRadius: 10,
+    borderWidth: 1,
+    boxShadow: '0 4px 10px rgba(15, 23, 42, 0.14)',
+    overflow: 'hidden',
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    zIndex: 20,
+  },
+  zoomDivider: {
+    backgroundColor: '#E1E7EC',
+    height: 1,
+    width: '100%',
   },
 });

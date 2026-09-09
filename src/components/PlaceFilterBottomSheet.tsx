@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -84,6 +84,7 @@ function formatDateOnly(date: DateOnly) {
 }
 
 const ANIMATION_DURATION = 220;
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export default function PlaceFilterBottomSheet({
   visible,
@@ -105,13 +106,13 @@ export default function PlaceFilterBottomSheet({
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 1,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
   }, [visible, translateY, overlayOpacity]);
@@ -125,13 +126,13 @@ export default function PlaceFilterBottomSheet({
         toValue: windowHeight,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start(({ finished }) => {
       if (finished) onDone();
@@ -217,7 +218,7 @@ export default function PlaceFilterBottomSheet({
 
             <View style={styles.filterHeaderRow}>
               <View style={styles.filterHeaderSpacer} />
-              <View pointerEvents="none" style={styles.filterHeaderTitleWrap}>
+              <View style={[styles.filterHeaderTitleWrap, styles.pointerEventsNone]}>
                 <CustomText style={styles.filterHeaderTitle}>{t.eventFilter.title}</CustomText>
               </View>
               <Pressable hitSlop={8} onPress={resetFilterDraft}>
@@ -383,6 +384,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
   },
   filterHeaderTitle: {
     fontFamily: FontFamily.pretendard.semiBold,

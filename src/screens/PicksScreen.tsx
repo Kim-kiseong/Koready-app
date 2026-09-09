@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -573,6 +573,7 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
       style={[
         styles.card,
         styles.behindCard,
+        styles.pointerEventsNone,
         {
           width,
           height,
@@ -580,8 +581,7 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
           top: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth,
           borderRadius: 16 * scale,
         },
-      ]}
-      pointerEvents="none">
+      ]}>
       {card.imageUrl ? (
         <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
@@ -828,10 +828,14 @@ const styles = StyleSheet.create({
   },
   scopeSegmentSelected: {
     backgroundColor: '#ffffff',
-    shadowColor: '#000000',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '3px 3px 4px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOffset: { width: 3, height: 3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+        }),
     elevation: 2,
   },
   scopeLabel: {
@@ -883,18 +887,25 @@ const styles = StyleSheet.create({
     borderColor: Palette.grey200,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 5, height: 5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOffset: { width: 5, height: 5 },
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+        }),
     elevation: 4,
   },
   behindCard: {
     position: 'absolute',
     top: 0,
     left: 0,
-    shadowOpacity: 0.04,
+    ...(Platform.OS === 'web' ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.04)' } as object) : { shadowOpacity: 0.04 }),
     elevation: 1,
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
   },
   behindCardTint: {
     backgroundColor: '#000000',

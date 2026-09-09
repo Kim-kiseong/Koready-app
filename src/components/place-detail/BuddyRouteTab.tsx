@@ -41,6 +41,14 @@ function formatFareValue(amount: number | null, language: 'KO' | 'EN') {
   return language === 'EN' ? `₩${formatted}` : `${formatted}원`;
 }
 
+function formatEstimatedTimeText(value: string, language: 'KO' | 'EN') {
+  if (language === 'EN') {
+    return value.replace(/(\bAbout\s+\d+\s+hr)\s+0\s+min\b/g, '$1');
+  }
+
+  return value.replace(/(약\s*\d+시간)\s*0분/g, '$1');
+}
+
 function getDifficultyLabel(
   difficulty: BuddyRoute['summary']['difficulty'],
   labels: {
@@ -153,7 +161,7 @@ export default function BuddyRouteTab({ placeId, destinationPlaceId, destination
   const statCards = [
     {
       label: routeCopy.statLabels.estimatedTime,
-      value: summary.estimatedOneWayTimeText,
+      value: formatEstimatedTimeText(summary.estimatedOneWayTimeText, language),
       Icon: Schedule,
       iconWidth: 50,
       iconHeight: 50,
