@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Animated, Easing, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
@@ -30,6 +30,7 @@ type MonthCell = {
 };
 
 export const EMPTY_DATE_RANGE: DateRangeSelection = { start: null, end: null };
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export function getTodayDateOnly(): DateOnly {
   const now = new Date();
@@ -104,7 +105,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
       toValue: 0,
       duration: 220,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start();
   }, [visible, windowHeight, sheetTranslateY]);
 
@@ -113,7 +114,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
       toValue: windowHeight,
       duration: 220,
       easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start(({ finished }) => {
       if (finished) {
         onClose();
@@ -160,7 +161,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
 
           Animated.spring(sheetTranslateY, {
             toValue: 0,
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
             damping: 20,
             stiffness: 180,
           }).start();
@@ -168,7 +169,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
         onPanResponderTerminate: () => {
           Animated.spring(sheetTranslateY, {
             toValue: 0,
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
             damping: 20,
             stiffness: 180,
           }).start();
@@ -183,7 +184,7 @@ export default function DateRangeBottomSheet({ visible, value, onApply, onClose 
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={requestClose}>
-      <View style={styles.overlay} pointerEvents="box-none">
+      <View style={[styles.overlay, styles.pointerEventsBoxNone]}>
         <Pressable style={styles.dismissArea} onPress={requestClose} />
         <Animated.View
           style={[
@@ -446,6 +447,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     justifyContent: 'flex-end',
+  },
+  pointerEventsBoxNone: {
+    pointerEvents: 'box-none',
   },
   dismissArea: {
     ...StyleSheet.absoluteFill,

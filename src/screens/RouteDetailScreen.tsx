@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -15,6 +16,7 @@ import type { ApiErrorEnvelope } from '@/api/client';
 import { createBuddyRoute, fetchBuddyRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
 import BackIcon from '@/components/icons/BackIcon';
+import KakaoRouteMap from '@/components/place-detail/KakaoRouteMap';
 import {
   Component13,
   Component15,
@@ -36,7 +38,6 @@ import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
-import KakaoRouteMap from '@/components/place-detail/KakaoRouteMap';
 
 const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number }>; width: number; height: number }> = {
   WALK: { Icon: Component13, width: 40, height: 40 },
@@ -60,7 +61,8 @@ const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; bor
   SHUTTLE_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
-const HANDLE_OVERLAP = 180;
+const WEB_HANDLE_OVERLAP = 330;
+const APP_HANDLE_OVERLAP = 180;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
 function formatTemplate(template: string, values: Record<string, string>) {
@@ -110,11 +112,15 @@ function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
 }
 
 function formatSummaryTimeLabel(label: string, language: 'KO' | 'EN') {
+  const normalizedLabel = language === 'EN'
+    ? label.replace(/(\bAbout\s+\d+\s+hr)\s+0\s+min\b/g, '$1')
+    : label.replace(/(약\s*\d+시간)\s*0분/g, '$1');
+
   if (language !== 'EN') {
-    return label;
+    return normalizedLabel;
   }
 
-  return label.replace(/\shr\s+/, ' hr\n');
+  return normalizedLabel.replace(/\shr\s+/, ' hr\n');
 }
 
 function formatRoutePointName(name: string, language: 'KO' | 'EN') {
@@ -137,7 +143,7 @@ function formatSegmentPointName(name: string, segmentMode: TransportMode, langua
   const displayName = formatRoutePointName(name, language);
   const trimmedName = displayName.trim();
 
-  if (language === 'EN' && segmentMode === 'SUBWAY') {
+  if (language === 'EN' && (segmentMode === 'SUBWAY' || segmentMode === 'TRAIN')) {
     return trimmedName.endsWith('Station') ? displayName : `${trimmedName} Station`;
   }
 
@@ -153,7 +159,7 @@ function formatSegmentPointName(name: string, segmentMode: TransportMode, langua
     return displayName;
   }
 
-  if (segmentMode === 'SUBWAY') {
+  if (segmentMode === 'SUBWAY' || segmentMode === 'TRAIN') {
     return trimmedName.endsWith('역') ? displayName : `${trimmedName}역`;
   }
 
@@ -166,7 +172,7 @@ function formatSegmentPointName(name: string, segmentMode: TransportMode, langua
 }
 
 function formatWalkSegmentSummary(segment: RouteSegment, language: 'KO' | 'EN', nextSegmentMode?: TransportMode) {
-  const endName = nextSegmentMode === 'SUBWAY' || nextSegmentMode === 'EXPRESS_BUS'
+  const endName = nextSegmentMode === 'SUBWAY' || nextSegmentMode === 'TRAIN' || nextSegmentMode === 'EXPRESS_BUS'
     ? formatSegmentPointName(segment.endName, nextSegmentMode, language)
     : formatRoutePointName(segment.endName, language);
 
@@ -193,6 +199,7 @@ export default function RouteDetailScreen() {
   const [hasError, setHasError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const language = useLanguageStore((state) => state.language);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
@@ -242,6 +249,10 @@ export default function RouteDetailScreen() {
 
   useEffect(() => {
     if (!routeId || !authHasHydrated || !onboardingHasHydrated) return;
+    if (!accessToken) {
+      router.replace('/login');
+      return;
+    }
 
     let active = true;
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -304,11 +315,12 @@ export default function RouteDetailScreen() {
     return () => {
       active = false;
     };
-  }, [authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
+  }, [accessToken, authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
 
   const snapPoints = useMemo(() => {
-    if (!mapAreaHeight) return ['50%', '100%'];
-    return [Math.max(mapAreaHeight - HANDLE_OVERLAP, 0), '100%'];
+    const handleOverlap = Platform.OS === 'web' ? WEB_HANDLE_OVERLAP : APP_HANDLE_OVERLAP;
+    if (!mapAreaHeight) return [Platform.OS === 'web' ? '30%' : '50%', '100%'];
+    return [Math.max(mapAreaHeight - handleOverlap, 0), '100%'];
   }, [mapAreaHeight]);
 
   const handleMapAreaLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
@@ -369,6 +381,7 @@ export default function RouteDetailScreen() {
           <KakaoRouteMap
             origin={route.origin}
             destination={route.destination}
+            segments={route.segments}
             style={styles.mapMock}
           />
         </View>
@@ -682,17 +695,21 @@ const styles = StyleSheet.create({
 
   bottomSheetBackground: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   bottomSheetShadow: {
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+        }),
     elevation: 8,
   },
-  sheetHandle: { width: 118, height: 8, backgroundColor: '#E5E7EB' },
+  sheetHandle: { width: 50, height: 5, backgroundColor: '#E5E7EB' },
   sheetContent: { paddingBottom: 36 },
 
   summaryBox: { marginTop: 24, marginHorizontal: 16, backgroundColor: '#F6F9FB', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

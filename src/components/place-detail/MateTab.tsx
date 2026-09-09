@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { fetchMyBuddyProfile, fetchProfileOptions } from '@/api/buddy-profile';
 import { fetchPlaceMates } from '@/api/mate';
@@ -751,13 +751,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: {
-      width: 5,
-      height: 5,
-    },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          shadowOffset: {
+            width: 5,
+            height: 5,
+          },
+        }),
     elevation: 4,
   },
   cardTopRow: {

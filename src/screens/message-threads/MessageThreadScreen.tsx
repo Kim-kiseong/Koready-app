@@ -52,15 +52,7 @@ export default function MessageThreadScreen() {
   const language = useLanguageStore((state) => state.language);
   const t = useTranslation();
   const normalizedThreadId = Array.isArray(threadId) ? threadId[0] : threadId;
-  const storedThread = useMessageThreadStore((state) => {
-    if (!normalizedThreadId) {
-      return null;
-    }
-
-    return state.threads[normalizedThreadId] ?? null;
-  });
-
-  const [threadState, setThreadState] = useState<MessageThreadResponse | null>(storedThread);
+  const [threadState, setThreadState] = useState<MessageThreadResponse | null>(null);
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
@@ -75,16 +67,11 @@ export default function MessageThreadScreen() {
   const replyInputRef = useRef<TextInput | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const visibleThread = threadState ?? storedThread;
+  const visibleThread = threadState;
   const selectedProfileFallback = useMemo(
     () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
     [language, selectedProfileId],
   );
-  const placeRouteId = visibleThread?.place.routeId ?? (visibleThread ? String(visibleThread.place.placeId) : '');
-
-  useEffect(() => {
-    setThreadState(storedThread);
-  }, [storedThread]);
 
   useEffect(() => {
     if (!normalizedThreadId) {
@@ -125,6 +112,8 @@ export default function MessageThreadScreen() {
 
         if (placeResult.status === 'fulfilled') {
           setPlaceDetail(placeResult.value);
+        } else {
+          setLoadError(extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback));
         }
       } catch (error) {
         if (!cancelled) {
@@ -288,18 +277,7 @@ export default function MessageThreadScreen() {
     } as never);
   }, [router, visibleThread]);
 
-  if (isLoading && !visibleThread) {
-    return (
-      <ScreenShell>
-        <View style={styles.loadingState}>
-          <ActivityIndicator color={Palette.primary} />
-          <CustomText style={styles.loadingText}>{t.messages.thread.loading}</CustomText>
-        </View>
-      </ScreenShell>
-    );
-  }
-
-  if ((loadError || !visibleThread) && !visibleThread) {
+  if (loadError) {
     return (
       <ScreenShell>
         <View style={styles.errorState}>
@@ -316,32 +294,20 @@ export default function MessageThreadScreen() {
     );
   }
 
-  if (!visibleThread) {
-    return null;
+  if (isLoading || !visibleThread || !placeDetail) {
+    return (
+      <ScreenShell>
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={Palette.primary} />
+          <CustomText style={styles.loadingText}>{t.messages.thread.loading}</CustomText>
+        </View>
+      </ScreenShell>
+    );
   }
 
-  const currentPlace = placeDetail ?? {
-    id: placeRouteId || String(visibleThread.place.placeId),
-    routeId: visibleThread.place.routeId ?? placeRouteId,
-    title: visibleThread.place.title,
-    address: visibleThread.place.address ?? '',
-    tags: [],
-    isSaved: false,
-    images: visibleThread.place.imageUrl
-      ? [{ source: { uri: visibleThread.place.imageUrl }, order: 1, altText: visibleThread.place.title }]
-      : [],
-    description: {
-      impactTitle: visibleThread.place.title,
-      impactSubtitle: '',
-      introParagraphs: [],
-      enjoyPoints: [],
-    },
-    relatedPlaces: [],
-  };
-
   const displayPlace = {
-    ...currentPlace,
-    title: visibleThread.place.title,
+    ...placeDetail,
+    title: placeDetail.title || visibleThread.place.title,
   };
 
   return (
@@ -381,8 +347,8 @@ export default function MessageThreadScreen() {
 
               <View style={styles.placeInfoRow}>
                 <View style={styles.placeInfo}>
-                  <CustomText style={styles.placeTitle}>{visibleThread.place.title}</CustomText>
-                  <CustomText style={styles.placeAddress}>{currentPlace.address || visibleThread.place.title}</CustomText>
+                  <CustomText style={styles.placeTitle}>{displayPlace.title}</CustomText>
+                  <CustomText style={styles.placeAddress}>{displayPlace.address || displayPlace.title}</CustomText>
                 </View>
 
                 <Pressable style={styles.placeButton} onPress={handleOpenPlace}>

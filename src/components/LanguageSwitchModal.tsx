@@ -5,6 +5,7 @@ import {
   Animated,
   Easing,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -28,6 +29,7 @@ export type LanguageSwitchModalProps = {
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export default function LanguageSwitchModal({
   visible,
@@ -67,13 +69,13 @@ export default function LanguageSwitchModal({
         toValue: 1,
         duration: 200,
         easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(sheetTranslateY, {
         toValue: 0,
         duration: 260,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
   }, [visible, windowHeight, backdropOpacity, sheetTranslateY]);

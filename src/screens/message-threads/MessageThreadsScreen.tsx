@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth-store';
 import type {
   MessageThreadListItem,
   MessageThreadMessage,
+  MessageThreadProfile,
   MessageThreadResponse,
   MessageThreadsResponse,
   ProfileOptionItem,
@@ -25,7 +26,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { useTranslation } from '@/i18n/useTranslation';
-import { getCountryDisplayName, getCountryFlag, normalizeCountryCode } from '@/utils/country';
+import { formatCountryDisplay, getCountryDisplayName, normalizeCountryCode } from '@/utils/country';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { resolveProfileImageUri } from '@/utils/profile-image';
 
@@ -422,11 +423,10 @@ function MessageThreadCard({
   onPress: () => void;
 }) {
   const avatarPressActiveRef = useRef(false);
-  const country = getCountryDisplayName(
-    item.otherProfile.nationalityCode ?? item.otherProfile.nationality ?? '',
+  const countryLabel = formatCountryDisplay(
+    getProfileNationalityValue(item.otherProfile),
     countryOptions,
   );
-  const countryFlag = getCountryFlag(item.otherProfile.nationalityCode ?? item.otherProfile.nationality ?? '', countryOptions);
   const placeLabel = item.place.title;
   const unread = item.unreadCount > 0;
 
@@ -465,11 +465,12 @@ function MessageThreadCard({
         <View style={styles.cardMeta}>
           <View style={styles.nameRow}>
             <CustomText style={styles.nickname}>{item.otherProfile.nickname}</CustomText>
-            <CustomText style={styles.dot}>·</CustomText>
-            <CustomText style={styles.country}>
-              {country}
-              {countryFlag ? ` ${countryFlag}` : ''}
-            </CustomText>
+            {countryLabel ? (
+              <>
+                <CustomText style={styles.dot}>·</CustomText>
+                <CustomText style={styles.country}>{countryLabel}</CustomText>
+              </>
+            ) : null}
           </View>
 
           <View style={styles.placeRow}>
@@ -563,11 +564,10 @@ function convertStoredThreadToListItem(
     place: thread.place,
     otherProfile: {
       ...thread.otherProfile,
-      nationalityCode:
-        thread.otherProfile.nationalityCode ?? normalizeCountryCode(thread.otherProfile.nationality ?? ''),
+      nationalityCode: getProfileNationalityCode(thread.otherProfile),
       nationality:
-        thread.otherProfile.nationality ??
-        getCountryDisplayName(thread.otherProfile.nationalityCode ?? '', countryOptions),
+        getNonEmptyString(thread.otherProfile.nationality) ??
+        getCountryDisplayName(getProfileNationalityValue(thread.otherProfile), countryOptions),
     },
     preview,
     lastSentAt,
@@ -575,6 +575,24 @@ function convertStoredThreadToListItem(
     blocked: false,
     canReply: thread.canReply,
   };
+}
+
+function getNonEmptyString(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function getProfileNationalityValue(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
+  return getNonEmptyString(profile.nationalityCode) ?? getNonEmptyString(profile.nationality) ?? '';
+}
+
+function getProfileNationalityCode(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
+  const explicitCode = getNonEmptyString(profile.nationalityCode);
+  if (explicitCode) {
+    return explicitCode;
+  }
+
+  return normalizeCountryCode(getNonEmptyString(profile.nationality) ?? '');
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {

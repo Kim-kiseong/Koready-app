@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -69,6 +69,7 @@ export type FilterBottomSheetProps = {
 };
 
 const ANIMATION_DURATION = 220;
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export default function FilterBottomSheet({ visible, value, onApply, onClose }: FilterBottomSheetProps) {
   const t = useTranslation();
@@ -85,13 +86,13 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 1,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
   }, [visible, translateY, overlayOpacity]);
@@ -105,13 +106,13 @@ export default function FilterBottomSheet({ visible, value, onApply, onClose }: 
         toValue: windowHeight,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start(({ finished }) => {
       if (finished) onDone();
