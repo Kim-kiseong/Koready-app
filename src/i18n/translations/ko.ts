@@ -137,8 +137,6 @@ export interface Translations {
     alerts: {
       errorTitle: string;
       logoutFailed: string;
-      privacyComingSoonTitle: string;
-      privacyComingSoonBody: string;
       withdrawComingSoonTitle: string;
       withdrawComingSoonBody: string;
     };
@@ -656,9 +654,6 @@ export const ko: Translations = {
     alerts: {
       errorTitle: "오류",
       logoutFailed: "로그아웃에 실패했습니다.",
-      privacyComingSoonTitle: "준비 중",
-      privacyComingSoonBody:
-        "개인정보 처리방침 화면은 다음 단계에서 연결됩니다.",
       withdrawComingSoonTitle: "준비 중",
       withdrawComingSoonBody: "회원 탈퇴는 다음 단계에서 연결됩니다.",
     },

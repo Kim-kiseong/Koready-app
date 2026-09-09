@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, ListRenderItemInfo, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +17,7 @@ import type {
   ProfileOptionsResponse,
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { goBackOrRoot } from '@/navigation/safe-back';
@@ -355,12 +355,7 @@ export default function MessageThreadsScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
 
         <View style={styles.headerTitleWrap}>
@@ -532,8 +527,8 @@ function buildThreadFromSummary(item: MessageThreadListItem): MessageThreadRespo
   const latestMessage: MessageThreadMessage = {
     messageId: Date.now(),
     threadId: item.threadId,
-    senderProfileId: 0,
-    receiverProfileId: item.otherProfile.profileId,
+    senderProfileId: item.otherProfile.profileId,
+    receiverProfileId: 0,
     placeId: item.place.placeId,
     content: item.preview,
     sentAt: item.lastSentAt,

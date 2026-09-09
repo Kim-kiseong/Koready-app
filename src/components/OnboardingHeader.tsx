@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, type TextStyle, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import StepProgressIndicator, {
   type StepProgressIndicatorProps,
 } from '@/components/StepProgressIndicator';
@@ -38,12 +39,7 @@ export default function OnboardingHeader({
   return (
     <View style={styles.header}>
       <Pressable onPress={onBack} hitSlop={8} style={styles.iconSlot}>
-        <SymbolView
-          name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-          size={18}
-          weight="semibold"
-          tintColor={Palette.text}
-        />
+        <BackIcon />
       </Pressable>
 
       <View style={styles.center}>

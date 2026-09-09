@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   translationPrimary: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 18,
     lineHeight: 25.2,
     color: '#ffffff',
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   translationSecondary: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     lineHeight: 19.6,
     color: '#ffffff',

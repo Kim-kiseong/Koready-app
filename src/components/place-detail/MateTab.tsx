@@ -4,8 +4,8 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { fetchProfileOptions } from '@/api/buddy-profile';
-import { fetchMockPlaceMates, fetchPlaceMates } from '@/api/mate';
+import { fetchMyBuddyProfile, fetchProfileOptions } from '@/api/buddy-profile';
+import { fetchPlaceMates } from '@/api/mate';
 import type { LanguageCode, PlaceMate, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
@@ -28,8 +28,6 @@ type MateTabProps = {
   placeImageUrl?: string;
   placeNumericId?: number;
 };
-
-type PreviewMode = 'before' | 'after' | 'list';
 
 const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'languages' | 'koreanLevels'> = {
   countries: [
@@ -64,10 +62,6 @@ const MATE_TAB_COPY: Record<
     beforeButton: string;
     afterTitle: string;
     afterDescription: string;
-    devTitle: string;
-    devBefore: string;
-    devAfter: string;
-    devList: string;
     moreButton: string;
     profileButton: string;
     messageButtonAvailable: string;
@@ -89,10 +83,6 @@ const MATE_TAB_COPY: Record<
     beforeButton: '프로필 설정하기',
     afterTitle: '함께할 여행 메이트를\n찾고 있어요',
     afterDescription: '나와 취향이 맞는 메이트가 나타나면 알려드릴게요.',
-    devTitle: '개발 토글',
-    devBefore: '프로필 설정 전',
-    devAfter: '프로필 설정 후',
-    devList: '다른 사용자들 목록',
     moreButton: '메이트 더 보기',
     profileButton: '프로필 보기',
     messageButtonAvailable: '쪽지 보내기',
@@ -113,10 +103,6 @@ const MATE_TAB_COPY: Record<
     beforeButton: 'Set Up Profile',
     afterTitle: 'Finding travel mates for you',
     afterDescription: 'We’ll let you know when we find someone who matches\nyour travel style.',
-    devTitle: 'Dev preview',
-    devBefore: 'Before profile setup',
-    devAfter: 'After profile setup',
-    devList: 'Other users',
     moreButton: 'See more mates',
     profileButton: 'View profile',
     messageButtonAvailable: 'Send message',
@@ -145,20 +131,18 @@ export default function MateTab({
   const language = useLanguageStore((state) => state.language);
   const copy = MATE_TAB_COPY[language];
 
-  const [previewMode, setPreviewMode] = useState<PreviewMode | null>(null);
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [mates, setMates] = useState<PlaceMate[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasCheckedProfileExists, setHasCheckedProfileExists] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const selectedProfileFallback = selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId);
-  const isPreviewBefore = previewMode === 'before';
-  const isPreviewAfter = previewMode === 'after';
-  const isPreviewList = previewMode === 'list';
+  const matesApiPlaceId = placeNumericId != null ? String(placeNumericId) : placeId;
   const openMessageCompose = (profileId: number) => {
     router.push({
       pathname: '/message-threads/new',
@@ -168,7 +152,7 @@ export default function MateTab({
         placeTitle,
         placeAddress: placeAddress ?? '',
         placeImageUrl: placeImageUrl ?? '',
-        placeNumericId: placeNumericId != null ? String(placeNumericId) : '',
+        placeNumericId: matesApiPlaceId,
         receiverProfileId: String(profileId),
       },
     } as never);
@@ -179,18 +163,57 @@ export default function MateTab({
       return;
     }
 
-    if (isPreviewBefore || isPreviewAfter || (!buddyProfileExists && !isPreviewList)) {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      setError(null);
-      setProfileOptions(null);
-      setMates([]);
-      setNextCursor(null);
-      setHasMore(false);
+    let cancelled = false;
+
+    if (!buddyProfileExists) {
+      if (!hasCheckedProfileExists) {
+        setIsLoading(true);
+        setIsLoadingMore(false);
+        setError(null);
+        setProfileOptions(null);
+        setMates([]);
+        setNextCursor(null);
+        setHasMore(false);
+
+        fetchMyBuddyProfile()
+          .then((profileResponse) => {
+            if (cancelled) {
+              return;
+            }
+
+            setHasCheckedProfileExists(true);
+            if (profileResponse.exists) {
+              useAuthStore.getState().setBuddyProfileExists(true);
+              return;
+            }
+
+            setIsLoading(false);
+          })
+          .catch(() => {
+            if (cancelled) {
+              return;
+            }
+
+            setHasCheckedProfileExists(true);
+            setIsLoading(false);
+          });
+
+        return () => {
+          cancelled = true;
+        };
+      }
+
+      if (!buddyProfileExists) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        setError(null);
+        setProfileOptions(null);
+        setMates([]);
+        setNextCursor(null);
+        setHasMore(false);
+      }
       return;
     }
-
-    let cancelled = false;
 
     setIsLoading(true);
     setIsLoadingMore(false);
@@ -201,23 +224,9 @@ export default function MateTab({
     setHasMore(false);
 
     (async () => {
-      if (isPreviewList) {
-        const previewResult = await fetchMockPlaceMates(placeId);
-        if (cancelled) {
-          return;
-        }
-
-        setProfileOptions(null);
-        setMates(previewResult.items);
-        setNextCursor(previewResult.nextCursor);
-        setHasMore(previewResult.hasMore);
-        setIsLoading(false);
-        return;
-      }
-
       const [optionsResult, matesResult] = await Promise.allSettled([
         fetchProfileOptions(),
-        fetchPlaceMates(placeId),
+        fetchPlaceMates(matesApiPlaceId),
       ]);
 
       if (cancelled) {
@@ -242,9 +251,9 @@ export default function MateTab({
     return () => {
       cancelled = true;
     };
-  }, [buddyProfileExists, copy.errorDescription, hasHydrated, isPreviewAfter, isPreviewBefore, isPreviewList, language, placeId, reloadToken]);
+  }, [buddyProfileExists, copy.errorDescription, hasCheckedProfileExists, hasHydrated, language, matesApiPlaceId, reloadToken]);
 
-  if (!hasHydrated) {
+  if (!hasHydrated || isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color={Palette.primary} />
@@ -252,10 +261,9 @@ export default function MateTab({
     );
   }
 
-  if (isPreviewBefore || (!previewMode && !buddyProfileExists)) {
+  if (!buddyProfileExists) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
         <BeforeProfileView
           title={copy.beforeTitle}
           description={copy.beforeDescription}
@@ -266,28 +274,9 @@ export default function MateTab({
     );
   }
 
-  if (isPreviewAfter) {
-    return (
-      <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
-        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
-      </View>
-    );
-  }
-
-  if (isPreviewList && isLoading) {
-    return (
-      <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
-        <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
-      </View>
-    );
-  }
-
   if (isLoading) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
         <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
@@ -296,7 +285,6 @@ export default function MateTab({
   if (error && mates.length === 0) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
         <ErrorState message={copy.errorTitle} description={error || copy.errorDescription} retryLabel={copy.errorRetry} onPressRetry={() => setReloadToken((value) => value + 1)} />
       </View>
     );
@@ -305,7 +293,6 @@ export default function MateTab({
   if (mates.length === 0) {
     return (
       <View style={styles.screenRoot}>
-        {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
         <SearchingState title={copy.afterTitle} description={copy.afterDescription} />
       </View>
     );
@@ -322,9 +309,7 @@ export default function MateTab({
     setError(null);
 
     try {
-      const response = isPreviewList
-        ? await fetchMockPlaceMates(placeId, nextCursor)
-        : await fetchPlaceMates(placeId, nextCursor);
+      const response = await fetchPlaceMates(matesApiPlaceId, nextCursor);
       setMates((current) => mergeUniqueMates(current, response.items));
       setNextCursor(response.nextCursor);
       setHasMore(response.hasMore);
@@ -337,7 +322,6 @@ export default function MateTab({
 
   return (
       <View style={styles.screenRoot}>
-      {renderPreviewSwitcher(previewMode, setPreviewMode, copy)}
       <View style={styles.container}>
         <View style={styles.listHeader}>
           <CustomText style={styles.listTitle}>{copy.listTitle}</CustomText>
@@ -651,47 +635,6 @@ function extractErrorMessage(error: unknown, fallbackMessage: string) {
   return error instanceof Error ? error.message : fallbackMessage;
 }
 
-function renderPreviewSwitcher(
-  previewMode: PreviewMode | null,
-  onChangePreviewMode: (mode: PreviewMode | null) => void,
-  copy: (typeof MATE_TAB_COPY)[LanguageCode],
-) {
-  const options: Array<{ key: PreviewMode; label: string }> = [
-    { key: 'before', label: copy.devBefore },
-    { key: 'after', label: copy.devAfter },
-    { key: 'list', label: copy.devList },
-  ];
-
-  return (
-    <View style={styles.previewPanel}>
-      <CustomText style={styles.previewPanelTitle}>{copy.devTitle}</CustomText>
-      <View style={styles.previewSwitcher}>
-        {options.map((option) => {
-          const isActive = previewMode === option.key;
-          return (
-            <Pressable
-              key={option.key}
-              style={({ pressed }) => [
-                styles.previewButton,
-                isActive && styles.previewButtonActive,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => onChangePreviewMode(isActive ? null : option.key)}>
-              <CustomText
-                style={[
-                  styles.previewButtonText,
-                  isActive && styles.previewButtonTextActive,
-                ]}>
-                {option.label}
-              </CustomText>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screenRoot: {
     flex: 1,
@@ -703,52 +646,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
-  previewPanel: {
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  previewPanelTitle: {
-    fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 12,
-    lineHeight: 16,
-    color: Palette.grey600,
-  },
-  previewSwitcher: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  previewButton: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#D7DEE5',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  previewButtonActive: {
-    borderColor: Palette.primary,
-    backgroundColor: '#F4FFF8',
-  },
-  previewButtonText: {
-    fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 11,
-    lineHeight: 15,
-    color: Palette.grey600,
-    textAlign: 'center',
-  },
-  previewButtonTextActive: {
-    color: Palette.primary,
-  },
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: 32,
     backgroundColor: '#FFFFFF',
   },
@@ -829,7 +730,6 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     gap: 4,
-    paddingTop: 4,
     paddingBottom: 24,
   },
   listTitle: {

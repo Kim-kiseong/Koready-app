@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
   },
   label: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 11,
     lineHeight: 15.4,
     color: '#ffffff',

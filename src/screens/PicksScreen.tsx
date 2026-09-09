@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     color: Palette.text,
   },
   scopeLabelUnselected: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey500,
   },
   state: {
@@ -934,7 +934,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tagLabel: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     color: Palette.grey600,
     letterSpacing: -0.28,
@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   guideText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',

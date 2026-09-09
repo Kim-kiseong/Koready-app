@@ -418,7 +418,7 @@ KOREADY는 현재 서비스 제공을 위하여 GPS 현재 위치, 연락처 또
 
 부칙
 본 개인정보처리방침은 2026년 9월 10일부터 시행합니다.`,
-  EN: `KOREADY Team ("KOREADY" or "we") values the privacy of its Users and complies with the Personal Information Protection Act of the Republic of Korea and other applicable laws and regulations.
+  EN: `KOREADY Team (“KOREADY” or “we”) values the privacy of its Users and complies with the Personal Information Protection Act of the Republic of Korea and other applicable laws and regulations.
 
 This Privacy Policy explains what personal information KOREADY processes, why it is processed, how long it is retained, how it is deleted, and what rights Users have regarding their personal information.
 
@@ -436,10 +436,10 @@ Email verification status
 KOREADY internal user ID and public ID
 Service language
 Account registration and recent login information
-KOREADY does not store the User's Google account name, Google profile photo, Google password, or the original Google ID Token in its database.
+KOREADY does not store the User’s Google account name, Google profile photo, Google password, or the original Google ID Token in its database.
 Destination Recommendations and Personalization
 Purpose
-Recommending destinations based on the User's departure point and travel preferences
+Recommending destinations based on the User’s departure point and travel preferences
 Improving recommendation quality
 Managing saved destinations
 Providing transportation information
@@ -452,7 +452,7 @@ Travel-purpose tags
 Saved destinations
 Recommendation results and recommendation display status
 Service usage records, including browsing recommendation cards, viewing destination details, saving or unsaving destinations, opening routes, and the time such actions occurred
-These usage records are processed on KOREADY's own servers for personalized recommendations and Service improvement.
+These usage records are processed on KOREADY’s own servers for personalized recommendations and Service improvement.
 KOREADY currently does not use external behavioral analytics or error-tracking tools such as Google Analytics, Firebase Analytics, or Sentry.
 Mates Profile
 Purpose
@@ -497,16 +497,16 @@ Retention period: Until account deletion is finalized
 A 7-day grace period applies after an account deletion request. If the User does not cancel the request during this period, account deletion becomes final.
 After deletion is finalized, KOREADY deletes account information, email address, address information, travel preferences, saved destinations, Mates profile, social media information, and identifiable Service usage records associated with the User.
 Profile Photos
-Retention period: Until the photo is deleted or the User's account deletion is finalized
+Retention period: Until the photo is deleted or the User’s account deletion is finalized
 Login Sessions
 Refresh sessions used for authentication may remain valid for up to 30 days. Active sessions are revoked when the User logs out or account deletion is finalized.
 Messages
-When a User's account deletion is finalized, the User's profile in existing conversations will be displayed in a manner such as "Deleted User."
+When a User’s account deletion is finalized, the User’s profile in existing conversations will be displayed in a manner such as “Deleted User.”
 Existing messages may be retained for up to 30 days after account deletion to allow the other participant to review the conversation and to address short-term Service-related disputes. They will then be deleted.
 If applicable laws require certain information to be retained for a specific period, only the necessary information will be stored separately for that period and deleted afterward.
 
 4. Disclosure of Personal Information to Third Parties
-KOREADY does not generally provide Users' personal information to third parties for their own independent purposes.
+KOREADY does not generally provide Users’ personal information to third parties for their own independent purposes.
 Exceptions may apply where:
 The User has separately consented to the disclosure
 Disclosure is specifically required by law
@@ -546,7 +546,7 @@ Information that may be processed: Address or search term entered by the User an
 TMAP Public Transportation API
 Purpose: Calculating public transportation routes between a departure point and a destination
 Information that may be processed: Departure and destination coordinates
-KOREADY uses the Korea Tourism Organization TourAPI and tourism photo APIs to obtain tourism information. These APIs are not used to send KOREADY Users' personal information to the Korea Tourism Organization.
+KOREADY uses the Korea Tourism Organization TourAPI and tourism photo APIs to obtain tourism information. These APIs are not used to send KOREADY Users’ personal information to the Korea Tourism Organization.
 If the external services used by KOREADY or the way personal information is processed changes, this Privacy Policy will be updated accordingly.
 
 7. Cross-Border Transfer of Personal Information
@@ -559,12 +559,12 @@ Purpose: Database hosting, storage, and maintenance
 Timing and method: Personal information is transferred through encrypted network communications when information is created or updated and stored in the Service database
 Retention period: For the applicable retention period specified in this Privacy Policy or until the relevant service-processing arrangement ends
 KOREADY transfers personal information internationally to the extent permitted by applicable laws where processing and storage are necessary to provide the Service.
-Users may contact teamkoready@gmail.com with questions regarding international transfers of personal information. However, because KOREADY's Service database is operated using this overseas infrastructure, refusing the required international transfer may make it impossible to register for or use the Service.
+Users may contact teamkoready@gmail.com with questions regarding international transfers of personal information. However, because KOREADY’s Service database is operated using this overseas infrastructure, refusing the required international transfer may make it impossible to register for or use the Service.
 
 8. Location-Related Information
-KOREADY does not continuously collect a User's current GPS location or track the User's movements.
+KOREADY does not continuously collect a User’s current GPS location or track the User’s movements.
 A full road-name address entered or selected directly by the User is stored in the KOREADY database for destination recommendations and departure-point management.
-KOREADY does not store latitude and longitude coordinates representing the User's departure point in its database.
+KOREADY does not store latitude and longitude coordinates representing the User’s departure point in its database.
 During address searches or public transportation route calculations, an address may be converted into coordinates and those coordinates may be transmitted to the Kakao Local API or TMAP Public Transportation API.
 A road-name address entered by a User is not disclosed to other KOREADY Users.
 
@@ -591,9 +591,9 @@ KOREADY is intended for Users who are 14 years of age or older. Users under the 
 If KOREADY begins processing personal information of children under 14 in the future, KOREADY will implement procedures to obtain and verify consent from a legal representative in accordance with applicable law.
 
 12. App Permissions and Security
-KOREADY may request access to the User's photos or photo library to allow the User to select and upload a Mates profile photo.
+KOREADY may request access to the User’s photos or photo library to allow the User to select and upload a Mates profile photo.
 This permission is optional. If the User does not grant access, the profile photo upload feature may be unavailable, but other core functions such as destination recommendations will remain available.
-KOREADY currently does not require access to the User's current GPS location, contacts, or microphone to provide the Service.
+KOREADY currently does not require access to the User’s current GPS location, contacts, or microphone to provide the Service.
 KOREADY applies technical and organizational security measures appropriate to the scale of the Service and the nature of the personal information processed, including hashing authentication information, encrypted database communications, and access-control measures.
 
 13. Privacy Contact and Changes to This Policy
@@ -601,7 +601,7 @@ For questions regarding privacy, the exercise of User rights, or other privacy-r
 Privacy Contact: KOREADY Team
 Email: teamkoready@gmail.com
 Users who need assistance regarding a personal information infringement may also contact the Personal Information Infringement Report Center at 118 or the Personal Information Dispute Mediation Committee at 1833-6972.
-This Privacy Policy may be amended in response to changes in applicable laws, the Service, or KOREADY's personal information processing practices.
+This Privacy Policy may be amended in response to changes in applicable laws, the Service, or KOREADY’s personal information processing practices.
 If material changes are made, KOREADY will provide notice through the Service or other appropriate means.
 
 Supplementary Provision

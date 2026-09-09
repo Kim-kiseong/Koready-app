@@ -4,8 +4,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
-import { FontFamily } from '@/constants/typography';
 import type { ChecklistCardIconKey } from '@/constants/guide-content';
+import { FontFamily } from '@/constants/typography';
 
 export type ChecklistCardProps = {
   title: string;
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   flowTitle: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 12,
     lineHeight: 16.8,
     color: '#1C1C1A',

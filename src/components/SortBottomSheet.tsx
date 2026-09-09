@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E8EB',
   },
   title: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     lineHeight: 19.6,
     color: '#4E5968',
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   optionLabel: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     lineHeight: 22.4,
     color: '#1C1C1A',
