@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 import { Asset } from 'expo-asset';
-import { File } from 'expo-file-system';
+import { File as ExpoFile } from 'expo-file-system';
 import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRouter } from 'expo-router';
@@ -31,6 +31,7 @@ import {
   requestProfileImageUploadUrl,
   updateMyBuddyProfile,
 } from '@/api/buddy-profile';
+import { fetchOnboardingProgress } from '@/api/onboarding';
 import type {
   BuddyProfileResponse,
   BuddyProfileSocialLinkInput,
@@ -41,6 +42,7 @@ import type {
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import BackIcon from '@/components/icons/BackIcon';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -211,6 +213,27 @@ export default function ProfileEditScreen() {
         );
         setForm(nextForm);
         setInitialForm(nextForm);
+
+        if (!loadedProfile.exists) {
+          fetchOnboardingProgress()
+            .then((onboardingProgress) => {
+              if (cancelled || onboardingProgress.travelStyles.length === 0) {
+                return;
+              }
+
+              useOnboardingStore.getState().applyProgress(onboardingProgress);
+              const sortedTravelStyles = sortCodesByOptionOrder(
+                onboardingProgress.travelStyles,
+                loadedOptions.travelStyles,
+              );
+              setForm((prev) => ({ ...prev, travelStyles: sortedTravelStyles }));
+              setInitialForm((prev) => ({ ...prev, travelStyles: sortedTravelStyles }));
+            })
+            .catch(() => {
+              // Profile editing should remain available even if onboarding
+              // progress cannot be fetched for a completed user.
+            });
+        }
       } catch (error) {
         if (!cancelled) {
           setLoadError(extractErrorMessage(error));
@@ -381,6 +404,7 @@ export default function ProfileEditScreen() {
       useAuthStore.getState().setBuddyProfileExists(true);
       useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
 
+      setIsBypassingUnsavedChangesGuard(true);
       setForm(nextForm);
       setInitialForm(nextForm);
       setProfileImagePreviewUri(null);
@@ -495,8 +519,8 @@ export default function ProfileEditScreen() {
       return;
     }
 
-    const localFile = new File(asset.uri);
-    const fileSize = asset.fileSize ?? localFile.size;
+    const uploadFile = await createProfileImageUploadFile(asset);
+    const fileSize = asset.fileSize ?? uploadFile.size;
 
     if (!Number.isFinite(fileSize) || fileSize <= 0) {
       if (!isMountedRef.current) return;
@@ -532,8 +556,8 @@ export default function ProfileEditScreen() {
 
       const uploadResponse = await expoFetch(uploadUrl, {
         method: 'PUT',
-        headers: normalizeHeaders(uploadInfo.requiredHeaders),
-        body: localFile,
+        headers: normalizeUploadHeaders(uploadInfo.requiredHeaders, mimeType),
+        body: uploadFile.body,
       });
 
       if (!uploadResponse.ok) {
@@ -601,12 +625,7 @@ export default function ProfileEditScreen() {
         keyboardVerticalOffset={0}>
         <View style={styles.header}>
           <Pressable hitSlop={10} style={styles.headerButton} onPress={requestLeaveScreen}>
-            <SymbolView
-              name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-              size={18}
-              weight="semibold"
-              tintColor={Palette.text}
-            />
+            <BackIcon />
           </Pressable>
 
           <CustomText style={styles.headerTitle}>{headerTitle}</CustomText>
@@ -930,6 +949,11 @@ function buildInitialForm(
     };
   }
 
+  const initialTravelStyles =
+    !profileResponse.exists && defaultTravelStyles.length > 0
+      ? defaultTravelStyles
+      : profile.travelStyles;
+
   return {
     profileImageUrl: profile.profileImageUrl ?? fallbackProfileImageUrl,
     nickname: profile.nickname ?? '',
@@ -940,8 +964,8 @@ function buildInitialForm(
     ),
     koreanLevel: resolveProfileOptionCode(profile.koreanLevel, options.koreanLevels),
     bio: profile.bio ?? '',
-    // Keep the onboarding travel styles as the initial profile draft.
-    travelStyles: sortCodesByOptionOrder(profile.travelStyles, options.travelStyles),
+    // A first-time buddy profile should inherit the user's onboarding choices.
+    travelStyles: sortCodesByOptionOrder(initialTravelStyles, options.travelStyles),
     socialLinks: profile.socialLinks
       .map((link) => ({
         type: resolveProfileOptionCode(link.type, options.socialPlatforms),
@@ -1118,10 +1142,73 @@ function extractErrorMessage(error: unknown, fallbackMessage = 'An unknown error
   return fallbackMessage;
 }
 
-function normalizeHeaders(headers: Record<string, string | undefined | null> | undefined) {
-  return Object.fromEntries(
-    Object.entries(headers ?? {}).filter(([, value]) => typeof value === 'string' && value.length > 0),
+async function createProfileImageUploadFile(asset: ImagePicker.ImagePickerAsset) {
+  if (Platform.OS === 'web') {
+    const browserFile = (asset as ImagePicker.ImagePickerAsset & { file?: Blob }).file;
+    if (browserFile) {
+      return {
+        body: browserFile,
+        size: browserFile.size,
+      };
+    }
+
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    return {
+      body: blob,
+      size: blob.size,
+    };
+  }
+
+  const localFile = new ExpoFile(asset.uri);
+  return {
+    body: localFile,
+    size: localFile.size,
+  };
+}
+
+function normalizeUploadHeaders(
+  headers: Record<string, string | undefined | null> | string | null | undefined,
+  contentType: ProfileImageContentType,
+) {
+  const parsedHeaders = parseUploadHeaders(headers);
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(parsedHeaders).filter(([, value]) => typeof value === 'string' && value.length > 0),
   ) as Record<string, string>;
+
+  if (!hasHeader(normalizedHeaders, 'content-type')) {
+    normalizedHeaders['Content-Type'] = contentType;
+  }
+
+  return normalizedHeaders;
+}
+
+function parseUploadHeaders(
+  headers: Record<string, string | undefined | null> | string | null | undefined,
+) {
+  if (!headers) {
+    return {};
+  }
+
+  if (typeof headers !== 'string') {
+    return headers;
+  }
+
+  try {
+    const parsed = JSON.parse(headers);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, string | undefined | null>;
+    }
+  } catch {
+    return {};
+  }
+
+  return {};
+}
+
+function hasHeader(headers: Record<string, string>, headerName: string) {
+  const normalizedHeaderName = headerName.toLowerCase();
+  return Object.keys(headers).some((key) => key.toLowerCase() === normalizedHeaderName);
 }
 
 function normalizeProfileImageMimeType(
@@ -1823,12 +1910,7 @@ function SnsEditorOverlay({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable hitSlop={10} style={styles.headerButton} onPress={close}>
-            <SymbolView
-              name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-              size={18}
-              weight="semibold"
-              tintColor={Palette.text}
-            />
+            <BackIcon />
           </Pressable>
           <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
           <View style={styles.headerButton} />

@@ -2,7 +2,6 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import {
   useEffect,
   useState,
@@ -28,6 +27,7 @@ import {
 } from '@/api/saved-place';
 import { recordRecommendationEvent } from '@/api/picks';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
 import MateTab from '@/components/place-detail/MateTab';
@@ -277,16 +277,7 @@ function PlaceDetailScreenContent({
           hitSlop={12}
           onPress={() => goBackOrRoot(router)}
         >
-          <SymbolView
-            name={{
-              ios: 'chevron.left',
-              android: 'arrow_back_ios',
-              web: 'arrow_back_ios',
-            }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
       </View>
 

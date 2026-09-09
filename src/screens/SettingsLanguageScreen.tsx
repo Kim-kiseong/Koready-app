@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { LanguageCode } from '@/api/types';
 import { updateMyLanguage } from '@/api/user';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
@@ -112,12 +113,7 @@ export default function SettingsLanguageScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable hitSlop={10} style={styles.backButton} onPress={requestLeaveScreen}>
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
       </View>
 

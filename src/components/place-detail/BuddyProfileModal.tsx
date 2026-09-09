@@ -15,7 +15,13 @@ import {
 import { SvgUri } from 'react-native-svg';
 
 import { BuddyProfileNotFoundError, fetchBuddyProfile } from '@/api/buddy-profile';
-import type { BuddyProfileDetail, LanguageCode, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
+import type {
+  BuddyProfileDetail,
+  BuddyProfileSocialLink,
+  LanguageCode,
+  ProfileOptionItem,
+  ProfileOptionsResponse,
+} from '@/api/types';
 import CustomText from '@/components/CustomText';
 import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
 import { Palette } from '@/constants/colors';
@@ -262,6 +268,12 @@ type BuddyProfileModalProps = {
   onClose: () => void;
 };
 
+type DisplaySocialLink = BuddyProfileSocialLink & {
+  displayValue: string;
+  url: string | null;
+  label: string;
+};
+
 export default function BuddyProfileModal({
   visible,
   profileId,
@@ -385,23 +397,34 @@ export default function BuddyProfileModal({
     );
   }, [language, profile, travelStyleOptions]);
 
-  const socialLinks = useMemo(() => {
+  const socialLinks = useMemo<DisplaySocialLink[]>(() => {
     if (!profile) {
       return [];
     }
 
     const socialFallbacks = createFallbackLabelMaps(socialPlatformOptions);
 
-    return profile.socialLinks
-      .map((link) => {
-        const type = normalizeSocialType(link.type);
-        return {
-          ...link,
-          type,
-          label: getLabel(type, socialPlatformOptions, language, socialFallbacks),
-        };
-      })
-      .filter((link) => Boolean(link.url.trim()));
+    return (profile.socialLinks ?? []).reduce<DisplaySocialLink[]>((acc, link) => {
+      if (!link) {
+        return acc;
+      }
+
+      const displayValue = typeof link.displayValue === 'string' ? link.displayValue.trim() : '';
+      const url = typeof link.url === 'string' ? link.url.trim() : '';
+      if (!displayValue && !url) {
+        return acc;
+      }
+
+      const type = normalizeSocialType(link.type ?? '');
+      acc.push({
+        ...link,
+        displayValue: displayValue || url,
+        url: url || null,
+        type,
+        label: getLabel(type, socialPlatformOptions, language, socialFallbacks),
+      });
+      return acc;
+    }, []);
   }, [language, profile, socialPlatformOptions]);
 
   return (
@@ -469,17 +492,25 @@ export default function BuddyProfileModal({
                   <CustomText style={styles.contactDescription}>{copy.contactDescription}</CustomText>
 
                   <View style={styles.socialList}>
-                    {socialLinks.map((link) => (
-                      <Pressable
-                        key={`${link.type}-${link.displayValue}`}
-                        style={({ pressed }) => [styles.socialRow, pressed && styles.pressed]}
-                        onPress={async () => {
-                          try {
-                            await Linking.openURL(link.url);
-                          } catch {
-                            Alert.alert(copy.linkErrorTitle, copy.linkErrorBody);
-                          }
-                        }}>
+                    {socialLinks.map((link) => {
+                      const canOpenLink = typeof link.url === 'string' && link.url.length > 0;
+
+                      return (
+                        <Pressable
+                          key={`${link.type}-${link.displayValue}`}
+                          style={({ pressed }) => [styles.socialRow, canOpenLink && pressed && styles.pressed]}
+                          disabled={!canOpenLink}
+                          onPress={async () => {
+                            if (!link.url) {
+                              return;
+                            }
+
+                            try {
+                              await Linking.openURL(link.url);
+                            } catch {
+                              Alert.alert(copy.linkErrorTitle, copy.linkErrorBody);
+                            }
+                          }}>
                         <SocialPlatformIcon code={link.type} size={40} />
 
                         <View style={styles.socialTextGroup}>
@@ -487,14 +518,17 @@ export default function BuddyProfileModal({
                           <CustomText style={styles.socialValue}>{link.displayValue}</CustomText>
                         </View>
 
-                        <SymbolView
-                          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-                          size={14}
-                          weight="semibold"
-                          tintColor={Palette.grey400}
-                        />
-                      </Pressable>
-                    ))}
+                          {canOpenLink ? (
+                            <SymbolView
+                              name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                              size={14}
+                              weight="semibold"
+                              tintColor={Palette.grey400}
+                            />
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 </View>
               </ScrollView>

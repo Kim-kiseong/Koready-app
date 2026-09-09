@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     flexShrink: 1,
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
   },
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   languageTextInactive: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     color: Palette.grey600,
   },

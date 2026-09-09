@@ -90,7 +90,7 @@ function SideTab({
   onPress: (tab: TabConfig) => void;
 }) {
   const color = isActive ? Palette.grey700 : Palette.grey400;
-  const fontFamily = isActive ? FontFamily.pretendard.bold : FontFamily.inter.medium;
+  const fontFamily = isActive ? FontFamily.pretendard.bold : FontFamily.pretendard.medium;
   const Icon = tab.Icon;
 
   return (

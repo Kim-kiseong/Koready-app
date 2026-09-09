@@ -136,8 +136,6 @@ export const en: DeepPartial<Translations> = {
     alerts: {
       errorTitle: 'Error',
       logoutFailed: 'Failed to log out.',
-      privacyComingSoonTitle: 'Coming soon',
-      privacyComingSoonBody: 'The Privacy Policy screen will be connected in a future step.',
       withdrawComingSoonTitle: 'Coming soon',
       withdrawComingSoonBody: 'Account deletion will be connected in a future step.',
     },

@@ -62,7 +62,7 @@ export type ProfileImageUploadUrlResponse = {
   imageId: string;
   uploadUrl: string;
   expiresAt: string;
-  requiredHeaders: Record<string, string>;
+  requiredHeaders: Record<string, string> | string | null;
   profileImageUrl?: string | null;
 };
 
@@ -99,7 +99,7 @@ export type ProfileImageCompleteEnvelope = {
 export type BuddyProfileSocialLink = {
   type: string;
   displayValue: string;
-  url: string;
+  url: string | null;
 };
 
 export type PlaceMateSocialLink = BuddyProfileSocialLink;
