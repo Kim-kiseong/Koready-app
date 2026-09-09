@@ -64,12 +64,14 @@ export default function AddressScreen() {
   };
 
   // The currently-active location is always the first row; the server's
-  // default=true entry (and any option that happens to match it by label)
-  // is dropped from the list below to avoid showing the same address twice.
-  const otherAddresses = savedAddresses.filter(
-    (option) =>
-      !option.default && option.customLabel !== location?.displayAddress && option.displayName !== location?.displayAddress,
-  );
+  // default=true entry is dropped from the list below to avoid showing it
+  // twice. setDefaultAddress keeps `default` mutually exclusive across the
+  // whole list, so this is a precise, id-backed check — matching by label
+  // text instead (as this used to) hides the WRONG row whenever two saved
+  // addresses share a display name (e.g. the same place saved once via a
+  // Korean search and once via an English one), since the current selection
+  // and its same-named duplicate become indistinguishable by text alone.
+  const otherAddresses = savedAddresses.filter((option) => !option.default);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>

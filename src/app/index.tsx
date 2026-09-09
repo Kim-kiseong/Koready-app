@@ -7,6 +7,7 @@ import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { resolveOnboardingResumeRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
 import type { NextStep } from '@/api/types';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 export default function Index() {
@@ -56,6 +57,11 @@ export default function Index() {
           unreadMessageCount: me.unreadMessageCount,
           user: state.user ? { ...state.user, ...me.user } : me.user,
         }));
+        // Authenticated responses (place titles, tags, ...) are localized
+        // server-side from the account's saved preferredLanguage, not the
+        // Accept-Language header — re-sync local i18n state from it on every
+        // cold restart so app chrome and backend content never disagree.
+        useLanguageStore.getState().setLanguage(me.user.preferredLanguage);
         useOnboardingStore.getState().setCurrentLocationId(me.defaultLocationId);
         routeFromNextStep(me.nextStep);
       })
