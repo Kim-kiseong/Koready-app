@@ -53,3 +53,29 @@ export function formatPlaceTravelStyle(travelStyle: string, language: LanguageCo
 export function formatPlaceTitle(title: string, language: LanguageCode) {
   return title;
 }
+
+// The admin-curated onboarding candidate set (GET
+// /onboarding/place-candidate-sets/current) comes back with its `title` and
+// `curatorMessage` already localized by the backend, but `tags` are raw
+// Korean text regardless of the user's language — this maps the ones
+// confirmed to appear in the published set. An unmapped tag falls back to
+// the original Korean string (rather than disappearing), since a partial
+// dictionary is safer than silently dropping content an admin curated.
+const PLACE_TAG_LABELS_EN: Record<string, string> = {
+  궁궐: 'Palace',
+  역사: 'History',
+  서울: 'Seoul',
+  전통시장: 'Traditional Market',
+  길거리음식: 'Street Food',
+  박물관: 'Museum',
+  한국사: 'Korean History',
+  전시: 'Exhibition',
+  전통문화: 'Traditional Culture',
+  촬영지: 'Filming Location',
+  체험: 'Experience',
+};
+
+export function formatPlaceTag(tag: string, language: LanguageCode) {
+  if (language === 'KO') return tag;
+  return PLACE_TAG_LABELS_EN[tag] ?? tag;
+}

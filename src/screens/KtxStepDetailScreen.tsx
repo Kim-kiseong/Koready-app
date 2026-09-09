@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -11,7 +12,6 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
 import { KTX_STEP3_DETAIL, KTX_STEP3_DETAIL_EN, KTX_STEPS, KTX_STEPS_EN } from '@/constants/ktx-content';
 import { FontFamily } from '@/constants/typography';
-import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -65,22 +65,20 @@ function ChecklistGrid({ title, columns }: { title: string; columns: string[][] 
 
 export default function KtxStepDetailScreen() {
   const router = useRouter();
-  const t = useTranslation();
   const { stepId } = useLocalSearchParams<{ stepId: string }>();
   const language = useLanguageStore((state) => state.language);
   const steps = language === 'EN' ? KTX_STEPS_EN : KTX_STEPS;
   const step = steps.find((item) => String(item.id) === stepId);
+  const isStep3 = !!step && stepId === '3';
 
-  if (!step || stepId !== '3') {
-    return (
-      <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-        <OnboardingHeader onBack={() => goBackOrRoot(router)} title={step?.title ?? ''} rightIcon={null} />
-        <View style={styles.emptyState}>
-          <CustomText style={styles.emptyTitle}>{t.guideDetail.stepComingSoonTitle}</CustomText>
-          <CustomText style={styles.emptyBody}>{t.guideDetail.stepComingSoonBody}</CustomText>
-        </View>
-      </SafeAreaView>
-    );
+  useEffect(() => {
+    if (!isStep3) {
+      goBackOrRoot(router);
+    }
+  }, [isStep3, router]);
+
+  if (!isStep3) {
+    return null;
   }
 
   const detail = language === 'EN' ? KTX_STEP3_DETAIL_EN : KTX_STEP3_DETAIL;
@@ -187,24 +185,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.text,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.pretendard.semiBold,
-    fontSize: 18,
-    color: Palette.text,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.pretendard.regular,
-    fontSize: 14,
-    color: Palette.grey600,
-    textAlign: 'center',
   },
   englishTitle: {
     fontSize: 15,

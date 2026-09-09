@@ -1,6 +1,5 @@
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,10 +19,10 @@ export default function KtxStepListScreen() {
   const language = useLanguageStore((state) => state.language);
   const steps = language === 'EN' ? KTX_STEPS_EN : KTX_STEPS;
   const listWarning = language === 'EN' ? KTX_LIST_WARNING_EN : KTX_LIST_WARNING;
-  const [currentStep, setCurrentStep] = useState(3);
+  const currentStep = 3;
 
   const handleStepPress = (stepId: number) => {
-    setCurrentStep(stepId);
+    if (stepId !== currentStep) return;
     router.push({ pathname: '/guides/ktx/steps/[stepId]', params: { stepId: String(stepId) } });
   };
 
@@ -63,28 +62,29 @@ export default function KtxStepListScreen() {
 
         <View style={styles.stepList}>
           {steps.map((step, index) => {
-            const active = step.id === currentStep;
+            const isNavigable = step.id === currentStep;
             const isLast = index === steps.length - 1;
             return (
               <Pressable
                 key={step.id}
-                style={[styles.stepRow, active && styles.stepRowActive, !isLast && styles.stepRowDivider]}
+                style={[styles.stepRow, !isLast && styles.stepRowDivider]}
+                disabled={!isNavigable}
                 onPress={() => handleStepPress(step.id)}>
-                <View style={[styles.stepBadge, active && styles.stepBadgeActive]}>
-                  <CustomText style={[styles.stepBadgeText, active && styles.stepBadgeTextActive]}>
-                    {step.id}
-                  </CustomText>
+                <View style={styles.stepBadge}>
+                  <CustomText style={styles.stepBadgeText}>{step.id}</CustomText>
                 </View>
                 <View style={styles.stepTextGroup}>
                   <CustomText style={styles.stepTitle}>{step.title}</CustomText>
                   <CustomText style={styles.stepDescription}>{step.description}</CustomText>
                 </View>
-                <SymbolView
-                  name={{ ios: 'chevron.right', android: 'arrow_forward_ios', web: 'arrow_forward_ios' }}
-                  size={14}
-                  weight="regular"
-                  tintColor={Palette.grey350}
-                />
+                {isNavigable && (
+                  <SymbolView
+                    name={{ ios: 'chevron.right', android: 'arrow_forward_ios', web: 'arrow_forward_ios' }}
+                    size={14}
+                    weight="regular"
+                    tintColor={Palette.grey350}
+                  />
+                )}
               </Pressable>
             );
           })}
@@ -152,9 +152,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
   },
-  stepRowActive: {
-    backgroundColor: Palette.secondary,
-  },
   stepRowDivider: {
     borderBottomWidth: 1,
     borderBottomColor: Palette.grey150,
@@ -169,17 +166,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBadgeActive: {
-    borderWidth: 0,
-    backgroundColor: Palette.primary,
-  },
   stepBadgeText: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 14,
     color: Palette.grey600,
-  },
-  stepBadgeTextActive: {
-    color: '#ffffff',
   },
   stepTextGroup: {
     flex: 1,

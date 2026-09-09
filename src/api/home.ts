@@ -412,21 +412,27 @@ function normalizeImageUrl(rawUrl: string | null | undefined, fallbackUrl: strin
   return encodeURI(`${API_BASE_URL}/${trimmed}`);
 }
 
-// POPULAR reuses GET /home's monthlyRecommendation preview (the backend's own
-// "recommended this month" set); the other tabs filter GET /monthly-recommendations
-// by travelStyle for the current month. Swallows failures to an empty list so a
-// network hiccup doesn't crash the home screen's carousel.
-export async function fetchFeaturedEvents(category: FeaturedEventCategory): Promise<FeaturedEvent[]> {
+// Always goes through GET /monthly-recommendations (never GET /home) so the
+// featured carousel — on both the home screen and the month-picker event list
+// — reflects the requested month with server-side priority ordering
+// (sort: RECOMMENDED) and is capped at exactly 5 cards. POPULAR omits
+// travelStyles so it isn't filtered to one style. Swallows failures to an
+// empty list so a network hiccup doesn't crash the carousel.
+const FEATURED_EVENTS_SIZE = 5;
+
+export async function fetchFeaturedEvents(
+  category: FeaturedEventCategory,
+  month?: number,
+  year?: number,
+): Promise<FeaturedEvent[]> {
   const now = new Date();
   try {
-    if (category === 'POPULAR') {
-      const home = await fetchHome();
-      return home.monthlyRecommendation.items.map(toFeaturedEvent);
-    }
     const result = await fetchMonthlyRecommendations({
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      travelStyles: [category],
+      year: year ?? now.getFullYear(),
+      month: month ?? now.getMonth() + 1,
+      travelStyles: category === 'POPULAR' ? undefined : [category],
+      sort: 'RECOMMENDED',
+      size: FEATURED_EVENTS_SIZE,
     });
     return result.items.map(toFeaturedEvent);
   } catch {

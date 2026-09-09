@@ -44,8 +44,39 @@ import { usePicksStore } from '@/store/picks-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
 
-const CARD_HEIGHT = 485;
+// Figma reference size (node 1076:6425) — a 343-wide card: a 400-tall photo
+// on top of an 85-tall text footer. Only the photo is a fixed aspect ratio;
+// the footer's height comes from its text content, which doesn't get smaller
+// just because the card is narrower. So width scales down to fit the screen
+// (max 343, same 16px side margin every other screen uses), the photo height
+// scales with it to preserve its aspect ratio, and the footer stays fixed —
+// blending all of it into one card-wide ratio (as before) very slightly
+// squashed the footer's text on narrower phones.
+const CARD_MAX_WIDTH = 343;
+const CARD_IMAGE_ASPECT_RATIO = 400 / 343;
+const CARD_FOOTER_HEIGHT = 85;
+const CARD_SCREEN_MARGIN = 16;
 const FLIP_DURATION = 400;
+// Figma (node 3197:16838): each card behind the top one is a uniformly
+// scaled-down copy offset down-and-right from the front card's top-left
+// corner — not centered/peeking-below like a plain scale+translateY would
+// produce — with a black tint that gets darker per layer back.
+const BEHIND_CARD_SCALE_STEP = 0.065;
+const BEHIND_CARD_X_OFFSET_RATIO = 0.1;
+const BEHIND_CARD_Y_OFFSET_RATIO = 0.045;
+const BEHIND_CARD_TINT_BASE_OPACITY = 0.1;
+const BEHIND_CARD_TINT_STEP_OPACITY = 0.2;
+// nextCards is capped at 2 (PicksScreen: cards.slice(currentIndex + 1,
+// currentIndex + 3)) — the deepest layer's right edge sits at
+// cardWidth * (1 + MAX_STACK_DEPTH * (X_OFFSET_RATIO - SCALE_STEP)) from the
+// front card's left edge. Sizing the front card off the raw screen width
+// (as if no stack existed) left zero room for that peek on a standard
+// ~375-430pt phone, so it ran off/touched the screen edge instead of
+// staying inset like Figma's reference. Reserving this factor up front
+// keeps the front card's right margin equal to its left margin even with
+// the full stack showing.
+const MAX_STACK_DEPTH = 2;
+const STACK_WIDTH_FACTOR = 1 + MAX_STACK_DEPTH * (BEHIND_CARD_X_OFFSET_RATIO - BEHIND_CARD_SCALE_STEP);
 const SWIPE_THRESHOLD = 120;
 const SWIPE_VELOCITY_THRESHOLD = 800;
 // Fallback only, used until the deck's own remainingThreshold arrives from the server.
@@ -183,6 +214,7 @@ function formatPickTagLabel(tag: unknown) {
 export default function PicksScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const SCOPES: { id: PicksScope; label: string }[] = [
     { id: 'NEARBY', label: t.picks.scopeNearby },
     { id: 'NATIONWIDE', label: t.picks.scopeNationwide },
@@ -215,6 +247,7 @@ export default function PicksScreen() {
   const isFetchingMoreRef = useRef(false);
   const latestRequestIdRef = useRef(0);
   const activeDeckIdRef = useRef<string | null>(null);
+  const isInitialDeckLoadRef = useRef(true);
 
   // The deck endpoint always returns each card's server-side saved flag, which
   // doesn't know about toggles the user made locally (dev mock session never
@@ -278,12 +311,30 @@ export default function PicksScreen() {
     // saved-place-store hydration so reconcileSaved has the restored heart
     // state available instead of an empty map on a cold start.
     if (!hasHydrated || !onboardingHasHydrated || !savedPlaceHydrated) return;
+
+    if (isInitialDeckLoadRef.current) {
+      isInitialDeckLoadRef.current = false;
+      loadDeck(scope);
+      return;
+    }
+
+    // The deck is generated server-side in whatever language was active at
+    // creation time, so a later language toggle doesn't retranslate it —
+    // the screen has to throw it away and request a fresh one, same reset
+    // changeScope does below.
+    setDeckId(null);
+    setCards([]);
+    setCurrentIndex(0);
+    setCursor(null);
+    setHasMore(false);
+    setIsLoading(true);
+    setHasError(false);
     loadDeck(scope);
-    // Still runs once — all hydration flags flip false→true exactly once,
-    // then stay true. Scope switches and retries go through changeScope/
-    // retryLoad below instead, so they can reset UI state synchronously.
+    // Scope switches and retries go through changeScope/retryLoad below
+    // instead, so they can reset UI state synchronously without waiting on
+    // this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated]);
+  }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated, language]);
 
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
@@ -478,7 +529,113 @@ function PicksDeck({
   onSwipePrev,
 }: PicksDeckProps) {
   const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = Math.min(CARD_MAX_WIDTH, (screenWidth - CARD_SCREEN_MARGIN * 2) / STACK_WIDTH_FACTOR);
+  const cardSize = { width: cardWidth, height: cardWidth * CARD_IMAGE_ASPECT_RATIO + CARD_FOOTER_HEIGHT };
+
+  return (
+    <View style={[styles.cardStack, cardSize]}>
+      {/* Furthest card first so nearer ones paint on top of it. */}
+      {[...nextCards].reverse().map((behindCard, reverseIndex) => (
+        <BehindCard
+          key={behindCard.placeId}
+          card={behindCard}
+          depth={nextCards.length - reverseIndex}
+          cardSize={cardSize}
+        />
+      ))}
+
+      <PicksFlipCard
+        key={card.placeId}
+        card={card}
+        cardSize={cardSize}
+        screenWidth={screenWidth}
+        canSwipeNext={canSwipeNext}
+        canSwipePrev={canSwipePrev}
+        onSwipeNext={onSwipeNext}
+        onSwipePrev={onSwipePrev}
+        onToggleSave={onToggleSave}
+        onExpand={onExpand}
+        onViewDetail={onViewDetail}
+      />
+    </View>
+  );
+}
+
+type CardSize = { width: number; height: number };
+
+function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number; cardSize: CardSize }) {
+  const scale = 1 - depth * BEHIND_CARD_SCALE_STEP;
+  const width = cardSize.width * scale;
+  const height = cardSize.height * scale;
+
+  return (
+    <View
+      style={[
+        styles.card,
+        styles.behindCard,
+        {
+          width,
+          height,
+          left: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth,
+          top: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth,
+          borderRadius: 16 * scale,
+        },
+      ]}
+      pointerEvents="none">
+      {card.imageUrl ? (
+        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
+      )}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.behindCardTint,
+          { opacity: BEHIND_CARD_TINT_BASE_OPACITY + depth * BEHIND_CARD_TINT_STEP_OPACITY },
+        ]}
+      />
+    </View>
+  );
+}
+
+type PicksFlipCardProps = {
+  card: PicksCard;
+  cardSize: CardSize;
+  screenWidth: number;
+  canSwipeNext: boolean;
+  canSwipePrev: boolean;
+  onSwipeNext: () => void;
+  onSwipePrev: () => void;
+  onToggleSave: () => void;
+  onExpand: () => void;
+  onViewDetail: () => void;
+};
+
+// Keyed by card.placeId in PicksDeck, so this whole component (translateX
+// included) remounts fresh for every card — there's never a stale
+// off-center position to reset between one card and the next, which used to
+// race against the index update and flicker.
+function PicksFlipCard({
+  card,
+  cardSize,
+  screenWidth,
+  canSwipeNext,
+  canSwipePrev,
+  onSwipeNext,
+  onSwipePrev,
+  onToggleSave,
+  onExpand,
+  onViewDetail,
+}: PicksFlipCardProps) {
+  const t = useTranslation();
+  const flip = useSharedValue(0);
   const translateX = useSharedValue(0);
+
+  const toggleFlip = () => {
+    const isExpanding = flip.value === 0;
+    flip.value = withTiming(isExpanding ? 1 : 0, { duration: FLIP_DURATION });
+    if (isExpanding) onExpand();
+  };
 
   const pan = Gesture.Pan()
     .activeOffsetX([-10, 10])
@@ -492,23 +649,11 @@ function PicksDeck({
 
       if (isSwipeRight && canSwipeNext) {
         translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
-          if (finished) {
-            // Trigger the index update first, then snap the replacement card in
-            // from the opposite off-screen side (not center) and spring it into
-            // place — otherwise the still-old card would flash back to center
-            // for a frame before the new one renders.
-            runOnJS(onSwipeNext)();
-            translateX.value = -screenWidth;
-            translateX.value = withSpring(0);
-          }
+          if (finished) runOnJS(onSwipeNext)();
         });
       } else if (isSwipeLeft && canSwipePrev) {
         translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
-          if (finished) {
-            runOnJS(onSwipePrev)();
-            translateX.value = screenWidth;
-            translateX.value = withSpring(0);
-          }
+          if (finished) runOnJS(onSwipePrev)();
         });
       } else {
         translateX.value = withSpring(0);
@@ -521,70 +666,6 @@ function PicksDeck({
       { rotateZ: `${interpolate(translateX.value, [-screenWidth, 0, screenWidth], [-8, 0, 8])}deg` },
     ],
   }));
-
-  return (
-    <View style={styles.cardStack}>
-      {/* Furthest card first so nearer ones paint on top of it. */}
-      {[...nextCards].reverse().map((behindCard, reverseIndex) => (
-        <BehindCard
-          key={behindCard.placeId}
-          card={behindCard}
-          depth={nextCards.length - reverseIndex}
-        />
-      ))}
-
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.cardStack, styles.topCard, swipeStyle]}>
-          <PicksFlipCard
-            key={card.placeId}
-            card={card}
-            onToggleSave={onToggleSave}
-            onExpand={onExpand}
-            onViewDetail={onViewDetail}
-          />
-        </Animated.View>
-      </GestureDetector>
-    </View>
-  );
-}
-
-function BehindCard({ card, depth }: { card: PicksCard; depth: number }) {
-  return (
-    <View
-      style={[
-        styles.card,
-        styles.behindCard,
-        {
-          transform: [{ translateY: depth * 10 }, { scale: 1 - depth * 0.05 }],
-          opacity: 1 - depth * 0.25,
-        },
-      ]}
-      pointerEvents="none">
-      {card.imageUrl ? (
-        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
-      )}
-    </View>
-  );
-}
-
-type PicksFlipCardProps = {
-  card: PicksCard;
-  onToggleSave: () => void;
-  onExpand: () => void;
-  onViewDetail: () => void;
-};
-
-function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlipCardProps) {
-  const t = useTranslation();
-  const flip = useSharedValue(0);
-
-  const toggleFlip = () => {
-    const isExpanding = flip.value === 0;
-    flip.value = withTiming(isExpanding ? 1 : 0, { duration: FLIP_DURATION });
-    if (isExpanding) onExpand();
-  };
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` }],
@@ -601,77 +682,79 @@ function PicksFlipCard({ card, onToggleSave, onExpand, onViewDetail }: PicksFlip
   );
 
   return (
-    <View style={styles.cardStack}>
-      <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
-        <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
-          {card.imageUrl ? (
-            <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
-          )}
-        </Pressable>
-
-        <View style={styles.cardInfo}>
-          <View style={styles.cardTextGroup}>
-            <CustomText style={styles.cardTitle}>{card.title}</CustomText>
-            <View style={styles.cardLocationRow}>
-              <View style={styles.cardLocationIconFrame}>
-                <Image
-                  source={require('@/assets/images/location-pin-detail.svg')}
-                  style={styles.cardLocationIcon}
-                  contentFit="contain"
-                />
-              </View>
-              <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
-            </View>
-          </View>
-
-          <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
-            {heartIcon}
+    <GestureDetector gesture={pan}>
+      <Animated.View style={[styles.cardStack, cardSize, styles.topCard, swipeStyle]}>
+        <Animated.View style={[styles.card, styles.cardFace, cardSize, frontStyle]}>
+          <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
+            {card.imageUrl ? (
+              <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : (
+              <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
+            )}
           </Pressable>
-        </View>
-      </Animated.View>
 
-      <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, backStyle]}>
-        <Pressable style={styles.cardBackContent} onPress={toggleFlip}>
-          <View style={styles.cardBackTop}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardTextGroup}>
-                <CustomText style={styles.cardTitle}>{card.title}</CustomText>
-                <View style={styles.cardLocationRow}>
-                  <View style={styles.cardLocationIconFrame}>
-                    <Image
-                      source={require('@/assets/images/location-pin-detail.svg')}
-                      style={styles.cardLocationIcon}
-                      contentFit="contain"
-                    />
+          <View style={styles.cardInfo}>
+            <View style={styles.cardTextGroup}>
+              <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+              <View style={styles.cardLocationRow}>
+                <View style={styles.cardLocationIconFrame}>
+                  <Image
+                    source={require('@/assets/images/location-pin-detail.svg')}
+                    style={styles.cardLocationIcon}
+                    contentFit="contain"
+                  />
+                </View>
+                <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
+              </View>
+            </View>
+
+            <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+              {heartIcon}
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, cardSize, backStyle]}>
+          <Pressable style={styles.cardBackContent} onPress={toggleFlip}>
+            <View style={styles.cardBackTop}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardTextGroup}>
+                  <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+                  <View style={styles.cardLocationRow}>
+                    <View style={styles.cardLocationIconFrame}>
+                      <Image
+                        source={require('@/assets/images/location-pin-detail.svg')}
+                        style={styles.cardLocationIcon}
+                        contentFit="contain"
+                      />
+                    </View>
+                    <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
                   </View>
-                  <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
                 </View>
+
+                <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+                  {heartIcon}
+                </Pressable>
               </View>
 
-              <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
-                {heartIcon}
-              </Pressable>
+              <View style={styles.tagRow}>
+                {card.tags.map((tag, index) => (
+                  <View key={toStableListKey(tag, index)} style={styles.tagChip}>
+                    <CustomText style={styles.tagLabel}>{formatPickTagLabel(tag)}</CustomText>
+                  </View>
+                ))}
+              </View>
+
+              <CustomText style={styles.descriptionText}>{card.shortDescription}</CustomText>
             </View>
 
-            <View style={styles.tagRow}>
-              {card.tags.map((tag, index) => (
-                <View key={toStableListKey(tag, index)} style={styles.tagChip}>
-                  <CustomText style={styles.tagLabel}>{formatPickTagLabel(tag)}</CustomText>
-                </View>
-              ))}
-            </View>
-
-            <CustomText style={styles.descriptionText}>{card.shortDescription}</CustomText>
-          </View>
-
-          <Pressable style={styles.detailButton} onPress={onViewDetail}>
-            <CustomText style={styles.detailButtonText}>{t.picks.detailButton}</CustomText>
+            <Pressable style={styles.detailButton} onPress={onViewDetail}>
+              <CustomText style={styles.detailButtonText}>{t.picks.detailButton}</CustomText>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </Animated.View>
       </Animated.View>
-    </View>
+    </GestureDetector>
   );
 }
 
@@ -786,8 +869,6 @@ const styles = StyleSheet.create({
   },
   cardStack: {
     position: 'relative',
-    width: 343,
-    height: CARD_HEIGHT,
   },
   topCard: {
     position: 'absolute',
@@ -797,7 +878,6 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   card: {
-    width: 343,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Palette.grey200,
@@ -813,15 +893,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    height: CARD_HEIGHT,
     shadowOpacity: 0.04,
     elevation: 1,
+  },
+  behindCardTint: {
+    backgroundColor: '#000000',
   },
   cardFace: {
     position: 'absolute',
     top: 0,
     left: 0,
-    height: CARD_HEIGHT,
     backfaceVisibility: 'hidden',
   },
   cardBack: {

@@ -1,5 +1,5 @@
 import { client } from './client';
-import type { NextStep } from './types';
+import type { LanguageCode, NextStep } from './types';
 
 // Matches the backend's TravelStyle enum exactly (see PUT /users/me/onboarding) —
 // values are sent as-is in the onboarding completion request.
@@ -52,19 +52,22 @@ type LocationSearchEnvelope = {
 };
 
 // GET /locations/search — call after debouncing the search box input
-// (300~500ms) and canceling any in-flight request for a stale query. The
-// backend merges Kakao address + keyword search, dedupes, and normalizes
-// addresses server-side, so a single request is enough. No matches is a
-// normal 200 with items: [].
+// (300~500ms) and canceling any in-flight request for a stale query. `language`
+// picks the provider, not just a display translation: KO uses Kakao address/
+// keyword search, EN uses Google Places' own English results (not a
+// backend-side translation or romanization of the Kakao data). The backend
+// dedupes, normalizes addresses, and maps the 7 service regions either way.
+// No matches is a normal 200 with items: [].
 export async function searchLocations(
   query: string,
+  language: LanguageCode,
   limit = 10,
   signal?: AbortSignal,
 ): Promise<LocationSearchItem[]> {
   const q = query.trim();
   if (!q) return [];
   const response = await client.get<LocationSearchEnvelope>('/locations/search', {
-    params: { query: q, limit },
+    params: { query: q, language, limit },
     signal,
   });
   return response.data.data.items;

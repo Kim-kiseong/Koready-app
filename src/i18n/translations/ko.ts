@@ -302,7 +302,6 @@ export interface Translations {
   address: {
     title: string;
     searchPlaceholder: string;
-    addHome: string;
     currentAddressBadge: string;
     alerts: {
       errorTitle: string;
@@ -870,7 +869,6 @@ export const ko: Translations = {
   address: {
     title: "주소 설정",
     searchPlaceholder: "도로명, 건물명, 지번으로 검색해 보세요",
-    addHome: "우리집 추가",
     currentAddressBadge: "현재 설정된 주소",
     alerts: {
       errorTitle: "오류",

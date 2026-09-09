@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { EventSortOrder } from '@/api/home';
@@ -15,14 +16,74 @@ export type SortBottomSheetProps = {
 };
 
 const OPTIONS: EventSortOrder[] = ['RECOMMENDED', 'DEADLINE'];
+const SHEET_HEIGHT = 190;
+const ANIMATION_DURATION = 220;
 
 export default function SortBottomSheet({ visible, value, onSelect, onClose }: SortBottomSheetProps) {
   const t = useTranslation();
+  const [translateY] = useState(() => new Animated.Value(SHEET_HEIGHT));
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  // The parent toggles `visible` directly (no close handshake), so the exit
+  // animation has to be kept alive across the render where `visible` flips
+  // to false — deriving `isClosing` here (React's documented "adjust state
+  // during render" escape hatch) instead of in an effect keeps this in sync
+  // on the very same render, before the sheet would otherwise unmount.
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [isClosing, setIsClosing] = useState(false);
+
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (!visible) setIsClosing(true);
+  }
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    if (!isClosing) return;
+
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: SHEET_HEIGHT,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setIsClosing(false);
+    });
+  }, [visible, isClosing, translateY, overlayOpacity]);
+
+  if (!visible && !isClosing) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.overlayContainer}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.overlayBackground, { opacity: overlayOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
           </View>
@@ -47,17 +108,19 @@ export default function SortBottomSheet({ visible, value, onSelect, onClose }: S
           </View>
 
           <SafeAreaView edges={['bottom']} />
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  overlayContainer: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  overlayBackground: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     height:190,

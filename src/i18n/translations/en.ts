@@ -299,7 +299,6 @@ export const en: DeepPartial<Translations> = {
   address: {
     title: 'Address Settings',
     searchPlaceholder: 'Search by road name, building, or lot number',
-    addHome: 'Add Home',
     currentAddressBadge: 'Current address',
     alerts: {
       errorTitle: 'Error',

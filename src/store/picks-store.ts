@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { secureStorage } from './secure-storage';
+import { webPersistentStorage } from './local-storage';
 
 type PicksState = {
   hasSeenGuide: boolean;
@@ -18,7 +18,7 @@ export const usePicksStore = create<PicksState>()(
     }),
     {
       name: 'picks-storage',
-      storage: createJSONStorage(() => secureStorage),
+      storage: createJSONStorage(() => webPersistentStorage),
       partialize: (state) => ({ hasSeenGuide: state.hasSeenGuide }),
       onRehydrateStorage: () => () => {
         usePicksStore.setState({ hasHydrated: true });

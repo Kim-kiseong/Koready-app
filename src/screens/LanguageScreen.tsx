@@ -12,7 +12,7 @@ import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { resolveNextStepRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
+import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function LanguageScreen() {
@@ -33,17 +33,24 @@ export default function LanguageScreen() {
     if (!selected || isSubmitting) return;
     if (isDevMockSession) {
       applyLanguageChange({ language: selected, nextStep: 'ONBOARDING', updatedAt: new Date().toISOString() });
-      router.push(resolveNextStepRoute('ONBOARDING'));
+      // replace, not push — this screen has no back button of its own, so it
+      // shouldn't linger in history either; the conceptual "back" target from
+      // the next screen is /terms, the step before this one.
+      router.replace(resolveNextStepRoute('ONBOARDING'));
       return;
     }
     setIsSubmitting(true);
     try {
       const result = await updateMyLanguage(selected);
       applyLanguageChange(result);
-      // Real backend only advances past TERMS once agreements are actually
-      // submitted — if terms still aren't agreed, result.nextStep comes back
-      // as 'TERMS' again here. Auto-agree instead of looping back to /language.
-      router.push(await resolveNextStepRouteSkippingTerms(result.nextStep));
+      // Always go to /terms next, even if this account already has terms
+      // agreed (e.g. the user went back from Location to Terms to here, then
+      // hit "Next" again) — routing by result.nextStep instead would skip
+      // straight past Terms in that case, which reads as the flow randomly
+      // dropping a step. TermsScreen itself already shows already-agreed
+      // items pre-checked, so re-entering it here costs one extra tap, not a
+      // re-agreement.
+      router.replace('/terms');
     } catch (error) {
       Alert.alert('오류', error instanceof Error ? error.message : '언어 설정에 실패했습니다.');
     } finally {
