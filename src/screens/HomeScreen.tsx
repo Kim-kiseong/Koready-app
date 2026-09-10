@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { FeaturedEvent, FeaturedEventCategory, GuideArticle } from '@/api/home';
-import { FEATURED_EVENT_CATEGORIES, fetchFeaturedEvents, fetchTravelGuides } from '@/api/home';
+import { FEATURED_EVENT_CATEGORIES, fetchFeaturedEvents, fetchHome, fetchTravelGuides } from '@/api/home';
 import type { LanguageCode } from '@/api/types';
 import { updateMyLanguage } from '@/api/user';
 import BottomNavBar from '@/components/BottomNavBar';
@@ -81,11 +81,55 @@ export default function HomeScreen() {
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
   useEffect(() => {
-    fetchFeaturedEvents(category).then(setEvents);
+    // Toggling language fires a new request before the previous one settles —
+    // without this guard, a slower first response (e.g. KO right after
+    // switching to EN) can resolve after the newer one and clobber it, so the
+    // screen gets stuck showing the language you just switched away from.
+    let cancelled = false;
+    fetchFeaturedEvents(category).then((result) => {
+      if (cancelled) return;
+      setEvents(result);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [category, language]);
 
   useEffect(() => {
-    fetchTravelGuides(language).then(setGuides);
+    let cancelled = false;
+    fetchTravelGuides(language).then((result) => {
+      if (cancelled) return;
+      setGuides(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
+
+  // The current location's display name is localized server-side from the
+  // account's preferredLanguage, but onboarding-store only caches whatever
+  // string was captured when the location was first selected/searched — so a
+  // language toggle has to explicitly re-fetch it via GET /home instead of
+  // trusting the cached value, otherwise the address stays frozen in
+  // whichever language was active at selection time.
+  useEffect(() => {
+    let cancelled = false;
+    fetchHome()
+      .then((home) => {
+        if (cancelled || !home.currentLocation) return;
+        const prevLocation = useOnboardingStore.getState().location;
+        useOnboardingStore.getState().setLocation({
+          displayAddress: home.currentLocation.displayName,
+          latitude: prevLocation?.latitude ?? null,
+          longitude: prevLocation?.longitude ?? null,
+          source: prevLocation?.source ?? 'search',
+        });
+        useOnboardingStore.getState().setCurrentLocationId(home.currentLocation.locationId);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [language]);
 
   const month = useMemo(() => new Date().getMonth() + 1, []);
@@ -308,7 +352,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop:24,
+    paddingTop: 16,
   },
   locationRow: {
     flexDirection: 'row',
@@ -318,7 +362,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     flexShrink: 1,
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
   },
@@ -352,7 +396,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   languageTextInactive: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     color: Palette.grey600,
   },

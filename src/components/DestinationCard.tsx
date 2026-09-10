@@ -1,12 +1,15 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { OnboardingCandidateItem } from '@/api/onboarding';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useLanguageStore } from '@/store/language-store';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
+import { formatPlaceTag } from '@/utils/place-i18n';
 
 export type DestinationCardProps = {
   item: OnboardingCandidateItem;
@@ -15,6 +18,8 @@ export type DestinationCardProps = {
 };
 
 export default function DestinationCard({ item, selected, onPress }: DestinationCardProps) {
+  const language = useLanguageStore((state) => state.language);
+
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {item.imageUrl ? (
@@ -22,6 +27,7 @@ export default function DestinationCard({ item, selected, onPress }: Destination
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
       )}
+      {selected && <View style={[StyleSheet.absoluteFill, styles.selectedOverlay]} />}
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
         start={{ x: 0.5, y: 0.12 }}
@@ -31,16 +37,21 @@ export default function DestinationCard({ item, selected, onPress }: Destination
 
       {selected && (
         <View style={styles.checkBadge}>
-          <CustomText style={styles.checkMark}>✓</CustomText>
+          <SymbolView
+            name={{ ios: 'checkmark', android: 'check', web: 'check' }}
+            size={16}
+            weight="bold"
+            tintColor={Palette.text}
+          />
         </View>
       )}
 
       <View style={styles.content}>
         <CustomText style={styles.title}>{item.title}</CustomText>
         <View style={styles.tagRow}>
-          {item.tags.map((tag, index) => (
+          {item.tags.slice(0, 2).map((tag, index) => (
             <View key={toStableListKey(tag, index)} style={styles.tag}>
-              <CustomText style={styles.tagText}>{toDisplayText(tag)}</CustomText>
+              <CustomText style={styles.tagText}>{formatPlaceTag(toDisplayText(tag), language)}</CustomText>
             </View>
           ))}
         </View>
@@ -61,21 +72,19 @@ const styles = StyleSheet.create({
   imageFallback: {
     backgroundColor: Palette.grey200,
   },
+  selectedOverlay: {
+    backgroundColor: Palette.selectionOverlay,
+  },
   checkBadge: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkMark: {
-    fontSize: 12,
-    color: '#1C1C1A',
-    fontFamily: FontFamily.pretendard.bold,
   },
   content: {
     gap: 8,
@@ -102,7 +111,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     lineHeight: 16.8,
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     color: '#ffffff',
   },
 });

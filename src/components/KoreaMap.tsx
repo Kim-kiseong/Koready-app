@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
@@ -239,85 +240,118 @@ const REGION_LABELS = [
   { key: 'gangwon', left: 201, top: 82 },
 ] as const;
 
+const TOTAL_MAP_ASSETS = MAP_PIECES.length + REGION_ARTS.length;
+
 export default function KoreaMap({ width }: KoreaMapProps) {
   const router = useRouter();
   const t = useTranslation();
   const scale = width / MAP_CANVAS_BASE_WIDTH;
   const sceneHeight = MAP_CANVAS_BASE_HEIGHT * scale;
   const regionLabels = t.map.regionLabels;
+  const [loadedAssetKeys, setLoadedAssetKeys] = useState<Set<string>>(() => new Set());
+  const mapReady = loadedAssetKeys.size >= TOTAL_MAP_ASSETS;
+  const markAssetReady = useCallback((key: string) => {
+    setLoadedAssetKeys((previous) => {
+      if (previous.has(key)) {
+        return previous;
+      }
+
+      const next = new Set(previous);
+      next.add(key);
+      return next;
+    });
+  }, []);
+  const mapLayerStyle = useMemo(() => [styles.mapLayer, mapReady ? styles.mapLayerVisible : null], [mapReady]);
 
   return (
     <View style={[styles.scene, { width, height: sceneHeight }]}>
-      {MAP_PIECES.map((piece) => (
-        <Image
-          key={piece.key}
-          source={piece.source}
+      {!mapReady ? (
+        <View style={styles.loadingLayer}>
+          <ActivityIndicator color={Palette.primary} />
+        </View>
+      ) : null}
+
+      <View style={mapLayerStyle}>
+        {MAP_PIECES.map((piece) => (
+          <Image
+            key={piece.key}
+            source={piece.source}
+            style={[
+              styles.piece,
+              {
+                left: piece.left * scale,
+                top: piece.top * scale,
+                width: piece.width * scale,
+                height: piece.height * scale,
+              },
+            ]}
+            contentFit="contain"
+            accessibilityLabel={`${piece.key} 지도 조각`}
+            onLoad={() => markAssetReady(`piece:${piece.key}`)}
+            onError={() => markAssetReady(`piece:${piece.key}`)}
+          />
+        ))}
+
+        <View
           style={[
-            styles.piece,
+            styles.windowFill,
+            styles.pointerEventsNone,
             {
-              left: piece.left * scale,
-              top: piece.top * scale,
-              width: piece.width * scale,
-              height: piece.height * scale,
+              left: GYEONGSANG_WINDOW.left * scale,
+              top: GYEONGSANG_WINDOW.top * scale,
+              width: GYEONGSANG_WINDOW.size * scale,
+              height: GYEONGSANG_WINDOW.size * scale,
             },
           ]}
-          contentFit="contain"
-          accessibilityLabel={`${piece.key} 지도 조각`}
         />
-      ))}
 
-      <View
-        pointerEvents="none"
-        style={[
-          styles.windowFill,
-          {
-            left: GYEONGSANG_WINDOW.left * scale,
-            top: GYEONGSANG_WINDOW.top * scale,
-            width: GYEONGSANG_WINDOW.size * scale,
-            height: GYEONGSANG_WINDOW.size * scale,
-          },
-        ]}
-      />
-
-      {REGION_ARTS.map((region) => {
-        const regionStyle = [
-          styles.piece,
-          {
-            left: region.left * scale,
-            top: region.top * scale,
-            width: region.size * scale,
-            height: region.size * scale,
-          },
-        ];
-
-        return (
-          <Pressable
-            key={region.key}
-            accessibilityRole="link"
-            accessibilityLabel={`${regionLabels[region.key as MapRegionKey]} 상세 페이지로 이동`}
-            onPress={() => router.push(region.href)}
-            style={regionStyle}
-          >
-            <Image source={region.source} style={StyleSheet.absoluteFill} contentFit="contain" />
-          </Pressable>
-        );
-      })}
-
-      {REGION_LABELS.map((region) => (
-        <View
-          key={region.key}
-          pointerEvents="none"
-          style={[
-            styles.regionPill,
+        {REGION_ARTS.map((region) => {
+          const regionStyle = [
+            styles.piece,
             {
               left: region.left * scale,
               top: region.top * scale,
+              width: region.size * scale,
+              height: region.size * scale,
             },
-          ]}
-        >
-          <CustomText style={styles.regionText}>{regionLabels[region.key as MapRegionKey]}</CustomText>
-        </View>
-      ))}
+          ];
+
+          return (
+            <Pressable
+              key={region.key}
+              accessibilityRole="link"
+              accessibilityLabel={`${regionLabels[region.key as MapRegionKey]} 상세 페이지로 이동`}
+              onPress={() => router.push(region.href)}
+              style={regionStyle}
+              disabled={!mapReady}
+            >
+              <Image
+                source={region.source}
+                style={StyleSheet.absoluteFill}
+                contentFit="contain"
+                onLoad={() => markAssetReady(`art:${region.key}`)}
+                onError={() => markAssetReady(`art:${region.key}`)}
+              />
+            </Pressable>
+          );
+        })}
+
+        {REGION_LABELS.map((region) => (
+          <View
+            key={region.key}
+            style={[
+              styles.regionPill,
+              styles.pointerEventsNone,
+              {
+                left: region.left * scale,
+                top: region.top * scale,
+              },
+            ]}
+          >
+            <CustomText style={styles.regionText}>{regionLabels[region.key as MapRegionKey]}</CustomText>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -328,8 +362,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginHorizontal: -24,
   },
+  loadingLayer: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapLayer: {
+    ...StyleSheet.absoluteFill,
+    opacity: 0,
+  },
+  mapLayerVisible: {
+    opacity: 1,
+  },
   piece: {
     position: 'absolute',
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
   },
   windowFill: {
     position: 'absolute',
@@ -343,10 +392,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 0 10px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 0 },
+        }),
     elevation: 2,
   },
   regionText: {

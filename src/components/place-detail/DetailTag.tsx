@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   label: {
-    fontFamily: 'Inter',
+    fontFamily: 'Pretendard-Medium',
     fontWeight: '500',
     fontSize: 12,
     lineHeight: 16.8,

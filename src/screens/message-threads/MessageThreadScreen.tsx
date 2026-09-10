@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,17 +13,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { fetchProfileOptions } from '@/api/buddy-profile';
 import { createMessageThreadIdempotencyKey, fetchMessageThread, markMessageThreadRead, replyMessageThread } from '@/api/messages';
 import { fetchPlaceDetail, type PlaceDetail } from '@/api/place';
 import type { MessageThreadMessage, MessageThreadResponse, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
-import { fetchProfileOptions } from '@/api/buddy-profile';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { goBackOrRoot } from '@/navigation/safe-back';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
@@ -52,15 +52,7 @@ export default function MessageThreadScreen() {
   const language = useLanguageStore((state) => state.language);
   const t = useTranslation();
   const normalizedThreadId = Array.isArray(threadId) ? threadId[0] : threadId;
-  const storedThread = useMessageThreadStore((state) => {
-    if (!normalizedThreadId) {
-      return null;
-    }
-
-    return state.threads[normalizedThreadId] ?? null;
-  });
-
-  const [threadState, setThreadState] = useState<MessageThreadResponse | null>(storedThread);
+  const [threadState, setThreadState] = useState<MessageThreadResponse | null>(null);
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
@@ -71,18 +63,15 @@ export default function MessageThreadScreen() {
   const [isSending, setIsSending] = useState(false);
 
   const hasMarkedReadRef = useRef<string | null>(null);
+  const sendInFlightRef = useRef(false);
+  const replyInputRef = useRef<TextInput | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const visibleThread = threadState ?? storedThread;
+  const visibleThread = threadState;
   const selectedProfileFallback = useMemo(
     () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
     [language, selectedProfileId],
   );
-  const placeRouteId = visibleThread?.place.routeId ?? (visibleThread ? String(visibleThread.place.placeId) : '');
-
-  useEffect(() => {
-    setThreadState(storedThread);
-  }, [storedThread]);
 
   useEffect(() => {
     if (!normalizedThreadId) {
@@ -105,7 +94,7 @@ export default function MessageThreadScreen() {
           return;
         }
 
-        useMessageThreadStore.getState().upsertThread(loadedThread);
+        useMessageThreadStore.getState().replaceThread(loadedThread);
         setThreadState(loadedThread);
 
         const [optionsResult, placeResult] = await Promise.allSettled([
@@ -123,6 +112,8 @@ export default function MessageThreadScreen() {
 
         if (placeResult.status === 'fulfilled') {
           setPlaceDetail(placeResult.value);
+        } else {
+          setLoadError(extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback));
         }
       } catch (error) {
         if (!cancelled) {
@@ -165,7 +156,7 @@ export default function MessageThreadScreen() {
           return;
         }
 
-        useMessageThreadStore.getState().upsertThread(refreshedThread);
+        useMessageThreadStore.getState().replaceThread(refreshedThread);
         setThreadState(refreshedThread);
         hasMarkedReadRef.current = normalizedThreadId;
       } catch {
@@ -220,7 +211,7 @@ export default function MessageThreadScreen() {
   }, [isLoadingOlder, normalizedThreadId, visibleThread]);
 
   const handleSendReply = useCallback(async () => {
-    if (!normalizedThreadId || !visibleThread || isSending || !visibleThread.canReply) {
+    if (!normalizedThreadId || !visibleThread || isSending || sendInFlightRef.current || !visibleThread.canReply) {
       return;
     }
 
@@ -230,6 +221,7 @@ export default function MessageThreadScreen() {
     }
 
     try {
+      sendInFlightRef.current = true;
       setIsSending(true);
 
       const message = await replyMessageThread(
@@ -266,6 +258,7 @@ export default function MessageThreadScreen() {
     } catch {
       // Keep the draft intact when sending fails.
     } finally {
+      sendInFlightRef.current = false;
       setIsSending(false);
     }
   }, [content, isSending, normalizedThreadId, visibleThread]);
@@ -284,18 +277,7 @@ export default function MessageThreadScreen() {
     } as never);
   }, [router, visibleThread]);
 
-  if (isLoading && !visibleThread) {
-    return (
-      <ScreenShell>
-        <View style={styles.loadingState}>
-          <ActivityIndicator color={Palette.primary} />
-          <CustomText style={styles.loadingText}>{t.messages.thread.loading}</CustomText>
-        </View>
-      </ScreenShell>
-    );
-  }
-
-  if ((loadError || !visibleThread) && !visibleThread) {
+  if (loadError) {
     return (
       <ScreenShell>
         <View style={styles.errorState}>
@@ -312,32 +294,20 @@ export default function MessageThreadScreen() {
     );
   }
 
-  if (!visibleThread) {
-    return null;
+  if (isLoading || !visibleThread || !placeDetail) {
+    return (
+      <ScreenShell>
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={Palette.primary} />
+          <CustomText style={styles.loadingText}>{t.messages.thread.loading}</CustomText>
+        </View>
+      </ScreenShell>
+    );
   }
 
-  const currentPlace = placeDetail ?? {
-    id: placeRouteId || String(visibleThread.place.placeId),
-    routeId: visibleThread.place.routeId ?? placeRouteId,
-    title: visibleThread.place.title,
-    address: visibleThread.place.address ?? '',
-    tags: [],
-    isSaved: false,
-    images: visibleThread.place.imageUrl
-      ? [{ source: { uri: visibleThread.place.imageUrl }, order: 1, altText: visibleThread.place.title }]
-      : [],
-    description: {
-      impactTitle: visibleThread.place.title,
-      impactSubtitle: '',
-      introParagraphs: [],
-      enjoyPoints: [],
-    },
-    relatedPlaces: [],
-  };
-
   const displayPlace = {
-    ...currentPlace,
-    title: visibleThread.place.title,
+    ...placeDetail,
+    title: placeDetail.title || visibleThread.place.title,
   };
 
   return (
@@ -346,12 +316,7 @@ export default function MessageThreadScreen() {
         <View style={styles.screen}>
           <View style={styles.header}>
             <Pressable hitSlop={12} onPress={() => goBackOrRoot(router, '/message-threads')}>
-              <SymbolView
-                name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-                size={18}
-                weight="semibold"
-                tintColor={Palette.text}
-              />
+              <BackIcon />
             </Pressable>
 
             <CustomText style={styles.headerTitle}>{visibleThread.otherProfile.nickname}</CustomText>
@@ -382,8 +347,8 @@ export default function MessageThreadScreen() {
 
               <View style={styles.placeInfoRow}>
                 <View style={styles.placeInfo}>
-                  <CustomText style={styles.placeTitle}>{visibleThread.place.title}</CustomText>
-                  <CustomText style={styles.placeAddress}>{currentPlace.address || visibleThread.place.title}</CustomText>
+                  <CustomText style={styles.placeTitle}>{displayPlace.title}</CustomText>
+                  <CustomText style={styles.placeAddress}>{displayPlace.address || displayPlace.title}</CustomText>
                 </View>
 
                 <Pressable style={styles.placeButton} onPress={handleOpenPlace}>
@@ -450,8 +415,12 @@ export default function MessageThreadScreen() {
             <View style={styles.replySection}>
               <CustomText style={styles.sectionTitle}>{t.messages.thread.replySection}</CustomText>
 
-              <View style={[styles.replyBox, !visibleThread.canReply && styles.replyBoxDisabled]}>
+              <Pressable
+                style={[styles.replyBox, !visibleThread.canReply && styles.replyBoxDisabled]}
+                disabled={!visibleThread.canReply}
+                onPress={() => replyInputRef.current?.focus()}>
                 <TextInput
+                  ref={replyInputRef}
                   value={content}
                   onChangeText={setContent}
                   placeholder={
@@ -468,7 +437,7 @@ export default function MessageThreadScreen() {
                   style={styles.replyInput}
                   textAlignVertical="top"
                 />
-              </View>
+              </Pressable>
 
               <View style={styles.counterRow}>
                 <CustomText style={styles.counterCurrent}>{content.length}</CustomText>
@@ -830,6 +799,8 @@ const styles = StyleSheet.create({
   },
   replyInput: {
     flex: 1,
+    width: '100%',
+    minHeight: 68,
     padding: 0,
     margin: 0,
     fontFamily: FontFamily.pretendard.medium,
@@ -851,14 +822,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.26,
   },
   counterSlash: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey500,
     letterSpacing: -0.26,
   },
   counterTotal: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.grey500,

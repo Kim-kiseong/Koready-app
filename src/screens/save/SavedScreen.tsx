@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -633,10 +634,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Palette.grey200,
     backgroundColor: Palette.white,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 5, height: 5 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 10px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+          shadowOffset: { width: 5, height: 5 },
+        }),
     elevation: 100,
     zIndex: 100,
   },

@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
-import { SymbolView } from 'expo-symbols';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,14 +28,14 @@ import type {
   ProfileOptionsResponse,
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
-import { formatCountryDisplay, normalizeCountryCode } from '@/utils/country';
+import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { resolveProfileImageUri } from '@/utils/profile-image';
 
@@ -88,55 +87,6 @@ const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'lang
 };
 
 const MAX_MESSAGE_LENGTH = 500;
-const MOCK_MESSAGE_COMPOSE_PROFILE: BuddyProfileDetail = {
-  profileId: 501,
-  profileImageUrl: 'https://picsum.photos/id/1027/300/300',
-  nickname: 'Emma',
-  nationality: 'France',
-  nationalityCode: 'FR',
-  availableLanguages: ['EN', 'KO'],
-  koreanLevel: 'BEGINNER',
-  travelStyles: ['LOCAL_FOOD', 'NATURE'],
-  bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-  socialLinks: [
-    {
-      type: 'INSTAGRAM',
-      displayValue: '@emma.travels',
-      url: 'https://instagram.com/emma.travels',
-    },
-    {
-      type: 'KAKAOTALK',
-      displayValue: 'emma_kr',
-      url: 'https://open.kakao.com/o/emma_kr',
-    },
-  ],
-  profilePublic: true,
-  snsPublic: true,
-  allowsMessages: true,
-  canMessage: true,
-  blockedByMe: false,
-  updatedAt: '2026-08-06T00:00:00.000Z',
-};
-
-function buildMockComposeProfile(profileId: number | null, language: 'KO' | 'EN'): BuddyProfileDetail {
-  if (profileId != null) {
-    const mockProfile = getMockBuddyProfileDetailById(profileId);
-    if (mockProfile) {
-      return {
-        ...mockProfile,
-        nationalityCode: normalizeCountryCode(mockProfile.nationality ?? '') || '',
-      };
-    }
-  }
-
-  return {
-    ...MOCK_MESSAGE_COMPOSE_PROFILE,
-    bio:
-      language === 'EN'
-        ? 'I love Korean traditional culture and exploring local food spots :)'
-        : MOCK_MESSAGE_COMPOSE_PROFILE.bio,
-  };
-}
 
 export default function MessageComposeScreen() {
   const router = useRouter();
@@ -186,9 +136,7 @@ export default function MessageComposeScreen() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [normalizedReceiverProfileId]);
 
-  const [profile, setProfile] = useState<BuddyProfileDetail | null>(() =>
-    buildMockComposeProfile(parsedReceiverProfileId, useLanguageStore.getState().language),
-  );
+  const [profile, setProfile] = useState<BuddyProfileDetail | null>(null);
   const [options, setOptions] = useState<Pick<
     ProfileOptionsResponse,
     'countries' | 'languages' | 'koreanLevels'
@@ -198,7 +146,7 @@ export default function MessageComposeScreen() {
     languages: [...FALLBACK_PROFILE_OPTIONS.languages],
     koreanLevels: [...FALLBACK_PROFILE_OPTIONS.koreanLevels],
   }));
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -207,6 +155,8 @@ export default function MessageComposeScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
+  const sendInFlightRef = useRef(false);
+  const messageInputRef = useRef<TextInput | null>(null);
 
   const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const sendDisabled = !content.trim() || isSending;
@@ -235,7 +185,7 @@ export default function MessageComposeScreen() {
   useEffect(() => {
     let cancelled = false;
     setLoadError(null);
-    setProfile(buildMockComposeProfile(parsedReceiverProfileId, language));
+    setProfile(null);
     setOptions({
       ...FALLBACK_PROFILE_OPTIONS,
       countries: [...FALLBACK_PROFILE_OPTIONS.countries],
@@ -244,6 +194,7 @@ export default function MessageComposeScreen() {
     });
 
     if (parsedReceiverProfileId == null) {
+      setLoadError(t.messages.compose.errorDescriptionFallback);
       setIsLoading(false);
       return () => {
         cancelled = true;
@@ -251,6 +202,7 @@ export default function MessageComposeScreen() {
     }
 
     (async () => {
+      setIsLoading(true);
       const [profileResult, optionsResult] = await Promise.allSettled([
         fetchBuddyProfile(parsedReceiverProfileId),
         fetchProfileOptions(),
@@ -262,6 +214,8 @@ export default function MessageComposeScreen() {
 
       if (profileResult.status === 'fulfilled') {
         setProfile(profileResult.value);
+      } else {
+        setLoadError(extractErrorMessage(profileResult.reason, t.messages.compose.errorDescriptionFallback));
       }
 
       if (optionsResult.status === 'fulfilled') {
@@ -278,7 +232,7 @@ export default function MessageComposeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [language, parsedPlaceId, parsedPlaceNumericId, parsedReceiverProfileId, reloadKey, router]);
+  }, [parsedReceiverProfileId, reloadKey, t.messages.compose.errorDescriptionFallback]);
 
   const languageChips = useMemo(() => {
     if (!profile) {
@@ -302,11 +256,12 @@ export default function MessageComposeScreen() {
     }
 
     const trimmedContent = content.trim();
-    if (!trimmedContent || isSending) {
+    if (!trimmedContent || isSending || sendInFlightRef.current) {
       return;
     }
 
     try {
+      sendInFlightRef.current = true;
       setIsSending(true);
       const receiverId = parsedReceiverProfileId ?? profile.profileId;
       const placeIdValue = parsedPlaceNumericId ?? parsedPlaceId ?? 0;
@@ -344,6 +299,7 @@ export default function MessageComposeScreen() {
     } catch (error) {
       Alert.alert(t.messages.compose.sendFailedTitle, extractErrorMessage(error, t.messages.compose.errorDescriptionFallback));
     } finally {
+      sendInFlightRef.current = false;
       setIsSending(false);
     }
   }, [
@@ -454,12 +410,7 @@ export default function MessageComposeScreen() {
         <View style={styles.screen}>
           <View style={styles.header}>
             <Pressable hitSlop={12} onPress={requestLeaveScreen}>
-              <SymbolView
-                name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-                size={18}
-                weight="semibold"
-                tintColor={Palette.text}
-              />
+              <BackIcon />
             </Pressable>
 
             <CustomText style={styles.headerTitle}>{t.messages.compose.title}</CustomText>
@@ -499,8 +450,9 @@ export default function MessageComposeScreen() {
             <View style={styles.messageSection}>
               <CustomText style={styles.sectionTitle}>{t.messages.compose.sectionMessage}</CustomText>
 
-              <View style={styles.messageBox}>
+              <Pressable style={styles.messageBox} onPress={() => messageInputRef.current?.focus()}>
                 <TextInput
+                  ref={messageInputRef}
                   value={content}
                   onChangeText={setContent}
                   placeholder={t.messages.compose.placeholder}
@@ -512,7 +464,7 @@ export default function MessageComposeScreen() {
                   style={styles.messageInput}
                   textAlignVertical="top"
                 />
-              </View>
+              </Pressable>
 
               <View style={styles.counterRow}>
                 <CustomText style={styles.counterCurrent}>{contentLength}</CustomText>
@@ -919,6 +871,8 @@ const styles = StyleSheet.create({
   },
   messageInput: {
     flex: 1,
+    width: '100%',
+    minHeight: 68,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     lineHeight: 22.4,
@@ -1087,7 +1041,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   successSecondaryButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.semiBold,
     fontWeight: '500',
     fontSize: 18,
     lineHeight: 25.2,

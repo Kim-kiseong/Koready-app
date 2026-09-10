@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import type { FeaturedEvent } from '@/api/home';
 import CustomText from '@/components/CustomText';
@@ -50,9 +50,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.bold,
     fontSize: 16,
     color: '#ffffff',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
+    ...(Platform.OS === 'web'
+      ? ({ textShadow: '0 0 4px rgba(0, 0, 0, 0.2)' } as object)
+      : {
+          textShadowColor: 'rgba(0,0,0,0.2)',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 4,
+        }),
   },
   dateRange: {
     fontFamily: FontFamily.pretendard.regular,

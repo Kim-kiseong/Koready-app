@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { EventListing } from '@/api/home';
@@ -60,10 +60,14 @@ const styles = StyleSheet.create({
     borderColor: Palette.grey200,
     backgroundColor: Palette.white,
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 4px 10px rgba(0, 0, 0, 0.04)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.04,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }),
     elevation: 1,
   },
   photoSection: {
@@ -87,9 +91,13 @@ const styles = StyleSheet.create({
     fontSize: 11.6,
     lineHeight: 16.8,
     color: '#ffffff',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
+    ...(Platform.OS === 'web'
+      ? ({ textShadow: '0 0 4px rgba(0, 0, 0, 0.2)' } as object)
+      : {
+          textShadowColor: 'rgba(0, 0, 0, 0.2)',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 4,
+        }),
   },
   content: {
     padding: 12,

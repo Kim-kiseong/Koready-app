@@ -5,6 +5,7 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -68,7 +69,7 @@ export default function JejuScreen() {
   const sortChevronName = isSortMenuOpen
     ? ({ ios: 'chevron.up', android: 'arrow_drop_up', web: 'arrow_drop_up' } as const)
     : ({ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' } as const);
-  const snapPoints = useMemo(() => ['59%', '76%', '96%'], []);
+  const snapPoints = useMemo(() => ['56%', '76%', '96%'], []);
 
   const loadPlaces = useCallback(
     async (nextCursor: string | null = null, isMore = false) => {
@@ -159,7 +160,7 @@ export default function JejuScreen() {
         <View style={[styles.mapStage, { width: mapWidth, height: mapHeight }]}>
           <Image source={JEJU_MAP_IMAGE} style={styles.mapBase} contentFit="contain" />
 
-          <View style={styles.mapOverlay} pointerEvents="none">
+          <View style={styles.mapOverlay}>
             {JEJU_MAP_ARTWORK.map((artwork) => (
               <Image
                 key={artwork.key}
@@ -333,15 +334,20 @@ const styles = StyleSheet.create({
   mapOverlay: {
     ...StyleSheet.absoluteFill,
     overflow: 'visible',
+    pointerEvents: 'none',
   },
   mapIcon: {
     position: 'absolute',
   },
   bottomSheetShadow: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: -4 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 -4px 18px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: -4 },
+        }),
     elevation: 8,
   },
   bottomSheetBackground: {
@@ -428,10 +434,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Palette.grey200,
     backgroundColor: Palette.white,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 5, height: 5 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 10px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+          shadowOffset: { width: 5, height: 5 },
+        }),
     elevation: 100,
     zIndex: 100,
   },

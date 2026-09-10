@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
       unreadMessageCount: 0,
       deviceId: Crypto.randomUUID(),
       hasHydrated: false,
-      setSession: (session) =>
+      setSession: (session) => {
         set({
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,
@@ -49,7 +49,15 @@ export const useAuthStore = create<AuthState>()(
           refreshTokenExpiresAt: session.refreshTokenExpiresAt,
           user: session.user,
           nextStep: session.nextStep,
-        }),
+        });
+        // The backend localizes every authenticated response (place titles,
+        // tags, ...) using the account's saved preferredLanguage, not the
+        // Accept-Language header — so local i18n state has to mirror it
+        // here, otherwise a returning user whose profile is EN sees Korean
+        // app chrome (from language-store's local default) alongside English
+        // content (from the backend actually honoring their real profile).
+        useLanguageStore.getState().setLanguage(session.user.preferredLanguage);
+      },
       applyLanguageChange: (data) => {
         set((state) => ({
           nextStep: data.nextStep,

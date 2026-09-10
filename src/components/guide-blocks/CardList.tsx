@@ -6,8 +6,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
-import { FontFamily } from '@/constants/typography';
 import type { CardIconKey } from '@/constants/guide-content';
+import { FontFamily } from '@/constants/typography';
 
 type SymbolName = ComponentProps<typeof SymbolView>['name'];
 type CardIconName = SymbolName | CardIconKey;
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   chipText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.primary,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 12,
     lineHeight: 16.8,
     color: '#4E5968',

@@ -29,15 +29,16 @@ const BODY_TEXT: Record<'SERVICE_TERMS' | 'PRIVACY_POLICY', Record<'KO' | 'EN', 
 
 export default function TermsDetailScreen() {
   const router = useRouter();
-  const { code } = useLocalSearchParams<{ code: 'SERVICE_TERMS' | 'PRIVACY_POLICY' }>();
+  const { code, from } = useLocalSearchParams<{ code: 'SERVICE_TERMS' | 'PRIVACY_POLICY'; from?: string }>();
   const language = useLanguageStore((state) => state.language);
 
   const title = TITLES[code]?.[language] ?? '';
   const body = BODY_TEXT[code]?.[language] ?? '';
+  const backFallback = from === 'settings' ? '/settings' : '/terms';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/terms')} title={title} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, backFallback)} title={title} rightIcon={null} />
 
       <ScrollView
         style={styles.scrollView}

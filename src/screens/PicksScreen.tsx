@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -57,6 +57,26 @@ const CARD_IMAGE_ASPECT_RATIO = 400 / 343;
 const CARD_FOOTER_HEIGHT = 85;
 const CARD_SCREEN_MARGIN = 16;
 const FLIP_DURATION = 400;
+// Figma (node 3197:16838): each card behind the top one is a uniformly
+// scaled-down copy offset down-and-right from the front card's top-left
+// corner — not centered/peeking-below like a plain scale+translateY would
+// produce — with a black tint that gets darker per layer back.
+const BEHIND_CARD_SCALE_STEP = 0.065;
+const BEHIND_CARD_X_OFFSET_RATIO = 0.1;
+const BEHIND_CARD_Y_OFFSET_RATIO = 0.045;
+const BEHIND_CARD_TINT_BASE_OPACITY = 0.1;
+const BEHIND_CARD_TINT_STEP_OPACITY = 0.2;
+// nextCards is capped at 2 (PicksScreen: cards.slice(currentIndex + 1,
+// currentIndex + 3)) — the deepest layer's right edge sits at
+// cardWidth * (1 + MAX_STACK_DEPTH * (X_OFFSET_RATIO - SCALE_STEP)) from the
+// front card's left edge. Sizing the front card off the raw screen width
+// (as if no stack existed) left zero room for that peek on a standard
+// ~375-430pt phone, so it ran off/touched the screen edge instead of
+// staying inset like Figma's reference. Reserving this factor up front
+// keeps the front card's right margin equal to its left margin even with
+// the full stack showing.
+const MAX_STACK_DEPTH = 2;
+const STACK_WIDTH_FACTOR = 1 + MAX_STACK_DEPTH * (BEHIND_CARD_X_OFFSET_RATIO - BEHIND_CARD_SCALE_STEP);
 const SWIPE_THRESHOLD = 120;
 const SWIPE_VELOCITY_THRESHOLD = 800;
 // Fallback only, used until the deck's own remainingThreshold arrives from the server.
@@ -194,6 +214,7 @@ function formatPickTagLabel(tag: unknown) {
 export default function PicksScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const SCOPES: { id: PicksScope; label: string }[] = [
     { id: 'NEARBY', label: t.picks.scopeNearby },
     { id: 'NATIONWIDE', label: t.picks.scopeNationwide },
@@ -226,6 +247,7 @@ export default function PicksScreen() {
   const isFetchingMoreRef = useRef(false);
   const latestRequestIdRef = useRef(0);
   const activeDeckIdRef = useRef<string | null>(null);
+  const isInitialDeckLoadRef = useRef(true);
 
   // The deck endpoint always returns each card's server-side saved flag, which
   // doesn't know about toggles the user made locally (dev mock session never
@@ -289,12 +311,30 @@ export default function PicksScreen() {
     // saved-place-store hydration so reconcileSaved has the restored heart
     // state available instead of an empty map on a cold start.
     if (!hasHydrated || !onboardingHasHydrated || !savedPlaceHydrated) return;
+
+    if (isInitialDeckLoadRef.current) {
+      isInitialDeckLoadRef.current = false;
+      loadDeck(scope);
+      return;
+    }
+
+    // The deck is generated server-side in whatever language was active at
+    // creation time, so a later language toggle doesn't retranslate it —
+    // the screen has to throw it away and request a fresh one, same reset
+    // changeScope does below.
+    setDeckId(null);
+    setCards([]);
+    setCurrentIndex(0);
+    setCursor(null);
+    setHasMore(false);
+    setIsLoading(true);
+    setHasError(false);
     loadDeck(scope);
-    // Still runs once — all hydration flags flip false→true exactly once,
-    // then stay true. Scope switches and retries go through changeScope/
-    // retryLoad below instead, so they can reset UI state synchronously.
+    // Scope switches and retries go through changeScope/retryLoad below
+    // instead, so they can reset UI state synchronously without waiting on
+    // this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated]);
+  }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated, language]);
 
   // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
   // of currentIndex than the server's remainingThreshold, pull the next page.
@@ -489,7 +529,7 @@ function PicksDeck({
   onSwipePrev,
 }: PicksDeckProps) {
   const { width: screenWidth } = useWindowDimensions();
-  const cardWidth = Math.min(CARD_MAX_WIDTH, screenWidth - CARD_SCREEN_MARGIN * 2);
+  const cardWidth = Math.min(CARD_MAX_WIDTH, (screenWidth - CARD_SCREEN_MARGIN * 2) / STACK_WIDTH_FACTOR);
   const cardSize = { width: cardWidth, height: cardWidth * CARD_IMAGE_ASPECT_RATIO + CARD_FOOTER_HEIGHT };
 
   return (
@@ -524,25 +564,36 @@ function PicksDeck({
 type CardSize = { width: number; height: number };
 
 function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number; cardSize: CardSize }) {
+  const scale = 1 - depth * BEHIND_CARD_SCALE_STEP;
+  const width = cardSize.width * scale;
+  const height = cardSize.height * scale;
+
   return (
     <View
       style={[
         styles.card,
         styles.behindCard,
-        cardSize,
+        styles.pointerEventsNone,
         {
-          transform: [{ translateY: depth * 10 }, { scale: 1 - depth * 0.05 }],
-          // The card directly behind the top one reads as fully solid — only
-          // cards further back (barely visible slivers anyway) fade out.
-          opacity: depth <= 1 ? 1 : 1 - (depth - 1) * 0.3,
+          width,
+          height,
+          left: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth,
+          top: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth,
+          borderRadius: 16 * scale,
         },
-      ]}
-      pointerEvents="none">
+      ]}>
       {card.imageUrl ? (
         <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
       )}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.behindCardTint,
+          { opacity: BEHIND_CARD_TINT_BASE_OPACITY + depth * BEHIND_CARD_TINT_STEP_OPACITY },
+        ]}
+      />
     </View>
   );
 }
@@ -777,10 +828,14 @@ const styles = StyleSheet.create({
   },
   scopeSegmentSelected: {
     backgroundColor: '#ffffff',
-    shadowColor: '#000000',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '3px 3px 4px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOffset: { width: 3, height: 3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+        }),
     elevation: 2,
   },
   scopeLabel: {
@@ -792,7 +847,7 @@ const styles = StyleSheet.create({
     color: Palette.text,
   },
   scopeLabelUnselected: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     color: Palette.grey500,
   },
   state: {
@@ -832,18 +887,28 @@ const styles = StyleSheet.create({
     borderColor: Palette.grey200,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 5, height: 5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOffset: { width: 5, height: 5 },
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+        }),
     elevation: 4,
   },
   behindCard: {
     position: 'absolute',
     top: 0,
     left: 0,
-    shadowOpacity: 0.04,
+    ...(Platform.OS === 'web' ? ({ boxShadow: '5px 5px 20px rgba(0, 0, 0, 0.04)' } as object) : { shadowOpacity: 0.04 }),
     elevation: 1,
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
+  },
+  behindCardTint: {
+    backgroundColor: '#000000',
   },
   cardFace: {
     position: 'absolute',
@@ -880,7 +945,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tagLabel: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     color: Palette.grey600,
     letterSpacing: -0.28,
@@ -973,7 +1038,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   guideText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',

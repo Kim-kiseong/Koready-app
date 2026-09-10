@@ -5,6 +5,7 @@ import type { MessageThreadResponse } from '@/api/types';
 type MessageThreadState = {
   threads: Record<string, MessageThreadResponse>;
   upsertThread: (thread: MessageThreadResponse) => void;
+  replaceThread: (thread: MessageThreadResponse) => void;
   clearThread: (threadId: string) => void;
   reset: () => void;
 };
@@ -59,6 +60,13 @@ export const useMessageThreadStore = create<MessageThreadState>()((set) => ({
         },
       };
     }),
+  replaceThread: (thread) =>
+    set((state) => ({
+      threads: {
+        ...state.threads,
+        [thread.threadId]: thread,
+      },
+    })),
   clearThread: (threadId) =>
     set((state) => {
       if (!(threadId in state.threads)) {
