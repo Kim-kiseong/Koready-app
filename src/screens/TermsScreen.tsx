@@ -33,12 +33,11 @@ function extractErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
 }
 
-// Dev-only fallback: /terms/required and /users/me/term-agreements are still
-// `x-implementation-status: PLANNED` on the backend, so this keeps the screen
-// previewable/testable locally before those endpoints go live. Mirrors the
-// same trade-off as LoginScreen's dev-bypass button. contentUrl points at
-// example.com as a stand-in — the real backend response will carry the
-// actual koready.kr terms/privacy page URLs once those pages are published.
+// Dev-only fallback, used ONLY for the mock-login bypass session (see
+// isDevMockSession below), which never has a real access token and so can
+// never call the real backend. /terms/required and /users/me/term-agreements
+// are live (`x-implementation-status: IMPLEMENTED`) — a real session always
+// hits the real backend and surfaces real errors via the catch block below.
 const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
   {
     termId: 1,
@@ -47,7 +46,10 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
     title: '서비스 이용약관',
     required: true,
     version: '1.0',
+    sourceType: 'EXTERNAL_URL',
     contentUrl: 'https://example.com/terms/service/1.0',
+    content: null,
+    contentFormat: null,
     agreed: false,
     needsAgreement: true,
     displayOrder: 1,
@@ -59,7 +61,10 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
     title: '개인정보 취급 방침',
     required: true,
     version: '1.0',
+    sourceType: 'EXTERNAL_URL',
     contentUrl: 'https://example.com/terms/privacy/1.0',
+    content: null,
+    contentFormat: null,
     agreed: false,
     needsAgreement: true,
     displayOrder: 2,
@@ -71,7 +76,10 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
     title: '마케팅 정보 수신',
     required: false,
     version: '1.0',
+    sourceType: 'EXTERNAL_URL',
     contentUrl: 'https://example.com/terms/marketing/1.0',
+    content: null,
+    contentFormat: null,
     agreed: false,
     needsAgreement: true,
     displayOrder: 3,
@@ -112,11 +120,6 @@ export default function TermsScreen() {
         setAgreedMap(Object.fromEntries(response.terms.map((term) => [term.termVersionId, term.agreed])));
       } catch (error) {
         if (cancelled) return;
-        if (__DEV__) {
-          setTerms(DEV_FALLBACK_TERMS);
-          setAgreedMap(Object.fromEntries(DEV_FALLBACK_TERMS.map((term) => [term.termVersionId, term.agreed])));
-          return;
-        }
         Alert.alert(t.terms.loadError, extractErrorMessage(error), [
           { text: '확인', onPress: () => goBackOrRoot(router, '/login') },
         ]);
@@ -133,8 +136,11 @@ export default function TermsScreen() {
   // Gates the "다음" button — includes the client-only age-14 checkbox
   // alongside the backend-driven required terms.
   const requiredAgreed = age14Agreed && requiredTermsAgreed;
-  const allAgreed =
-    age14Agreed && terms !== null && terms.length > 0 && terms.every((term) => agreedMap[term.termVersionId]);
+  // No `terms.length > 0` gate here — [].every(...) is vacuously true, so an
+  // empty/not-yet-loaded terms list must not permanently block "agree to
+  // all" from reflecting age14Agreed (previously it could never show
+  // checked in that case, even after toggling it).
+  const allAgreed = age14Agreed && terms !== null && terms.every((term) => agreedMap[term.termVersionId]);
 
   const toggleGroup = (group: RequiredTermItem[]) => {
     const groupAgreed = group.every((term) => agreedMap[term.termVersionId]);
@@ -158,6 +164,11 @@ export default function TermsScreen() {
   const openTerm = (term: RequiredTermItem) => {
     if (term.code === 'SERVICE_TERMS' || term.code === 'PRIVACY_POLICY') {
       router.push({ pathname: '/terms/[code]', params: { code: term.code } });
+      return;
+    }
+    // contentUrl is only populated when sourceType is EXTERNAL_URL — INLINE
+    // terms have no link to open from this list.
+    if (term.sourceType !== 'EXTERNAL_URL' || !term.contentUrl) {
       return;
     }
     WebBrowser.openBrowserAsync(term.contentUrl).catch((error) => {
