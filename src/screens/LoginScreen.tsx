@@ -15,7 +15,7 @@ import { FontFamily } from '@/constants/typography';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { DEV_TEST_ACCESS_TOKEN, DEV_TEST_REFRESH_TOKEN } from '@/constants/env';
 import { useTranslation } from '@/i18n/useTranslation';
-import { resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
+import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 import { refreshSavedLocationsAndRestoreCurrentLocation } from '@/utils/location-session';
 
@@ -90,7 +90,7 @@ export default function LoginScreen() {
         const session = await googleLogin({ idToken, deviceId });
         setSession(session);
         await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
-        router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
+        router.replace(resolveNextStepRoute(session.nextStep));
         return;
       }
 
@@ -98,7 +98,7 @@ export default function LoginScreen() {
       const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
       setSession(session);
       await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
-      router.replace(await resolveNextStepRouteSkippingTerms(session.nextStep));
+      router.replace(resolveNextStepRoute(session.nextStep));
     } catch (error) {
       // User backed out of the Google account chooser — not a failure worth alerting on.
       if (error instanceof GoogleSignInCancelledError) {

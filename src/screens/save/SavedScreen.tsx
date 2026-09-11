@@ -4,6 +4,8 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   FlatList,
   Modal,
   Platform,
@@ -35,6 +37,9 @@ type SavedSortOption = {
   value: SavedSortOrder;
   label: string;
 };
+
+const SORT_SHEET_HEIGHT = 260;
+const SORT_SHEET_ANIMATION_DURATION = 220;
 
 const TRAVEL_STYLE_LABELS: Record<LanguageCode, Record<string, string>> = {
   KO: {
@@ -357,11 +362,69 @@ function SortSheet({
   onClose: () => void;
 }) {
   const t = useTranslation();
+  const [translateY] = useState(() => new Animated.Value(SORT_SHEET_HEIGHT));
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  // The parent toggles `visible` directly (no close handshake), so the exit
+  // animation has to be kept alive across the render where `visible` flips
+  // to false — deriving `isClosing` here (React's documented "adjust state
+  // during render" escape hatch) instead of in an effect keeps this in sync
+  // on the very same render, before the sheet would otherwise unmount.
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [isClosing, setIsClosing] = useState(false);
+
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (!visible) setIsClosing(true);
+  }
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: SORT_SHEET_ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: SORT_SHEET_ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    if (!isClosing) return;
+
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: SORT_SHEET_HEIGHT,
+        duration: SORT_SHEET_ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: SORT_SHEET_ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setIsClosing(false);
+    });
+  }, [visible, isClosing, translateY, overlayOpacity]);
+
+  if (!visible && !isClosing) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.sheetOverlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.sheetOverlayContainer}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.sheetOverlayBackground, { opacity: overlayOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           <View style={styles.sheetHandleArea}>
             <View style={styles.sheetHandle} />
           </View>
@@ -390,8 +453,8 @@ function SortSheet({
               })}
             </View>
           </View>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -793,10 +856,12 @@ const styles = StyleSheet.create({
   footerSpacer: {
     height: 12,
   },
-  sheetOverlay: {
+  sheetOverlayContainer: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  sheetOverlayBackground: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     backgroundColor: '#ffffff',

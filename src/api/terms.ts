@@ -1,6 +1,9 @@
 import { client } from './client';
 import type { NextStep } from './types';
 
+export type TermSourceType = 'INLINE' | 'EXTERNAL_URL';
+export type TermContentFormat = 'PLAIN_TEXT' | 'MARKDOWN';
+
 export type RequiredTermItem = {
   termId: number;
   termVersionId: number;
@@ -8,7 +11,12 @@ export type RequiredTermItem = {
   title: string;
   required: boolean;
   version: string;
-  contentUrl: string;
+  sourceType: TermSourceType;
+  // Present only when sourceType is EXTERNAL_URL.
+  contentUrl: string | null;
+  // Present only when sourceType is INLINE.
+  content: string | null;
+  contentFormat: TermContentFormat | null;
   agreed: boolean;
   needsAgreement: boolean;
   displayOrder: number;
