@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { fetchMyUser } from '@/api/user';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
-import { resolveOnboardingResumeRoute, resolveNextStepRouteSkippingTerms } from '@/navigation/next-step-route';
+import { resolveOnboardingResumeRoute, resolveNextStepRoute } from '@/navigation/next-step-route';
 import type { NextStep } from '@/api/types';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
@@ -29,10 +29,10 @@ export default function Index() {
         // instead of always restarting at /location.
         resolveOnboardingResumeRoute()
           .then(setRoute)
-          .catch(() => resolveNextStepRouteSkippingTerms(step).then(setRoute));
+          .catch(() => setRoute(resolveNextStepRoute(step)));
         return;
       }
-      resolveNextStepRouteSkippingTerms(step).then(setRoute);
+      setRoute(resolveNextStepRoute(step));
     };
 
     // The dev-mock session isn't a real backend user — GET /users/me would
