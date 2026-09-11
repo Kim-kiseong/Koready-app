@@ -184,7 +184,10 @@ export default function MessageThreadScreen() {
 
   const countryOptions = profileOptions?.countries?.length ? profileOptions.countries : FALLBACK_COUNTRY_OPTIONS;
   const otherCountryLabel = formatCountryDisplay(
-    visibleThread?.otherProfile.nationalityCode ?? visibleThread?.otherProfile.nationality ?? '',
+    visibleThread?.otherProfile.nationalityCode ??
+      visibleThread?.otherProfile.nationality ??
+      visibleThread?.otherProfile.nationalityName ??
+      '',
     countryOptions,
   );
 

@@ -61,8 +61,8 @@ const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; bor
   SHUTTLE_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
-const WEB_HANDLE_OVERLAP = 330;
-const APP_HANDLE_OVERLAP = 180;
+const WEB_HANDLE_OVERLAP = 320;
+const APP_HANDLE_OVERLAP = 170;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
 function formatTemplate(template: string, values: Record<string, string>) {
@@ -121,6 +121,10 @@ function formatSummaryTimeLabel(label: string, language: 'KO' | 'EN') {
   }
 
   return normalizedLabel.replace(/\shr\s+/, ' hr\n');
+}
+
+function formatSummaryTransportLabel(label: string) {
+  return label.replace(/\s*\+\s*/g, ', ');
 }
 
 function formatRoutePointName(name: string, language: 'KO' | 'EN') {
@@ -400,7 +404,10 @@ export default function RouteDetailScreen() {
             contentContainerStyle={styles.sheetContent}
           >
             <View style={styles.summaryBox}>
-              <SummaryItem label={routeCopy.summaryLabels.transport} value={route.summary.recommendedTransportText} />
+              <SummaryItem
+                label={routeCopy.summaryLabels.transport}
+                value={formatSummaryTransportLabel(route.summary.recommendedTransportText)}
+              />
               <SummaryItem label={routeCopy.summaryLabels.time} value={summaryTimeLabel} />
               <SummaryItem label={routeCopy.statLabels.dayTrip} value={summaryDayTripLabel} highlight />
             </View>

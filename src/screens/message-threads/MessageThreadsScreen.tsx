@@ -286,7 +286,6 @@ export default function MessageThreadsScreen() {
     const prependItems: MessageThreadListItem[] = [];
     storeItems.forEach((item) => {
       if (apiMap.has(item.threadId)) {
-        apiMap.set(item.threadId, item);
         return;
       }
 
@@ -426,6 +425,7 @@ function MessageThreadCard({
   const countryLabel = formatCountryDisplay(
     getProfileNationalityValue(item.otherProfile),
     countryOptions,
+    language,
   );
   const placeLabel = item.place.title;
   const unread = item.unreadCount > 0;
@@ -567,7 +567,9 @@ function convertStoredThreadToListItem(
       nationalityCode: getProfileNationalityCode(thread.otherProfile),
       nationality:
         getNonEmptyString(thread.otherProfile.nationality) ??
+        getNonEmptyString(thread.otherProfile.nationalityName) ??
         getCountryDisplayName(getProfileNationalityValue(thread.otherProfile), countryOptions),
+      nationalityName: getNonEmptyString(thread.otherProfile.nationalityName),
     },
     preview,
     lastSentAt,
@@ -583,7 +585,12 @@ function getNonEmptyString(value?: string | null) {
 }
 
 function getProfileNationalityValue(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
-  return getNonEmptyString(profile.nationalityCode) ?? getNonEmptyString(profile.nationality) ?? '';
+  return (
+    getNonEmptyString(profile.nationalityCode) ??
+    getNonEmptyString(profile.nationality) ??
+    getNonEmptyString(profile.nationalityName) ??
+    ''
+  );
 }
 
 function getProfileNationalityCode(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
@@ -592,7 +599,11 @@ function getProfileNationalityCode(profile: MessageThreadListItem['otherProfile'
     return explicitCode;
   }
 
-  return normalizeCountryCode(getNonEmptyString(profile.nationality) ?? '');
+  return normalizeCountryCode(
+    getNonEmptyString(profile.nationality) ??
+    getNonEmptyString(profile.nationalityName) ??
+    '',
+  );
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {
