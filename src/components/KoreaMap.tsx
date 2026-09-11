@@ -264,7 +264,7 @@ export default function KoreaMap({ width }: KoreaMapProps) {
   const mapLayerStyle = useMemo(() => [styles.mapLayer, mapReady ? styles.mapLayerVisible : null], [mapReady]);
 
   return (
-    <View style={[styles.scene, { width, height: sceneHeight }]}>
+    <View style={[styles.scene, Platform.OS === 'web' && styles.sceneWeb, { width, height: sceneHeight }]}>
       {!mapReady ? (
         <View style={styles.loadingLayer}>
           <ActivityIndicator color={Palette.primary} />
@@ -361,6 +361,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginTop: 12,
     marginHorizontal: -24,
+  },
+  sceneWeb: {
+    marginHorizontal: 0,
   },
   loadingLayer: {
     ...StyleSheet.absoluteFill,

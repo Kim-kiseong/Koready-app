@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 
 import CustomText from '@/components/CustomText';
 
-import type { RoutePlace, RouteSegment } from '@/api/route';
+import type { RouteCoordinate, RoutePlace, RouteSegment } from '@/api/route';
 
 // Set this in .env.local and Vercel Environment Variables.
 // EXPO_PUBLIC_KAKAO_MAP_JS_KEY=your-kakao-javascript-key
@@ -102,6 +102,20 @@ function normalizeSearchText(place: RoutePlace) {
   return isUsableSearchText(address) ? address : name;
 }
 
+function createPlaceSearchQueries(place: RoutePlace) {
+  const queries: string[] = [];
+  const address = place.address?.trim() ?? '';
+  const name = place.name.trim();
+
+  pushUniqueQuery(queries, address);
+  if (isUsableSearchText(address) && isUsableSearchText(name) && address !== name) {
+    pushUniqueQuery(queries, `${address} ${name}`);
+  }
+  pushUniqueQuery(queries, name);
+
+  return queries;
+}
+
 function isUsableSearchText(value: string) {
   const normalized = value.trim().toLowerCase();
   if (!normalized) {
@@ -109,6 +123,91 @@ function isUsableSearchText(value: string) {
   }
 
   return !['string', 'null', 'undefined', '-', 'n/a'].includes(normalized);
+}
+
+function toNumber(value: number | string | null | undefined) {
+  if (value == null) {
+    return null;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function createPoint(latitude: number | string | null | undefined, longitude: number | string | null | undefined) {
+  const lat = toNumber(latitude);
+  const lng = toNumber(longitude);
+
+  if (lat == null || lng == null) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+function resolveCoordinatePoint(coordinate: RouteCoordinate | null | undefined) {
+  if (!coordinate) {
+    return null;
+  }
+
+  return (
+    createPoint(coordinate.latitude, coordinate.longitude)
+    ?? createPoint(coordinate.lat, coordinate.lng)
+    // Kakao and many map APIs expose x as longitude and y as latitude.
+    ?? createPoint(coordinate.y, coordinate.x)
+  );
+}
+
+function resolvePlacePoint(place: RoutePlace) {
+  return resolveCoordinatePoint(place);
+}
+
+function resolveSegmentStartPoint(segment: RouteSegment) {
+  return (
+    createPoint(segment.startLatitude, segment.startLongitude)
+    ?? createPoint(segment.startLat, segment.startLng)
+    ?? createPoint(segment.startY, segment.startX)
+  );
+}
+
+function resolveSegmentEndPoint(segment: RouteSegment) {
+  return (
+    createPoint(segment.endLatitude, segment.endLongitude)
+    ?? createPoint(segment.endLat, segment.endLng)
+    ?? createPoint(segment.endY, segment.endX)
+  );
+}
+
+function resolveCoordinateListPoint(value: RouteCoordinate | [number | string, number | string]) {
+  if (Array.isArray(value)) {
+    const [first, second] = value;
+    const firstNumber = toNumber(first);
+    const secondNumber = toNumber(second);
+
+    if (firstNumber == null || secondNumber == null) {
+      return null;
+    }
+
+    // Most backend path arrays use [latitude, longitude]. If the first value
+    // cannot be latitude, treat the pair as [longitude, latitude].
+    return Math.abs(firstNumber) <= 90
+      ? { lat: firstNumber, lng: secondNumber }
+      : { lat: secondNumber, lng: firstNumber };
+  }
+
+  return resolveCoordinatePoint(value);
+}
+
+function resolveSegmentPathPoints(segment: RouteSegment) {
+  const path = Array.isArray(segment.path)
+    ? segment.path
+    : Array.isArray(segment.polyline)
+      ? segment.polyline
+      : [];
+
+  return path
+    .map(resolveCoordinateListPoint)
+    .filter((point): point is KakaoPoint => point !== null);
 }
 
 function createPinDataUri(color: string) {
@@ -168,6 +267,34 @@ function createWaypointSearchQueries(segments: RouteSegment[] = []) {
   });
 
   return queries;
+}
+
+function createSegmentCoordinatePoints(segments: RouteSegment[] = []) {
+  const points: KakaoPoint[] = [];
+  let hasPathCoordinates = false;
+
+  [...segments].sort((left, right) => left.order - right.order).forEach((segment) => {
+    const pathPoints = resolveSegmentPathPoints(segment);
+    if (pathPoints.length > 0) {
+      hasPathCoordinates = true;
+      points.push(...pathPoints);
+      return;
+    }
+
+    const startPoint = resolveSegmentStartPoint(segment);
+    const endPoint = resolveSegmentEndPoint(segment);
+    if (startPoint) {
+      points.push(startPoint);
+    }
+    if (endPoint) {
+      points.push(endPoint);
+    }
+  });
+
+  return {
+    points: removeConsecutiveDuplicatePoints(points),
+    hasPathCoordinates,
+  };
 }
 
 function calculateMidpoint(a: KakaoPoint, b: KakaoPoint): KakaoPoint {
@@ -390,15 +517,36 @@ export default function KakaoRouteMap({ origin, destination, segments = [], styl
             });
           });
 
-        const originPoint = await searchPoint(normalizeSearchText(origin));
-        const destinationPoint = await searchPoint(normalizeSearchText(destination));
-        const waypointQueries = createWaypointSearchQueries(segments);
+        const searchFirstPoint = async (queries: string[]) => {
+          for (const query of queries) {
+            const point = await searchPoint(query);
+            if (point) {
+              return point;
+            }
+          }
+
+          return null;
+        };
+
+        const originPoint = resolvePlacePoint(origin) ?? await searchFirstPoint(createPlaceSearchQueries(origin));
+        const destinationPoint = resolvePlacePoint(destination) ?? await searchFirstPoint(createPlaceSearchQueries(destination));
+        const coordinateWaypoints = createSegmentCoordinatePoints(segments);
+        const coordinateWaypointPoints = coordinateWaypoints.points;
+        const waypointQueries = coordinateWaypointPoints.length > 0 ? [] : createWaypointSearchQueries(segments);
         const searchedWaypointPoints = await Promise.all(waypointQueries.map((query) => searchPoint(query)));
-        const routePoints = filterRoutePoints(
-          originPoint,
-          destinationPoint,
-          searchedWaypointPoints.filter((point): point is KakaoPoint => point !== null),
-        );
+        const routePoints = coordinateWaypoints.hasPathCoordinates
+          ? removeConsecutiveDuplicatePoints([
+              ...(originPoint ? [originPoint] : []),
+              ...coordinateWaypointPoints,
+              ...(destinationPoint ? [destinationPoint] : []),
+            ])
+          : filterRoutePoints(
+              originPoint,
+              destinationPoint,
+              coordinateWaypointPoints.length > 0
+                ? coordinateWaypointPoints
+                : searchedWaypointPoints.filter((point): point is KakaoPoint => point !== null),
+            );
         const routeStartPoint = originPoint ?? routePoints[0];
         const routeEndPoint = destinationPoint ?? routePoints.at(-1);
 
