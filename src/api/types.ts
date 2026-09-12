@@ -240,11 +240,13 @@ export type MessageThreadProfile = {
   profileImageUrl: string | null;
   nationalityCode?: string | null;
   nationality?: string | null;
+  nationalityName?: string | null;
 };
 
 export type MessageThreadListProfile = MessageThreadProfile & {
   nationalityCode?: string | null;
   nationality?: string | null;
+  nationalityName?: string | null;
 };
 
 export type MessageThreadListItem = {
@@ -385,6 +387,7 @@ export type BuddyProfileEnvelope = {
 export type BuddyProfileDetail = Omit<BuddyProfile, 'nationality'> & {
   nationality?: string;
   nationalityCode?: string;
+  nationalityName?: string;
 };
 
 export type BuddyProfileDetailEnvelope = {

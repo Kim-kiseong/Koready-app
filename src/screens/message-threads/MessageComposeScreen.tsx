@@ -431,7 +431,14 @@ export default function MessageComposeScreen() {
                   <CustomText style={styles.nickname}>{profile.nickname}</CustomText>
                   <CustomText style={styles.dot}>·</CustomText>
                   <CustomText style={styles.country}>
-                    {formatCountryDisplay(profile.nationalityCode ?? profile.nationality ?? '', resolvedOptions.countries)}
+                    {formatCountryDisplay(
+                      profile.nationalityCode ??
+                        profile.nationality ??
+                        profile.nationalityName ??
+                        '',
+                      resolvedOptions.countries,
+                      language,
+                    )}
                   </CustomText>
                 </View>
 

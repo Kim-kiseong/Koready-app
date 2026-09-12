@@ -29,6 +29,12 @@ export type FareCoverage = 'FULL_ROUTE' | 'AVAILABLE_SEGMENTS_ONLY' | 'UNAVAILAB
 export type RoutePlace = {
   name: string;
   address: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
+  x?: number | string | null;
+  y?: number | string | null;
 };
 
 export type RouteTip = {
@@ -67,6 +73,20 @@ export type RouteSegment = {
   source: RouteSource;
   startName: string;
   endName: string;
+  startLatitude?: number | string | null;
+  startLongitude?: number | string | null;
+  endLatitude?: number | string | null;
+  endLongitude?: number | string | null;
+  startLat?: number | string | null;
+  startLng?: number | string | null;
+  endLat?: number | string | null;
+  endLng?: number | string | null;
+  startX?: number | string | null;
+  startY?: number | string | null;
+  endX?: number | string | null;
+  endY?: number | string | null;
+  path?: Array<RouteCoordinate | [number | string, number | string]> | null;
+  polyline?: Array<RouteCoordinate | [number | string, number | string]> | string | null;
   mode: TransportMode;
   routeName?: string | null;
   durationMinutes: number;
@@ -75,6 +95,15 @@ export type RouteSegment = {
   instruction: string;
   serviceAvailable: boolean;
   horiTips: RouteTip[];
+};
+
+export type RouteCoordinate = {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
+  x?: number | string | null;
+  y?: number | string | null;
 };
 
 export type RouteWarning = {
