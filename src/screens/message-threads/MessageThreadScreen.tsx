@@ -62,7 +62,6 @@ export default function MessageThreadScreen() {
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const hasMarkedReadRef = useRef<string | null>(null);
   const sendInFlightRef = useRef(false);
   const replyInputRef = useRef<TextInput | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
@@ -85,7 +84,6 @@ export default function MessageThreadScreen() {
     setIsLoading(true);
     setPlaceDetail(null);
     setProfileOptions(null);
-    hasMarkedReadRef.current = null;
 
     (async () => {
       try {
@@ -94,8 +92,27 @@ export default function MessageThreadScreen() {
           return;
         }
 
-        useMessageThreadStore.getState().replaceThread(loadedThread);
-        setThreadState(loadedThread);
+        const readAt = new Date().toISOString();
+        const readThread: MessageThreadResponse = {
+          ...loadedThread,
+          messages: loadedThread.messages.map((message) =>
+            message.senderProfileId === loadedThread.otherProfile.profileId && !message.read
+              ? { ...message, read: true, readAt }
+              : message,
+          ),
+        };
+
+        // Clear the inbox highlight before the read request finishes, including on a quick back navigation.
+        useMessageThreadStore.getState().replaceThread(readThread);
+        setThreadState(readThread);
+
+        void markMessageThreadRead(normalizedThreadId)
+          .then((readResult) => {
+            useAuthStore.setState({ unreadMessageCount: readResult.unreadTotal });
+          })
+          .catch(() => {
+            // Keep locally viewed messages read; opening the thread again retries the request.
+          });
 
         const [optionsResult, placeResult] = await Promise.allSettled([
           fetchProfileOptions(),
@@ -130,46 +147,6 @@ export default function MessageThreadScreen() {
       cancelled = true;
     };
   }, [language, normalizedThreadId]);
-
-  useEffect(() => {
-    if (!normalizedThreadId || !visibleThread) {
-      return;
-    }
-
-    if (hasMarkedReadRef.current === normalizedThreadId) {
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const readResult = await markMessageThreadRead(normalizedThreadId);
-        if (cancelled) {
-          return;
-        }
-
-        useAuthStore.setState({ unreadMessageCount: readResult.unreadTotal });
-
-        const refreshedThread = await fetchMessageThread(normalizedThreadId, { size: 20 });
-        if (cancelled) {
-          return;
-        }
-
-        useMessageThreadStore.getState().replaceThread(refreshedThread);
-        setThreadState(refreshedThread);
-        hasMarkedReadRef.current = normalizedThreadId;
-      } catch {
-        if (!cancelled) {
-          hasMarkedReadRef.current = normalizedThreadId;
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizedThreadId, visibleThread]);
 
   const messageRows = useMemo(() => {
     return [...(visibleThread?.messages ?? [])].sort((left, right) => {

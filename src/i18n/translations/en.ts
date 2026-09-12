@@ -452,11 +452,11 @@ export const en: DeepPartial<Translations> = {
     dateLabel: 'Date',
     dateAll: 'All',
     dateOptions: {
-      THIS_WEEK: 'This week',
-      THIS_MONTH: 'This month',
-      NEXT_MONTH: 'Next month',
+      THIS_WEEK: 'This Week',
+      THIS_MONTH: 'This Month',
+      NEXT_MONTH: 'Next Month',
     },
-    dateCustomButton: 'Choose dates',
+    dateCustomButton: 'Select Dates',
     typeLabel: 'Travel type',
     typeOptions: {
       LOCAL_FOOD: 'Local Food',

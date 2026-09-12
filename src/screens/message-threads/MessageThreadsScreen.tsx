@@ -285,7 +285,12 @@ export default function MessageThreadsScreen() {
 
     const prependItems: MessageThreadListItem[] = [];
     storeItems.forEach((item) => {
-      if (apiMap.has(item.threadId)) {
+      const summary = apiMap.get(item.threadId);
+      if (summary) {
+        // A read detail supersedes the cached summary until a newer message arrives.
+        if (item.unreadCount === 0 && item.lastSentAt >= summary.lastSentAt) {
+          apiMap.set(item.threadId, { ...summary, unreadCount: 0 });
+        }
         return;
       }
 
