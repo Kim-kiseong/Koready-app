@@ -577,7 +577,7 @@ export const ko: Translations = {
     searchPlaceholder: "오늘은 어떤 여행을 해보실래요?",
     featuredTitlePrefix: "한국",
     featuredTitleConnector: "에 왔으면,",
-    featuredTitleSuffix: "월엔 '이건' 해야지!",
+    featuredTitleSuffix: "월에 '이건' 해야지!",
     guidesSectionTitle: "호리가 알려주는 한국 여행 가이드",
     seeAll: "전체보기",
     languageKo: "한국어",

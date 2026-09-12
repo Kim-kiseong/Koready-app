@@ -141,7 +141,6 @@ export default function ProfileEditScreen() {
   const t = useTranslation();
   const copy = t.profileEdit;
   const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
-  const onboardingTravelStyles = useOnboardingStore((state) => state.travelStyles);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const isMountedRef = useRef(true);
 
@@ -164,6 +163,7 @@ export default function ProfileEditScreen() {
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const [isBypassingUnsavedChangesGuard, setIsBypassingUnsavedChangesGuard] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
+  const shouldNavigateAfterSaveRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,37 +203,32 @@ export default function ProfileEditScreen() {
         const loadedOptions = optionsResult.value;
         const loadedProfile = profileResult.value;
 
+        let defaultTravelStyles = useOnboardingStore.getState().travelStyles;
+
+        if (!loadedProfile.exists) {
+          try {
+            const onboardingProgress = await fetchOnboardingProgress();
+            if (cancelled) return;
+
+            useOnboardingStore.getState().applyProgress(onboardingProgress);
+            defaultTravelStyles = onboardingProgress.travelStyles;
+          } catch {
+            // Profile editing should remain available even if onboarding
+            // progress cannot be fetched for a completed user.
+          }
+        }
+
+        if (cancelled) return;
         setOptions(loadedOptions);
         setProfileExists(loadedProfile.exists);
         const nextForm = buildInitialForm(
           loadedProfile,
           loadedOptions,
-          onboardingTravelStyles,
+          defaultTravelStyles,
           authProfileImageUrl,
         );
         setForm(nextForm);
         setInitialForm(nextForm);
-
-        if (!loadedProfile.exists) {
-          fetchOnboardingProgress()
-            .then((onboardingProgress) => {
-              if (cancelled || onboardingProgress.travelStyles.length === 0) {
-                return;
-              }
-
-              useOnboardingStore.getState().applyProgress(onboardingProgress);
-              const sortedTravelStyles = sortCodesByOptionOrder(
-                onboardingProgress.travelStyles,
-                loadedOptions.travelStyles,
-              );
-              setForm((prev) => ({ ...prev, travelStyles: sortedTravelStyles }));
-              setInitialForm((prev) => ({ ...prev, travelStyles: sortedTravelStyles }));
-            })
-            .catch(() => {
-              // Profile editing should remain available even if onboarding
-              // progress cannot be fetched for a completed user.
-            });
-        }
       } catch (error) {
         if (!cancelled) {
           setLoadError(extractErrorMessage(error));
@@ -248,7 +243,7 @@ export default function ProfileEditScreen() {
     return () => {
       cancelled = true;
     };
-  }, [authProfileImageUrl, reloadKey, onboardingHasHydrated, onboardingTravelStyles]);
+  }, [authProfileImageUrl, copy.errors.loadOptions, reloadKey, onboardingHasHydrated]);
 
   useEffect(() => {
     return () => {
@@ -319,6 +314,18 @@ export default function ProfileEditScreen() {
     pendingNavigationActionRef.current = data.action;
     setUnsavedChangesModalOpen(true);
   });
+
+  useEffect(() => {
+    if (!isBypassingUnsavedChangesGuard || !shouldNavigateAfterSaveRef.current) return;
+
+    shouldNavigateAfterSaveRef.current = false;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    goBackOrRoot(router);
+  }, [isBypassingUnsavedChangesGuard, navigation, router]);
 
   const handleUpdateField = <K extends keyof BuddyProfileFormState>(
     key: K,
@@ -401,9 +408,7 @@ export default function ProfileEditScreen() {
       });
       if (!isMountedRef.current) return;
 
-      useAuthStore.getState().setBuddyProfileExists(true);
-      useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
-
+      shouldNavigateAfterSaveRef.current = true;
       setIsBypassingUnsavedChangesGuard(true);
       setForm(nextForm);
       setInitialForm(nextForm);
@@ -411,15 +416,8 @@ export default function ProfileEditScreen() {
       setUnsavedChangesModalOpen(false);
       pendingNavigationActionRef.current = null;
 
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      if (!isMountedRef.current) return;
-
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-        return;
-      }
-
-      goBackOrRoot(router);
+      useAuthStore.getState().setBuddyProfileExists(true);
+      useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
     } catch (error) {
       if (!isMountedRef.current) return;
       Alert.alert(copy.alerts.errorTitle, extractErrorMessage(error, copy.errors.generic));
