@@ -43,10 +43,13 @@ function sanitizeSavedPlace(place: SavedPlaceItem): SavedPlaceItem {
 }
 
 interface SavedPlaceState {
+  ownerPublicId: string | null;
   savedByPlaceId: Record<string, boolean>;
   savedPlacesByPlaceId: Record<string, SavedPlaceItem>;
   hasHydrated: boolean;
 
+  prepareForUser: (publicId: string) => void;
+  reset: () => void;
   initializePlace: (
     placeId: string,
     initialIsSaved: boolean,
@@ -62,9 +65,32 @@ export const useSavedPlaceStore =
   create<SavedPlaceState>()(
     persist(
       (set) => ({
+        ownerPublicId: null,
         savedByPlaceId: {},
         savedPlacesByPlaceId: {},
         hasHydrated: false,
+
+        prepareForUser: (publicId) => {
+          set((state) => {
+            if (state.ownerPublicId === publicId) {
+              return state;
+            }
+
+            return {
+              ownerPublicId: publicId,
+              savedByPlaceId: {},
+              savedPlacesByPlaceId: {},
+            };
+          });
+        },
+
+        reset: () => {
+          set({
+            ownerPublicId: null,
+            savedByPlaceId: {},
+            savedPlacesByPlaceId: {},
+          });
+        },
 
         initializePlace: (
           placeId,
@@ -228,6 +254,8 @@ export const useSavedPlaceStore =
          * hasHydrated는 앱 실행 때마다 다시 확인합니다.
          */
         partialize: (state) => ({
+          ownerPublicId:
+            state.ownerPublicId,
           savedByPlaceId:
             state.savedByPlaceId,
           savedPlacesByPlaceId:

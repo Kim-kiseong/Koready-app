@@ -9,7 +9,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { fetchMyBuddyProfile, fetchProfileOptions } from '@/api/buddy-profile';
 import { fetchMessageThreads } from '@/api/messages';
-import type { BuddyProfile, ProfileOptionItem } from '@/api/types';
+import type { BuddyProfile, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
@@ -18,7 +18,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
-import { buildLanguageDisplayLabels } from '@/utils/language-display';
+import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { resolveProfileImageSource } from '@/utils/profile-image';
 
 type BuddyProfileState = {
@@ -35,7 +35,7 @@ export default function MyScreen() {
   const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [profileState, setProfileState] = useState<BuddyProfileState | null>(null);
-  const [countryOptions, setCountryOptions] = useState<ProfileOptionItem[]>([]);
+  const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export default function MyScreen() {
     setIsLoading(true);
     setProfileLoadError(null);
     setProfileState(null);
-    setCountryOptions([]);
+    setProfileOptions(null);
 
     (async () => {
       try {
@@ -57,7 +57,7 @@ export default function MyScreen() {
           fetchMyBuddyProfile(),
         ]);
         if (!cancelled) {
-          setCountryOptions(options.countries);
+          setProfileOptions(options);
           setProfileState(data);
           if (data.profile?.profileImageUrl) {
             useAuthStore.getState().setUserProfileImageUrl(data.profile.profileImageUrl);
@@ -157,8 +157,8 @@ export default function MyScreen() {
                     <CustomText style={styles.nationality}>
                       {' '}
                       · {formatNationality(
-                        profile.nationalityCode ?? profile.nationality,
-                        countryOptions,
+                        profile.nationalityCode?.trim() || profile.nationality,
+                        profileOptions?.countries ?? [],
                         language,
                       )}
                     </CustomText>
@@ -171,6 +171,9 @@ export default function MyScreen() {
                       copy.languageFallback,
                       copy.languageLabels,
                       copy.koreanLevelLabels,
+                      profileOptions?.languages ?? [],
+                      profileOptions?.koreanLevels ?? [],
+                      language,
                     )}
                   </CustomText>
                 </View>
@@ -320,15 +323,36 @@ function formatLanguageLine(
   fallbackText: string,
   languageLabels: Record<string, string>,
   koreanLevelLabels: Record<string, string>,
+  languageOptions: ProfileOptionItem[],
+  koreanLevelOptions: ProfileOptionItem[],
+  language: 'KO' | 'EN',
 ) {
   const mappedLanguages = buildLanguageDisplayLabels(
     languages,
     koreanLevel,
-    (code) => languageLabels[code] ?? code,
-    (level) => koreanLevelLabels[level] ?? level,
+    (code) =>
+      getLocalizedOptionLabel(code, languageOptions, language) ?? languageLabels[code] ?? code,
+    (level) =>
+      getLocalizedOptionLabel(level, koreanLevelOptions, language) ??
+      koreanLevelLabels[level] ??
+      level,
     fallbackText,
   );
   return mappedLanguages.join(' · ');
+}
+
+function getLocalizedOptionLabel(
+  code: string,
+  options: ProfileOptionItem[],
+  language: 'KO' | 'EN',
+) {
+  const normalizedCode = normalizeLanguageCode(code);
+  const option = options.find(
+    (item) => normalizeLanguageCode(item.code) === normalizedCode,
+  );
+  if (!option) return null;
+
+  return language === 'EN' ? option.labelEn : option.labelKo;
 }
 
 function EmptyState({

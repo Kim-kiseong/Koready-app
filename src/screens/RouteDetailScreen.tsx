@@ -39,7 +39,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
 
-const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number }>; width: number; height: number }> = {
+const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number; hideOuterBorder?: boolean }>; width: number; height: number }> = {
   WALK: { Icon: Component13, width: 40, height: 40 },
   SUBWAY: { Icon: Component15, width: 40, height: 40 },
   BUS: { Icon: Component17, width: 40, height: 40 },
@@ -51,7 +51,7 @@ const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: 
 };
 
 const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; borderColor: string }> = {
-  WALK: { backgroundColor: '#F1F7FF', borderColor: '#D9E9FF' },
+  WALK: { backgroundColor: '#F1F7FF', borderColor: '#E8EEF2' },
   SUBWAY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
   BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
   EXPRESS_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
@@ -606,7 +606,11 @@ function TimelineItem({
       <View style={styles.timelineRail}>
         <View style={styles.railLine} />
         <View style={[styles.segmentMarker, SEGMENT_MARKER_STYLE[segment.mode]]}>
-          <Icon width={SEGMENT_ICON[segment.mode].width} height={SEGMENT_ICON[segment.mode].height} />
+          <Icon
+            width={SEGMENT_ICON[segment.mode].width}
+            height={SEGMENT_ICON[segment.mode].height}
+            hideOuterBorder={Platform.OS === 'web'}
+          />
         </View>
       </View>
 
