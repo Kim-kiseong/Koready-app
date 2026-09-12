@@ -69,6 +69,7 @@ export function buildLanguageDisplayLabels(
   fallbackText = '',
   options?: {
     koreanLevelPlacement?: 'replace' | 'append';
+    koreanLabelFallback?: string;
   },
 ) {
   const levelLabel = resolveKoreanLevelLabel(koreanLevel).trim();
@@ -80,8 +81,9 @@ export function buildLanguageDisplayLabels(
     .map((code) => resolveLanguageLabel(code).trim())
     .filter((label) => label.length > 0);
 
-  const koreanLabel = resolveLanguageLabel('KO').trim() || 'Korean';
-  const koreanDisplay = levelLabel ? `${koreanLabel} (${levelLabel})` : koreanLabel;
+  const koreanLabelFallback = options?.koreanLabelFallback ?? 'Korean';
+  const koreanLabel = resolveLanguageLabel('KO').trim() || koreanLabelFallback.trim();
+  const koreanDisplay = koreanLabel && levelLabel ? `${koreanLabel} (${levelLabel})` : koreanLabel;
   const placement = options?.koreanLevelPlacement ?? 'replace';
   const koreanIndex = normalizedLanguages.findIndex((code) => code === 'KO');
 

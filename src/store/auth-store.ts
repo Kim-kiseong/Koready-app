@@ -8,6 +8,7 @@ import { secureStorage } from './secure-storage';
 import { useAddressStore } from './address-store';
 import { useLanguageStore } from './language-store';
 import { useOnboardingStore } from './onboarding-store';
+import { useSavedPlaceStore } from './saved-place-store';
 
 type AuthState = {
   accessToken: string | null;
@@ -42,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       deviceId: Crypto.randomUUID(),
       hasHydrated: false,
       setSession: (session) => {
+        useSavedPlaceStore.getState().prepareForUser(session.user.publicId);
         set({
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,
@@ -84,6 +86,7 @@ export const useAuthStore = create<AuthState>()(
         });
         useOnboardingStore.getState().reset();
         useAddressStore.getState().reset();
+        useSavedPlaceStore.getState().reset();
       },
     }),
     {

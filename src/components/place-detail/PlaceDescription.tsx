@@ -84,6 +84,6 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: 220, borderRadius: 16, backgroundColor: Palette.grey200, marginBottom: 16 },
   gallery: { flexDirection: 'row', gap: 16, marginBottom: 16 },
   galleryImage: { borderRadius: 16, backgroundColor: Palette.grey200 },
-  body: { maxWidth: '86%', marginBottom: 42, fontFamily: FontFamily.pretendard.medium, fontSize: 14, lineHeight: 19.6, color: Palette.grey900 },
+  body: { alignSelf: 'stretch', marginBottom: 42, fontFamily: FontFamily.pretendard.medium, fontSize: 14, lineHeight: 19.6, color: Palette.grey900 },
   lastBody: { marginBottom: 42 },
 });

@@ -11,7 +11,6 @@ import {
 import type { PicksCard } from './picks';
 import type {
   PlaceListItem,
-  SavedPlaceFestivalOccurrence,
   SavedPlaceItem,
   SavedPlaceSource,
   SavedPlacesResponse,
@@ -36,6 +35,7 @@ type SavedPlaceToggleEnvelope = {
 
 const savedClient = create({
   baseURL: API_V1_BASE_URL,
+  timeout: 15_000,
 });
 
 savedClient.interceptors.request.use((config) => {
@@ -58,6 +58,18 @@ const SERVICE_REGION_NAME_BY_CODE: Record<string, string> = {
 };
 
 let savedPlaceCache: SavedPlaceItem[] = [];
+let savedPlaceCacheOwnerPublicId: string | null = null;
+
+function ensureSavedPlaceCacheOwner() {
+  const currentPublicId = useAuthStore.getState().user?.publicId ?? null;
+
+  if (savedPlaceCacheOwnerPublicId === currentPublicId) {
+    return;
+  }
+
+  savedPlaceCache = [];
+  savedPlaceCacheOwnerPublicId = currentPublicId;
+}
 
 function cloneSavedPlaceItem(place: SavedPlaceItem): SavedPlaceItem {
   return {
@@ -130,6 +142,7 @@ function paginateSavedPlaces(
 }
 
 function getLocalSavedPlaces(): SavedPlaceItem[] {
+  ensureSavedPlaceCacheOwner();
   const { savedByPlaceId, savedPlacesByPlaceId } = useSavedPlaceStore.getState();
   const merged = new Map<number, SavedPlaceItem>();
 
@@ -151,6 +164,7 @@ function getLocalSavedPlaces(): SavedPlaceItem[] {
 }
 
 function mergeSavedPlaceIntoCache(place: SavedPlaceItem, preserveExistingSavedAt = true) {
+  ensureSavedPlaceCacheOwner();
   const nextPlace = cloneSavedPlaceItem(place);
   const index = savedPlaceCache.findIndex((item) => item.placeId === nextPlace.placeId);
 
@@ -177,6 +191,7 @@ function mergeSavedPlacesIntoCache(places: SavedPlaceItem[]) {
 }
 
 function removeSavedPlaceFromCache(placeId: string | number) {
+  ensureSavedPlaceCacheOwner();
   const key = Number(placeId);
   if (!Number.isFinite(key)) {
     return;
@@ -287,6 +302,51 @@ export function rememberSavedPlace(place: SavedPlaceItem) {
 
 export function forgetSavedPlace(placeId: string | number) {
   removeSavedPlaceFromCache(placeId);
+}
+
+export async function fetchSavedPlaceStatus(
+  placeId: string | number,
+): Promise<boolean> {
+  const numericPlaceId = Number(placeId);
+  const requesterPublicId = useAuthStore.getState().user?.publicId ?? null;
+
+  if (!Number.isFinite(numericPlaceId) || !requesterPublicId) {
+    return false;
+  }
+
+  let cursor: string | null = null;
+  const visitedCursors = new Set<string>();
+
+  try {
+    while (true) {
+      if (useAuthStore.getState().user?.publicId !== requesterPublicId) {
+        return false;
+      }
+
+      const page: SavedPlacesResponse = (
+        await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
+          params: { size: 50, ...(cursor ? { cursor } : {}) },
+        })
+      ).data.data;
+
+      if (useAuthStore.getState().user?.publicId !== requesterPublicId) {
+        return false;
+      }
+
+      if (page.items.some((item) => item.placeId === numericPlaceId && item.saved !== false)) {
+        return true;
+      }
+
+      if (!page.hasMore || !page.nextCursor || visitedCursors.has(page.nextCursor)) {
+        return false;
+      }
+
+      visitedCursors.add(page.nextCursor);
+      cursor = page.nextCursor;
+    }
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchSavedPlaces(

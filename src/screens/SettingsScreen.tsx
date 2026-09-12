@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { logout } from '@/api/auth';
+import { signOutOfGoogle } from '@/api/socialAuth';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import CustomText from '@/components/CustomText';
 import BackIcon from '@/components/icons/BackIcon';
@@ -52,19 +53,13 @@ export default function SettingsScreen() {
   const [pendingAccountAction, setPendingAccountAction] = useState<'logout' | 'withdraw' | null>(null);
 
   const handleLogout = async () => {
-    if (!refreshToken) {
-      clearSession();
-      router.replace('/login');
-      return;
+    if (refreshToken) {
+      await logout({ refreshToken, deviceId }).catch(() => undefined);
     }
 
-    try {
-      await logout({ refreshToken, deviceId });
-      clearSession();
-      router.replace('/login');
-    } catch {
-      Alert.alert(copy.alerts.errorTitle, copy.alerts.logoutFailed);
-    }
+    await signOutOfGoogle();
+    clearSession();
+    router.replace('/login');
   };
 
   const closeAccountActionModal = () => {

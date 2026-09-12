@@ -2,6 +2,7 @@ import { Asset } from "expo-asset";
 import type { ImageSource } from "expo-image";
 
 import { formatPlaceRegionName } from "@/utils/place-i18n";
+import { useAuthStore } from "@/store/auth-store";
 import { useLanguageStore } from "@/store/language-store";
 import type { ServiceRegionCode, TravelStyleId } from "./onboarding";
 import type {
@@ -426,8 +427,9 @@ function mapPlaceDetailResponse(response: PlaceDetailApiResponse): PlaceDetail {
 export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
   const numericId = Number(placeId);
   if (Number.isFinite(numericId) && numericId > 0) {
+    const viewerPublicId = useAuthStore.getState().user?.publicId ?? "guest";
     const language = useLanguageStore.getState().language;
-    const cacheKey = `${language}:${numericId}`;
+    const cacheKey = `${viewerPublicId}:${language}:${numericId}`;
     const inflightRequest = PLACE_DETAIL_IN_FLIGHT_REQUESTS.get(cacheKey);
 
     if (inflightRequest) {

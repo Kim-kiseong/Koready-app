@@ -55,37 +55,6 @@ type UnsavedChangesModalProps = {
   onConfirm: () => void;
 };
 
-const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'languages' | 'koreanLevels'> = {
-  countries: [
-    { code: 'FR', labelKo: '프랑스', labelEn: 'France', displayOrder: 1 },
-    { code: 'KR', labelKo: '한국', labelEn: 'Korea', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본', labelEn: 'Japan', displayOrder: 3 },
-    { code: 'US', labelKo: '미국', labelEn: 'United States', displayOrder: 4 },
-    { code: 'CN', labelKo: '중국', labelEn: 'China', displayOrder: 5 },
-    { code: 'TW', labelKo: '대만', labelEn: 'Taiwan', displayOrder: 6 },
-  ],
-  languages: [
-    { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
-    { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
-    { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
-    { code: 'TH', labelKo: '태국어', labelEn: 'Thai', displayOrder: 6 },
-    { code: 'VI', labelKo: '베트남어', labelEn: 'Vietnamese', displayOrder: 7 },
-    { code: 'MN', labelKo: '몽골어', labelEn: 'Mongolian', displayOrder: 8 },
-    { code: 'RU', labelKo: '러시아어', labelEn: 'Russian', displayOrder: 9 },
-    { code: 'ID', labelKo: '인도네시아어', labelEn: 'Indonesian', displayOrder: 10 },
-    { code: 'ES', labelKo: '스페인어', labelEn: 'Spanish', displayOrder: 11 },
-    { code: 'DE', labelKo: '독일어', labelEn: 'German', displayOrder: 12 },
-    { code: 'AR', labelKo: '아랍어', labelEn: 'Arabic', displayOrder: 13 },
-  ],
-  koreanLevels: [
-    { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
-    { code: 'INTERMEDIATE', labelKo: '중급', labelEn: 'Intermediate', displayOrder: 2 },
-    { code: 'ADVANCED', labelKo: '고급', labelEn: 'Advanced', displayOrder: 3 },
-  ],
-};
-
 const MAX_MESSAGE_LENGTH = 500;
 
 export default function MessageComposeScreen() {
@@ -140,12 +109,7 @@ export default function MessageComposeScreen() {
   const [options, setOptions] = useState<Pick<
     ProfileOptionsResponse,
     'countries' | 'languages' | 'koreanLevels'
-  > | null>(() => ({
-    ...FALLBACK_PROFILE_OPTIONS,
-    countries: [...FALLBACK_PROFILE_OPTIONS.countries],
-    languages: [...FALLBACK_PROFILE_OPTIONS.languages],
-    koreanLevels: [...FALLBACK_PROFILE_OPTIONS.koreanLevels],
-  }));
+  > | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [content, setContent] = useState('');
@@ -158,7 +122,6 @@ export default function MessageComposeScreen() {
   const sendInFlightRef = useRef(false);
   const messageInputRef = useRef<TextInput | null>(null);
 
-  const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const sendDisabled = !content.trim() || isSending;
   const contentLength = content.length;
   const hasUnsavedChanges = content.trim().length > 0 && !successVisible;
@@ -186,12 +149,7 @@ export default function MessageComposeScreen() {
     let cancelled = false;
     setLoadError(null);
     setProfile(null);
-    setOptions({
-      ...FALLBACK_PROFILE_OPTIONS,
-      countries: [...FALLBACK_PROFILE_OPTIONS.countries],
-      languages: [...FALLBACK_PROFILE_OPTIONS.languages],
-      koreanLevels: [...FALLBACK_PROFILE_OPTIONS.koreanLevels],
-    });
+    setOptions(null);
 
     if (parsedReceiverProfileId == null) {
       setLoadError(t.messages.compose.errorDescriptionFallback);
@@ -232,23 +190,23 @@ export default function MessageComposeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [parsedReceiverProfileId, reloadKey, t.messages.compose.errorDescriptionFallback]);
+  }, [language, parsedReceiverProfileId, reloadKey, t.messages.compose.errorDescriptionFallback]);
 
   const languageChips = useMemo(() => {
-    if (!profile) {
+    if (!profile || !options) {
       return [];
     }
 
-    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, resolvedOptions.languages);
+    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, options.languages);
     return buildLanguageDisplayLabels(
       sortedLanguages,
       profile.koreanLevel,
-      (code) => getLabel(code, resolvedOptions.languages),
-      (level) => getLabel(level, resolvedOptions.koreanLevels),
+      (code) => getLabel(code, options.languages, language),
+      (level) => getLabel(level, options.koreanLevels, language),
       '',
-      { koreanLevelPlacement: 'append' },
+      { koreanLevelPlacement: 'append', koreanLabelFallback: '' },
     );
-  }, [profile, resolvedOptions.koreanLevels, resolvedOptions.languages]);
+  }, [language, options, profile]);
 
   const handleSend = useCallback(async () => {
     if (!profile) {
@@ -436,7 +394,7 @@ export default function MessageComposeScreen() {
                         profile.nationality ??
                         profile.nationalityName ??
                         '',
-                      resolvedOptions.countries,
+                      options?.countries,
                       language,
                     )}
                   </CustomText>
@@ -649,8 +607,13 @@ function sortLanguageCodesByOptionOrder(codes: string[], options: ProfileOptionI
   });
 }
 
-function getLabel(code: string, options: ProfileOptionItem[]) {
-  return options.find((option) => option.code === code)?.labelKo ?? code;
+function getLabel(code: string, options: ProfileOptionItem[], language: 'KO' | 'EN') {
+  const option = options.find((item) => normalizeLanguageCode(item.code) === normalizeLanguageCode(code));
+  if (!option) {
+    return '';
+  }
+
+  return language === 'EN' ? option.labelEn : option.labelKo;
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {
@@ -915,14 +878,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.26,
   },
   noticeCard: {
-    marginTop: 180,
+    marginTop: Platform.select({ web: 147, default: 180 }),
     borderRadius: 12,
     backgroundColor: '#F6F9FB',
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
   noticeCardEnglish: {
-    marginTop: 130,
+    marginTop: Platform.select({ web: 110, default: 130 }),
   },
   noticeText: {
     fontFamily: FontFamily.pretendard.regular,
