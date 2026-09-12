@@ -95,6 +95,16 @@ export default function SavedScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSortSheetVisible, setIsSortSheetVisible] = useState(false);
   const [savedPlacesSnapshot, setSavedPlacesSnapshot] = useState<SavedPlaceItem[]>([]);
+  const loadKey = JSON.stringify([language, hasAuthHydrated]);
+  const [previousLoadKey, setPreviousLoadKey] = useState(loadKey);
+  if (previousLoadKey !== loadKey) {
+    setPreviousLoadKey(loadKey);
+    setSavedPlacesSnapshot([]);
+    setCursor(null);
+    setHasMore(false);
+    setIsLoading(true);
+    setIsLoadingMore(false);
+  }
 
   const loadSavedPlaces = useCallback(
     async (nextCursor: string | null = null, isMore = false) => {
@@ -138,18 +148,25 @@ export default function SavedScreen() {
       return;
     }
 
-    setSavedPlacesSnapshot([]);
-    setCursor(null);
-    setHasMore(false);
-
-    const timeout = setTimeout(() => {
-      void loadSavedPlaces(null, false);
-    }, 0);
+    let cancelled = false;
+    fetchSavedPlaces(null, 20)
+      .then((result) => {
+        if (cancelled) return;
+        setSavedPlacesSnapshot([...new Map(result.items.map((item) => [item.placeId, item])).values()]);
+        setCursor(result.nextCursor);
+        setHasMore(result.hasMore);
+      })
+      .catch(() => {
+        // Keep the empty list usable if its initial request fails.
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
 
     return () => {
-      clearTimeout(timeout);
+      cancelled = true;
     };
-  }, [language, hasAuthHydrated, loadSavedPlaces]);
+  }, [language, hasAuthHydrated]);
 
   const savedPlaces = useMemo(() => {
     const items = savedPlacesSnapshot.filter((item) => item.saved !== false);

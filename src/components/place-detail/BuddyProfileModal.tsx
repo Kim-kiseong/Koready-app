@@ -91,30 +91,6 @@ const FALLBACK_PROFILE_OPTIONS: ProfileOptionsResponse = {
   ],
 };
 
-const FALLBACK_LANGUAGE_LABELS: Record<string, string> = {
-  EN: '영어',
-  KO: '한국어',
-  JA: '일본어',
-  JP: '일본어',
-  ZH: '중국어',
-  CN: '중국어',
-  FR: '프랑스어',
-  TH: '태국어',
-  VI: '베트남어',
-  MN: '몽골어',
-  RU: '러시아어',
-  ID: '인도네시아어',
-  ES: '스페인어',
-  DE: '독일어',
-  AR: '아랍어',
-};
-
-const FALLBACK_KOREAN_LEVEL_LABELS: Record<string, string> = {
-  BEGINNER: '초급',
-  INTERMEDIATE: '중급',
-  ADVANCED: '고급',
-};
-
 const PROFILE_MODAL_COPY: Record<
   LanguageCode,
   {
@@ -166,16 +142,6 @@ const PROFILE_MODAL_COPY: Record<
     linkErrorBody: 'Please try again in a moment.',
     messageUnavailable: 'Message unavailable',
   },
-};
-
-const FALLBACK_TRAVEL_STYLE_LABELS: Record<string, string> = {
-  LOCAL_FOOD: '로컬 맛집',
-  LOCAL_FESTIVAL: '지역 축제',
-  TRADITIONAL_MARKET: '전통시장',
-  CULTURE_EXPERIENCE: '문화 체험',
-  NATURE: '자연 명소',
-  EXHIBITION_MUSEUM: '전시/미술관',
-  DRAMA_LOCATION: '드라마 촬영지',
 };
 
 const LANGUAGE_CODE_ALIASES: Record<string, string> = {
@@ -283,16 +249,28 @@ export default function BuddyProfileModal({
   onPressMessage,
   onClose,
 }: BuddyProfileModalProps) {
-  const [profile, setProfile] = useState<BuddyProfileDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const language = useLanguageStore((state) => state.language);
   const copy = PROFILE_MODAL_COPY[language];
   const resolvedFallbackProfile = useMemo(
     () => fallbackProfile ?? (profileId != null ? getMockBuddyProfileDetailById(profileId) : null),
     [fallbackProfile, language, profileId],
   );
+  const [profile, setProfile] = useState<BuddyProfileDetail | null>(
+    () => visible && profileId != null ? resolvedFallbackProfile : null,
+  );
+  const [isLoading, setIsLoading] = useState(visible && profileId != null);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const loadKey = JSON.stringify([visible, profileId, language, reloadKey]);
+  const [loadSource, setLoadSource] = useState({ key: loadKey, fallback: resolvedFallbackProfile });
+
+  // Reset before rendering children so a newly opened profile never shows the previous one.
+  if (loadSource.key !== loadKey || loadSource.fallback !== resolvedFallbackProfile) {
+    setLoadSource({ key: loadKey, fallback: resolvedFallbackProfile });
+    setProfile(visible && profileId != null ? resolvedFallbackProfile : null);
+    setError(null);
+    setIsLoading(visible && profileId != null);
+  }
 
   const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const languageOptions = resolvedOptions.languages;
@@ -309,17 +287,10 @@ export default function BuddyProfileModal({
 
   useEffect(() => {
     if (!visible || profileId == null) {
-      setProfile(null);
-      setError(null);
-      setIsLoading(false);
       return;
     }
 
     let cancelled = false;
-
-    setIsLoading(true);
-    setError(null);
-    setProfile(resolvedFallbackProfile);
 
     (async () => {
       try {
@@ -329,7 +300,7 @@ export default function BuddyProfileModal({
         }
 
         setProfile(loadedProfile);
-    } catch (loadError) {
+      } catch (loadError) {
         if (cancelled) {
           return;
         }

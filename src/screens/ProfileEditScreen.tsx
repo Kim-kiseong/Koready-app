@@ -1658,13 +1658,15 @@ function SelectionModal({
   const renderOptionLabel =
     optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ selectedCodes, visible });
+  if (draftSource.selectedCodes !== selectedCodes || draftSource.visible !== visible) {
+    setDraftSource({ selectedCodes, visible });
     if (visible) {
       setDraft(selectedCodes);
       setSearchQuery('');
       setIsSearchFocused(false);
     }
-  }, [selectedCodes, visible]);
+  }
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1855,17 +1857,21 @@ function SnsEditorOverlay({
   const t = useTranslation();
   const copy = t.profileEdit.modals.sns;
   const insets = useSafeAreaInsets();
-  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(value);
+  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(
+    () => sortSocialLinks(value, options),
+  );
   const [focusedSnsCode, setFocusedSnsCode] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
   const platformCardWidth = Math.max(0, Math.floor((windowWidth - 16 * 2 - 8) / 2));
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ options, value, visible });
+  if (draftSource.options !== options || draftSource.value !== value || draftSource.visible !== visible) {
+    setDraftSource({ options, value, visible });
     if (visible) {
       setDraftLinks(sortSocialLinks(value, options));
       setFocusedSnsCode(null);
     }
-  }, [options, value, visible]);
+  }
 
   if (!visible) return null;
 

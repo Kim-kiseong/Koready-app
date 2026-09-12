@@ -57,8 +57,12 @@ export default function MessageThreadScreen() {
   const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [content, setContent] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadStatus, setLoadStatus] = useState<{ key: string; error: string | null } | null>(null);
+  const loadKey = JSON.stringify([language, normalizedThreadId]);
+  const isLoading = !!normalizedThreadId && loadStatus?.key !== loadKey;
+  const loadError = !normalizedThreadId
+    ? t.messages.thread.errorTitle
+    : loadStatus?.key === loadKey ? loadStatus.error : null;
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -66,7 +70,7 @@ export default function MessageThreadScreen() {
   const replyInputRef = useRef<TextInput | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const visibleThread = threadState;
+  const visibleThread = threadState?.threadId === normalizedThreadId ? threadState : null;
   const selectedProfileFallback = useMemo(
     () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
     [language, selectedProfileId],
@@ -74,16 +78,10 @@ export default function MessageThreadScreen() {
 
   useEffect(() => {
     if (!normalizedThreadId) {
-      setLoadError(t.messages.thread.errorTitle);
-      setIsLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoadError(null);
-    setIsLoading(true);
-    setPlaceDetail(null);
-    setProfileOptions(null);
 
     (async () => {
       try {
@@ -123,22 +121,20 @@ export default function MessageThreadScreen() {
           return;
         }
 
-        if (optionsResult.status === 'fulfilled') {
-          setProfileOptions(optionsResult.value);
-        }
-
-        if (placeResult.status === 'fulfilled') {
-          setPlaceDetail(placeResult.value);
-        } else {
-          setLoadError(extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback));
-        }
+        setProfileOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : null);
+        setPlaceDetail(placeResult.status === 'fulfilled' ? placeResult.value : null);
+        setLoadStatus({
+          key: loadKey,
+          error: placeResult.status === 'rejected'
+            ? extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback)
+            : null,
+        });
       } catch (error) {
         if (!cancelled) {
-          setLoadError(extractErrorMessage(error, t.messages.thread.errorDescriptionFallback));
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
+          setLoadStatus({
+            key: loadKey,
+            error: extractErrorMessage(error, t.messages.thread.errorDescriptionFallback),
+          });
         }
       }
     })();
@@ -146,7 +142,7 @@ export default function MessageThreadScreen() {
     return () => {
       cancelled = true;
     };
-  }, [language, normalizedThreadId]);
+  }, [loadKey, normalizedThreadId, t.messages.thread.errorDescriptionFallback]);
 
   const messageRows = useMemo(() => {
     return [...(visibleThread?.messages ?? [])].sort((left, right) => {
