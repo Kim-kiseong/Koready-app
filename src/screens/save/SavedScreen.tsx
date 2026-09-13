@@ -62,7 +62,7 @@ const TRAVEL_STYLE_LABELS: Record<LanguageCode, Record<string, string>> = {
   },
 };
 
-function createLocalizedLabelMap(entries: Array<[string, string]>) {
+function createLocalizedLabelMap(entries: [string, string][]) {
   const ko: Record<string, string> = {};
   const en: Record<string, string> = {};
 

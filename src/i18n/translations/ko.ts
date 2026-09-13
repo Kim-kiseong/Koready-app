@@ -475,7 +475,7 @@ export interface Translations {
       sentTitle: string;
       sentDescription: string;
       viewMessages: string;
-      sendAgain: string;
+      continueBrowsing: string;
       unsavedMessage: string;
       unsavedCancel: string;
       unsavedLeave: string;
@@ -1068,7 +1068,7 @@ export const ko: Translations = {
       sentDescription:
         "답장은 바로 오지 않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.",
       viewMessages: "쪽지함 보기",
-      sendAgain: "쪽지 보내기",
+      continueBrowsing: "계속 둘러보기",
       unsavedMessage: "아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?",
       unsavedCancel: "취소",
       unsavedLeave: "나가기",

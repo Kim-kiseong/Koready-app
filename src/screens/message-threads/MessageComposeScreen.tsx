@@ -35,6 +35,7 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
+import { useAuthStore } from '@/store/auth-store';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { resolveProfileImageUri } from '@/utils/profile-image';
@@ -52,6 +53,14 @@ type MessageComposeParams = {
 const MAX_MESSAGE_LENGTH = 500;
 
 export default function MessageComposeScreen() {
+  const publicId = useAuthStore((state) => state.user?.publicId);
+  const ownerPublicId = useMessageThreadStore((state) => state.ownerPublicId);
+  const sessionVersion = useMessageThreadStore((state) => state.sessionVersion);
+  if (!publicId || publicId !== ownerPublicId) return null;
+  return <MessageComposeContent key={`${publicId}:${sessionVersion}`} sessionVersion={sessionVersion} />;
+}
+
+function MessageComposeContent({ sessionVersion }: { sessionVersion: number }) {
   const router = useRouter();
   const navigation = useNavigation();
   const language = useLanguageStore((state) => state.language);
@@ -237,7 +246,7 @@ export default function MessageComposeScreen() {
           }
         : threadResponse;
 
-      useMessageThreadStore.getState().upsertThread(nextThread);
+      useMessageThreadStore.getState().upsertThread(nextThread, sessionVersion);
       setSentThread(nextThread);
       setSuccessVisible(true);
     } catch (error) {
@@ -252,12 +261,12 @@ export default function MessageComposeScreen() {
     normalizedPlaceAddress,
     normalizedPlaceImageUrl,
     normalizedPlaceId,
-    normalizedPlaceNumericId,
     normalizedPlaceRouteId,
     normalizedPlaceTitle,
     parsedPlaceId,
     parsedPlaceNumericId,
     parsedReceiverProfileId,
+    sessionVersion,
     profile,
     isSending,
   ]);
@@ -276,7 +285,11 @@ export default function MessageComposeScreen() {
     setSuccessVisible(false);
     setContent('');
     setSentThread(null);
-  }, []);
+    const placeId = normalizedPlaceNumericId ?? normalizedPlaceId ?? normalizedPlaceRouteId;
+    goBackOrRoot(router, placeId
+      ? { pathname: '/places/[placeId]', params: { placeId, tab: 'MATES' } }
+      : '/home');
+  }, [normalizedPlaceId, normalizedPlaceNumericId, normalizedPlaceRouteId, router]);
 
   const requestLeaveScreen = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -489,7 +502,7 @@ export default function MessageComposeScreen() {
                 </Pressable>
 
                 <Pressable style={styles.successSecondaryButton} onPress={handleContinueBrowsing}>
-                  <CustomText style={styles.successSecondaryButtonText}>{t.messages.compose.sendAgain}</CustomText>
+                  <CustomText style={styles.successSecondaryButtonText}>{t.messages.compose.continueBrowsing}</CustomText>
                 </Pressable>
               </View>
             </View>

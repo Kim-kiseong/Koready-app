@@ -406,7 +406,7 @@ export const en: DeepPartial<Translations> = {
       sentTitle: 'Message Sent!',
       sentDescription: 'Replies may take some time.\nYou can check new replies in Messages.',
       viewMessages: 'View Messages',
-      sendAgain: 'Send Message',
+      continueBrowsing: 'Continue browsing',
       unsavedMessage: "Your message hasn't been sent yet.\nAre you sure you want to leave?",
       unsavedCancel: 'Cancel',
       unsavedLeave: 'Leave',

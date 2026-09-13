@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { isAxiosError } from 'axios';
 
 import { client } from './client';
 import { publicClient } from './public-client';
@@ -277,7 +277,7 @@ export async function fetchBuddyProfile(profileId: number): Promise<BuddyProfile
     const response = await client.get<BuddyProfileDetailEnvelope>(`/buddy-profiles/${profileId}`);
     return cloneBuddyProfile(response.data.data);
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
+    if (isAxiosError(error) && error.response?.status === 404) {
       if (isDevMockSession()) {
         const mockProfile = getMockBuddyProfileDetailById(profileId);
         if (mockProfile) {

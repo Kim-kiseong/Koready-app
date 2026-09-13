@@ -252,7 +252,7 @@ export default function BuddyProfileModal({
   const language = useLanguageStore((state) => state.language);
   const copy = PROFILE_MODAL_COPY[language];
   const resolvedFallbackProfile = useMemo(
-    () => fallbackProfile ?? (profileId != null ? getMockBuddyProfileDetailById(profileId) : null),
+    () => fallbackProfile ?? (profileId != null ? getMockBuddyProfileDetailById(profileId, language) : null),
     [fallbackProfile, language, profileId],
   );
   const [profile, setProfile] = useState<BuddyProfileDetail | null>(

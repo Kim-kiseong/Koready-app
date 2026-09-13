@@ -47,6 +47,14 @@ const FALLBACK_COUNTRY_OPTIONS: ProfileOptionItem[] = [
 ];
 
 export default function MessageThreadScreen() {
+  const publicId = useAuthStore((state) => state.user?.publicId);
+  const ownerPublicId = useMessageThreadStore((state) => state.ownerPublicId);
+  const sessionVersion = useMessageThreadStore((state) => state.sessionVersion);
+  if (!publicId || publicId !== ownerPublicId) return null;
+  return <MessageThreadContent key={`${publicId}:${sessionVersion}`} sessionVersion={sessionVersion} />;
+}
+
+function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
   const router = useRouter();
   const { threadId } = useLocalSearchParams<MessageThreadParams>();
   const language = useLanguageStore((state) => state.language);
@@ -72,7 +80,7 @@ export default function MessageThreadScreen() {
 
   const visibleThread = threadState?.threadId === normalizedThreadId ? threadState : null;
   const selectedProfileFallback = useMemo(
-    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
+    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId, language)),
     [language, selectedProfileId],
   );
 
@@ -101,11 +109,15 @@ export default function MessageThreadScreen() {
         };
 
         // Clear the inbox highlight before the read request finishes, including on a quick back navigation.
-        useMessageThreadStore.getState().replaceThread(readThread);
+        useMessageThreadStore.getState().replaceThread(readThread, sessionVersion);
         setThreadState(readThread);
+        setPlaceDetail(null);
+        setProfileOptions(null);
+        setLoadStatus({ key: loadKey, error: null });
 
         void markMessageThreadRead(normalizedThreadId)
           .then((readResult) => {
+            if (useMessageThreadStore.getState().sessionVersion !== sessionVersion) return;
             useAuthStore.setState({ unreadMessageCount: readResult.unreadTotal });
           })
           .catch(() => {
@@ -114,7 +126,7 @@ export default function MessageThreadScreen() {
 
         const [optionsResult, placeResult] = await Promise.allSettled([
           fetchProfileOptions(),
-          fetchPlaceDetail(loadedThread.place.routeId ?? String(loadedThread.place.placeId)),
+          fetchPlaceDetail(String(loadedThread.place.placeId)),
         ]);
 
         if (cancelled) {
@@ -123,12 +135,6 @@ export default function MessageThreadScreen() {
 
         setProfileOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : null);
         setPlaceDetail(placeResult.status === 'fulfilled' ? placeResult.value : null);
-        setLoadStatus({
-          key: loadKey,
-          error: placeResult.status === 'rejected'
-            ? extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback)
-            : null,
-        });
       } catch (error) {
         if (!cancelled) {
           setLoadStatus({
@@ -142,7 +148,7 @@ export default function MessageThreadScreen() {
     return () => {
       cancelled = true;
     };
-  }, [loadKey, normalizedThreadId, t.messages.thread.errorDescriptionFallback]);
+  }, [loadKey, normalizedThreadId, sessionVersion, t.messages.thread.errorDescriptionFallback]);
 
   const messageRows = useMemo(() => {
     return [...(visibleThread?.messages ?? [])].sort((left, right) => {
@@ -177,14 +183,14 @@ export default function MessageThreadScreen() {
         size: 20,
       });
 
-      useMessageThreadStore.getState().upsertThread(olderPage);
+      useMessageThreadStore.getState().upsertThread(olderPage, sessionVersion);
       setThreadState((previous) => mergeThreadDetail(previous, olderPage));
     } catch {
       // mock-backed API should keep the UI usable even if this page fails.
     } finally {
       setIsLoadingOlder(false);
     }
-  }, [isLoadingOlder, normalizedThreadId, visibleThread]);
+  }, [isLoadingOlder, normalizedThreadId, sessionVersion, visibleThread]);
 
   const handleSendReply = useCallback(async () => {
     if (!normalizedThreadId || !visibleThread || isSending || sendInFlightRef.current || !visibleThread.canReply) {
@@ -213,7 +219,7 @@ export default function MessageThreadScreen() {
       useMessageThreadStore.getState().upsertThread({
         ...visibleThread,
         messages: [message],
-      });
+      }, sessionVersion);
 
       setThreadState((previous) => {
         if (!previous) {
@@ -237,7 +243,7 @@ export default function MessageThreadScreen() {
       sendInFlightRef.current = false;
       setIsSending(false);
     }
-  }, [content, isSending, normalizedThreadId, visibleThread]);
+  }, [content, isSending, normalizedThreadId, sessionVersion, visibleThread]);
 
   const handleOpenPlace = useCallback(() => {
     if (!visibleThread) {
@@ -270,7 +276,7 @@ export default function MessageThreadScreen() {
     );
   }
 
-  if (isLoading || !visibleThread || !placeDetail) {
+  if (isLoading || !visibleThread) {
     return (
       <ScreenShell>
         <View style={styles.loadingState}>
@@ -282,9 +288,11 @@ export default function MessageThreadScreen() {
   }
 
   const displayPlace = {
-    ...placeDetail,
-    title: placeDetail.title || visibleThread.place.title,
+    title: placeDetail?.title || visibleThread.place.title,
+    address: placeDetail?.address || visibleThread.place.address,
   };
+  const placeImageSource = placeDetail?.images[0]?.source
+    ?? (visibleThread.place.imageUrl ? { uri: visibleThread.place.imageUrl } : null);
 
   return (
     <ScreenShell>
@@ -311,9 +319,9 @@ export default function MessageThreadScreen() {
             </View>
 
             <View style={styles.placeCard}>
-              {resolvePlaceImageSource(displayPlace) ? (
+              {placeImageSource ? (
                 <Image
-                  source={resolvePlaceImageSource(displayPlace)}
+                  source={placeImageSource}
                   style={styles.placeImage}
                   contentFit="cover"
                 />
@@ -490,10 +498,6 @@ function Avatar({
   }
 
   return <Image source={{ uri: resolvedImageUrl }} style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]} contentFit="cover" />;
-}
-
-function resolvePlaceImageSource(place: PlaceDetail) {
-  return place.images[0]?.source ?? null;
 }
 
 function formatMessageTime(value: string, language: 'KO' | 'EN') {

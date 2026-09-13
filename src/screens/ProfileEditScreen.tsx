@@ -7,7 +7,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { SymbolView } from 'expo-symbols';
 import { fetch as expoFetch } from 'expo/fetch';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -1244,7 +1244,7 @@ function normalizeProfileImageMimeType(
   return null;
 }
 
-function firstNonEmptyString(...values: Array<string | null | undefined>) {
+function firstNonEmptyString(...values: (string | null | undefined)[]) {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) {
@@ -1655,8 +1655,12 @@ function SelectionModal({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const isListPresentation = presentation === 'list';
-  const renderOptionLabel =
-    optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
+  const renderOptionLabel = useCallback(
+    (option: ProfileOptionItem) => optionLabelFormatter
+      ? optionLabelFormatter(option)
+      : getOptionLabel(option, language),
+    [optionLabelFormatter, language],
+  );
 
   const [draftSource, setDraftSource] = useState({ selectedCodes, visible });
   if (draftSource.selectedCodes !== selectedCodes || draftSource.visible !== visible) {
