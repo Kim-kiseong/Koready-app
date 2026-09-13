@@ -368,7 +368,7 @@ export default function PicksScreen() {
       .finally(() => {
         isFetchingMoreRef.current = false;
       });
-  }, [cards.length, currentIndex, cursor, deckId, hasMore, remainingThreshold]);
+  }, [cards.length, currentIndex, cursor, deckId, hasMore, remainingThreshold, upsertSavedPlace]);
 
   const changeScope = (nextScope: PicksScope) => {
     if (nextScope === scope) return;

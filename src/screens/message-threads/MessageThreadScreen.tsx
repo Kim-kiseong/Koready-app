@@ -47,6 +47,14 @@ const FALLBACK_COUNTRY_OPTIONS: ProfileOptionItem[] = [
 ];
 
 export default function MessageThreadScreen() {
+  const publicId = useAuthStore((state) => state.user?.publicId);
+  const ownerPublicId = useMessageThreadStore((state) => state.ownerPublicId);
+  const sessionVersion = useMessageThreadStore((state) => state.sessionVersion);
+  if (!publicId || publicId !== ownerPublicId) return null;
+  return <MessageThreadContent key={`${publicId}:${sessionVersion}`} sessionVersion={sessionVersion} />;
+}
+
+function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
   const router = useRouter();
   const { threadId } = useLocalSearchParams<MessageThreadParams>();
   const language = useLanguageStore((state) => state.language);
@@ -57,35 +65,31 @@ export default function MessageThreadScreen() {
   const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [content, setContent] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadStatus, setLoadStatus] = useState<{ key: string; error: string | null } | null>(null);
+  const loadKey = JSON.stringify([language, normalizedThreadId]);
+  const isLoading = !!normalizedThreadId && loadStatus?.key !== loadKey;
+  const loadError = !normalizedThreadId
+    ? t.messages.thread.errorTitle
+    : loadStatus?.key === loadKey ? loadStatus.error : null;
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const hasMarkedReadRef = useRef<string | null>(null);
   const sendInFlightRef = useRef(false);
   const replyInputRef = useRef<TextInput | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const visibleThread = threadState;
+  const visibleThread = threadState?.threadId === normalizedThreadId ? threadState : null;
   const selectedProfileFallback = useMemo(
-    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
+    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId, language)),
     [language, selectedProfileId],
   );
 
   useEffect(() => {
     if (!normalizedThreadId) {
-      setLoadError(t.messages.thread.errorTitle);
-      setIsLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoadError(null);
-    setIsLoading(true);
-    setPlaceDetail(null);
-    setProfileOptions(null);
-    hasMarkedReadRef.current = null;
 
     (async () => {
       try {
@@ -94,74 +98,49 @@ export default function MessageThreadScreen() {
           return;
         }
 
-        useMessageThreadStore.getState().replaceThread(loadedThread);
-        setThreadState(loadedThread);
+        const readAt = new Date().toISOString();
+        const readThread: MessageThreadResponse = {
+          ...loadedThread,
+          messages: loadedThread.messages.map((message) =>
+            message.senderProfileId === loadedThread.otherProfile.profileId && !message.read
+              ? { ...message, read: true, readAt }
+              : message,
+          ),
+        };
+
+        // Clear the inbox highlight before the read request finishes, including on a quick back navigation.
+        useMessageThreadStore.getState().replaceThread(readThread, sessionVersion);
+        setThreadState(readThread);
+        setPlaceDetail(null);
+        setProfileOptions(null);
+        setLoadStatus({ key: loadKey, error: null });
+
+        void markMessageThreadRead(normalizedThreadId)
+          .then((readResult) => {
+            if (useMessageThreadStore.getState().sessionVersion !== sessionVersion) return;
+            useAuthStore.setState({ unreadMessageCount: readResult.unreadTotal });
+          })
+          .catch(() => {
+            // Keep locally viewed messages read; opening the thread again retries the request.
+          });
 
         const [optionsResult, placeResult] = await Promise.allSettled([
           fetchProfileOptions(),
-          fetchPlaceDetail(loadedThread.place.routeId ?? String(loadedThread.place.placeId)),
+          fetchPlaceDetail(String(loadedThread.place.placeId)),
         ]);
 
         if (cancelled) {
           return;
         }
 
-        if (optionsResult.status === 'fulfilled') {
-          setProfileOptions(optionsResult.value);
-        }
-
-        if (placeResult.status === 'fulfilled') {
-          setPlaceDetail(placeResult.value);
-        } else {
-          setLoadError(extractErrorMessage(placeResult.reason, t.messages.thread.errorDescriptionFallback));
-        }
+        setProfileOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : null);
+        setPlaceDetail(placeResult.status === 'fulfilled' ? placeResult.value : null);
       } catch (error) {
         if (!cancelled) {
-          setLoadError(extractErrorMessage(error, t.messages.thread.errorDescriptionFallback));
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [language, normalizedThreadId]);
-
-  useEffect(() => {
-    if (!normalizedThreadId || !visibleThread) {
-      return;
-    }
-
-    if (hasMarkedReadRef.current === normalizedThreadId) {
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const readResult = await markMessageThreadRead(normalizedThreadId);
-        if (cancelled) {
-          return;
-        }
-
-        useAuthStore.setState({ unreadMessageCount: readResult.unreadTotal });
-
-        const refreshedThread = await fetchMessageThread(normalizedThreadId, { size: 20 });
-        if (cancelled) {
-          return;
-        }
-
-        useMessageThreadStore.getState().replaceThread(refreshedThread);
-        setThreadState(refreshedThread);
-        hasMarkedReadRef.current = normalizedThreadId;
-      } catch {
-        if (!cancelled) {
-          hasMarkedReadRef.current = normalizedThreadId;
+          setLoadStatus({
+            key: loadKey,
+            error: extractErrorMessage(error, t.messages.thread.errorDescriptionFallback),
+          });
         }
       }
     })();
@@ -169,7 +148,7 @@ export default function MessageThreadScreen() {
     return () => {
       cancelled = true;
     };
-  }, [normalizedThreadId, visibleThread]);
+  }, [loadKey, normalizedThreadId, sessionVersion, t.messages.thread.errorDescriptionFallback]);
 
   const messageRows = useMemo(() => {
     return [...(visibleThread?.messages ?? [])].sort((left, right) => {
@@ -204,14 +183,14 @@ export default function MessageThreadScreen() {
         size: 20,
       });
 
-      useMessageThreadStore.getState().upsertThread(olderPage);
+      useMessageThreadStore.getState().upsertThread(olderPage, sessionVersion);
       setThreadState((previous) => mergeThreadDetail(previous, olderPage));
     } catch {
       // mock-backed API should keep the UI usable even if this page fails.
     } finally {
       setIsLoadingOlder(false);
     }
-  }, [isLoadingOlder, normalizedThreadId, visibleThread]);
+  }, [isLoadingOlder, normalizedThreadId, sessionVersion, visibleThread]);
 
   const handleSendReply = useCallback(async () => {
     if (!normalizedThreadId || !visibleThread || isSending || sendInFlightRef.current || !visibleThread.canReply) {
@@ -240,7 +219,7 @@ export default function MessageThreadScreen() {
       useMessageThreadStore.getState().upsertThread({
         ...visibleThread,
         messages: [message],
-      });
+      }, sessionVersion);
 
       setThreadState((previous) => {
         if (!previous) {
@@ -264,7 +243,7 @@ export default function MessageThreadScreen() {
       sendInFlightRef.current = false;
       setIsSending(false);
     }
-  }, [content, isSending, normalizedThreadId, visibleThread]);
+  }, [content, isSending, normalizedThreadId, sessionVersion, visibleThread]);
 
   const handleOpenPlace = useCallback(() => {
     if (!visibleThread) {
@@ -297,7 +276,7 @@ export default function MessageThreadScreen() {
     );
   }
 
-  if (isLoading || !visibleThread || !placeDetail) {
+  if (isLoading || !visibleThread) {
     return (
       <ScreenShell>
         <View style={styles.loadingState}>
@@ -309,9 +288,11 @@ export default function MessageThreadScreen() {
   }
 
   const displayPlace = {
-    ...placeDetail,
-    title: placeDetail.title || visibleThread.place.title,
+    title: placeDetail?.title || visibleThread.place.title,
+    address: placeDetail?.address || visibleThread.place.address,
   };
+  const placeImageSource = placeDetail?.images[0]?.source
+    ?? (visibleThread.place.imageUrl ? { uri: visibleThread.place.imageUrl } : null);
 
   return (
     <ScreenShell>
@@ -338,9 +319,9 @@ export default function MessageThreadScreen() {
             </View>
 
             <View style={styles.placeCard}>
-              {resolvePlaceImageSource(displayPlace) ? (
+              {placeImageSource ? (
                 <Image
-                  source={resolvePlaceImageSource(displayPlace)}
+                  source={placeImageSource}
                   style={styles.placeImage}
                   contentFit="cover"
                 />
@@ -517,10 +498,6 @@ function Avatar({
   }
 
   return <Image source={{ uri: resolvedImageUrl }} style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]} contentFit="cover" />;
-}
-
-function resolvePlaceImageSource(place: PlaceDetail) {
-  return place.images[0]?.source ?? null;
 }
 
 function formatMessageTime(value: string, language: 'KO' | 'EN') {

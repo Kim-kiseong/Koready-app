@@ -1,5 +1,5 @@
 import { getMockBuddyProfileById } from '@/api/mate';
-import type { BuddyProfile, BuddyProfileDetail } from '@/api/types';
+import type { BuddyProfile, BuddyProfileDetail, LanguageCode } from '@/api/types';
 import { normalizeCountryCode } from '@/utils/country';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -117,8 +117,8 @@ function cloneBuddyProfileDetail(profile: BuddyProfileDetail): BuddyProfileDetai
   };
 }
 
-function localizeBuddyProfile(profile: BuddyProfileDetail): BuddyProfileDetail {
-  if (useLanguageStore.getState().language !== 'EN') {
+function localizeBuddyProfile(profile: BuddyProfileDetail, language: LanguageCode): BuddyProfileDetail {
+  if (language !== 'EN') {
     return profile;
   }
 
@@ -135,20 +135,26 @@ function toBuddyProfileDetail(profile: BuddyProfile): BuddyProfileDetail {
   };
 }
 
-export function getInboxMockBuddyProfileById(profileId: number): BuddyProfileDetail | null {
+export function getInboxMockBuddyProfileById(
+  profileId: number,
+  language: LanguageCode = useLanguageStore.getState().language,
+): BuddyProfileDetail | null {
   const profile = INBOX_MOCK_BUDDY_PROFILES[profileId];
-  return profile ? localizeBuddyProfile(cloneBuddyProfileDetail(profile)) : null;
+  return profile ? localizeBuddyProfile(cloneBuddyProfileDetail(profile), language) : null;
 }
 
-export function getMockBuddyProfileDetailById(profileId: number): BuddyProfileDetail | null {
-  const inboxMockProfile = getInboxMockBuddyProfileById(profileId);
+export function getMockBuddyProfileDetailById(
+  profileId: number,
+  language: LanguageCode = useLanguageStore.getState().language,
+): BuddyProfileDetail | null {
+  const inboxMockProfile = getInboxMockBuddyProfileById(profileId, language);
   if (inboxMockProfile) {
     return inboxMockProfile;
   }
 
   const mateProfile = getMockBuddyProfileById(profileId);
   if (mateProfile) {
-    return localizeBuddyProfile(toBuddyProfileDetail(mateProfile));
+    return localizeBuddyProfile(toBuddyProfileDetail(mateProfile), language);
   }
 
   return null;

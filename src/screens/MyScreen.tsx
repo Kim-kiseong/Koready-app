@@ -20,6 +20,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { resolveProfileImageSource } from '@/utils/profile-image';
+import { useMessageThreadStore } from '@/store/message-thread-store';
 
 type BuddyProfileState = {
   exists: boolean;
@@ -34,6 +35,7 @@ export default function MyScreen() {
   const unreadMessageCount = useAuthStore((state) => state.unreadMessageCount);
   const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const publicId = useAuthStore((state) => state.user?.publicId);
   const [profileState, setProfileState] = useState<BuddyProfileState | null>(null);
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,16 +81,17 @@ export default function MyScreen() {
   }, [hasHydrated, copy.error.description]);
 
   const syncUnreadMessageCount = useCallback(() => {
-    if (!hasHydrated) {
+    if (!hasHydrated || !publicId) {
       return undefined;
     }
 
     let cancelled = false;
+    const sessionVersion = useMessageThreadStore.getState().sessionVersion;
 
     (async () => {
       try {
         const threads = await fetchMessageThreads();
-        if (!cancelled) {
+        if (!cancelled && useMessageThreadStore.getState().sessionVersion === sessionVersion) {
           useAuthStore.setState({ unreadMessageCount: threads.unreadTotal });
         }
       } catch {
@@ -99,7 +102,7 @@ export default function MyScreen() {
     return () => {
       cancelled = true;
     };
-  }, [hasHydrated]);
+  }, [hasHydrated, publicId]);
 
   useFocusEffect(loadProfile);
   useFocusEffect(syncUnreadMessageCount);
