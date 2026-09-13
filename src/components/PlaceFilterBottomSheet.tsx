@@ -14,6 +14,7 @@ import DateRangeBottomSheet, {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/language-store';
 import {
   DEFAULT_PLACE_FILTER_SELECTION,
   formatPlaceDateRangeLabel,
@@ -93,6 +94,7 @@ export default function PlaceFilterBottomSheet({
   onClose,
 }: PlaceFilterBottomSheetProps) {
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const { height: windowHeight } = useWindowDimensions();
   const [draftFilter, setDraftFilter] = useState<PlaceFilterSelection>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
@@ -191,6 +193,31 @@ export default function PlaceFilterBottomSheet({
   const customDateRangeLabel = hasCustomDateRange
     ? formatPlaceDateRangeLabel(draftFilter.dateRange.startDate!, draftFilter.dateRange.endDate!)
     : null;
+  const firstDateRowPresetIds =
+    language === 'EN'
+      ? EVENT_DATE_FILTER_IDS.filter((id) => id !== 'NEXT_MONTH')
+      : EVENT_DATE_FILTER_IDS;
+
+  const dateSelectButton = (
+    <Pressable
+      style={[
+        styles.dateSelectButton,
+        hasCustomDateRange ? styles.dateSelectButtonSelected : null,
+      ]}
+      onPress={() => setIsDateSheetOpen((current) => !current)}
+    >
+      <CalendarIcon color={hasCustomDateRange ? Palette.white : Palette.grey500} />
+      <CustomText
+        numberOfLines={1}
+        style={[
+          styles.dateSelectText,
+          hasCustomDateRange ? styles.dateSelectTextSelected : null,
+        ]}
+      >
+        {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
+      </CustomText>
+    </Pressable>
+  );
 
   if (!visible) return null;
 
@@ -233,42 +260,38 @@ export default function PlaceFilterBottomSheet({
             >
               <View style={styles.section}>
                 <CustomText style={styles.sectionLabel}>{t.eventFilter.dateLabel}</CustomText>
-                <View style={styles.chipWrap}>
-                  <FilterChip
-                    label={t.eventFilter.dateAll}
-                    selected={!hasCustomDateRange && draftFilter.datePreset === 'ALL'}
-                    onPress={() => handleDatePresetSelect('ALL')}
-                  />
-                  {EVENT_DATE_FILTER_IDS.map((id) => (
+                <View style={styles.dateRows}>
+                  <View style={styles.chipWrap}>
                     <FilterChip
-                      key={id}
-                      label={t.eventFilter.dateOptions[id]}
-                      selected={!hasCustomDateRange && draftFilter.datePreset === id}
-                      onPress={() => handleDatePresetSelect(id)}
+                      label={t.eventFilter.dateAll}
+                      selected={!hasCustomDateRange && draftFilter.datePreset === 'ALL'}
+                      onPress={() => handleDatePresetSelect('ALL')}
                     />
-                  ))}
-                </View>
+                    {firstDateRowPresetIds.map((id) => (
+                      <FilterChip
+                        key={id}
+                        label={t.eventFilter.dateOptions[id]}
+                        selected={!hasCustomDateRange && draftFilter.datePreset === id}
+                        onPress={() => handleDatePresetSelect(id)}
+                      />
+                    ))}
+                  </View>
 
-                <Pressable
-                  style={[
-                    styles.dateSelectButton,
-                    hasCustomDateRange ? styles.dateSelectButtonSelected : null,
-                  ]}
-                  onPress={() => setIsDateSheetOpen((current) => !current)}
-                >
-                  <CalendarIcon
-                    color={hasCustomDateRange ? Palette.white : Palette.grey500}
-                  />
-                  <CustomText
-                    numberOfLines={1}
-                    style={[
-                      styles.dateSelectText,
-                      hasCustomDateRange ? styles.dateSelectTextSelected : null,
-                    ]}
-                  >
-                    {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
-                  </CustomText>
-                </Pressable>
+                  {language === 'EN' ? (
+                    <View style={styles.chipWrap}>
+                      <FilterChip
+                        label={t.eventFilter.dateOptions.NEXT_MONTH}
+                        selected={
+                          !hasCustomDateRange && draftFilter.datePreset === 'NEXT_MONTH'
+                        }
+                        onPress={() => handleDatePresetSelect('NEXT_MONTH')}
+                      />
+                      {dateSelectButton}
+                    </View>
+                  ) : (
+                    dateSelectButton
+                  )}
+                </View>
               </View>
 
               <View style={styles.section}>
@@ -413,6 +436,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19.6,
     color: Palette.text,
+  },
+  dateRows: {
+    gap: 8,
   },
   chipWrap: {
     flexDirection: 'row',

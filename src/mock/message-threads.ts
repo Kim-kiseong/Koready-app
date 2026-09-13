@@ -13,6 +13,7 @@ import type {
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { normalizeCountryCode } from '@/utils/country';
 import { useLanguageStore } from '@/store/language-store';
+import { useMessageThreadStore } from '@/store/message-thread-store';
 
 type ThreadRecord = {
   threadId: string;
@@ -267,6 +268,28 @@ seedThread({
   ],
 });
 
+const INITIAL_MOCK_THREADS = [...MOCK_THREADS.values()].map((thread) => ({
+  ...thread,
+  messages: thread.messages.map((message) => ({ ...message })),
+}));
+let mockSessionVersion: number | null = null;
+
+export function prepareMockMessageThreads(sessionVersion: number) {
+  if (mockSessionVersion === sessionVersion) return;
+  mockSessionVersion = sessionVersion;
+  MOCK_THREADS.clear();
+  MOCK_IDEMPOTENCY.clear();
+  nextMessageId = 9400;
+  INITIAL_MOCK_THREADS.forEach((thread) => {
+    MOCK_THREADS.set(thread.threadId, {
+      ...thread,
+      place: { ...thread.place },
+      otherProfile: { ...thread.otherProfile },
+      messages: thread.messages.map((message) => ({ ...message })),
+    });
+  });
+}
+
 function seedThread(seed: Omit<ThreadRecord, 'otherProfile'> & { otherProfileId: number }) {
   const profile = getMockBuddyProfileDetailById(seed.otherProfileId);
   const otherProfile = profile
@@ -485,7 +508,24 @@ function paginateList(items: MessageThreadListItem[], cursor?: string | null, si
 }
 
 function getThreadRecord(threadId: string) {
-  return MOCK_THREADS.get(threadId) ?? null;
+  const record = MOCK_THREADS.get(threadId);
+  if (record) return record;
+
+  // Fast Refresh can reload mock fixtures while the screen store still has sent messages.
+  const cachedThread = useMessageThreadStore.getState().threads[threadId];
+  if (!threadId.startsWith('mock-message-thread-') || !cachedThread?.messages.length) {
+    return null;
+  }
+
+  const restoredRecord: ThreadRecord = {
+    threadId,
+    place: { ...cachedThread.place },
+    otherProfile: { ...cachedThread.otherProfile },
+    messages: cachedThread.messages.map((message) => ({ ...message })),
+    canReply: cachedThread.canReply,
+  };
+  MOCK_THREADS.set(threadId, restoredRecord);
+  return restoredRecord;
 }
 
 function ensureRecordFromRequest(
@@ -584,6 +624,7 @@ function getThreadPage(record: ThreadRecord, cursor?: string | null, size = 20) 
 }
 
 export function getMockMessageThreadsResponse(cursor?: string | null, size = 20): MessageThreadsResponse {
+  Object.keys(useMessageThreadStore.getState().threads).forEach(getThreadRecord);
   const items = [...MOCK_THREADS.values()].map(buildListItem);
   const paginated = paginateList(items, cursor, size);
   if (!paginated) {

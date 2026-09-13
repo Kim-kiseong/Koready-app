@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import CustomText from '@/components/CustomText';
@@ -8,6 +8,7 @@ import type { RouteCoordinate, RoutePlace, RouteSegment } from '@/api/route';
 // Set this in .env.local and Vercel Environment Variables.
 // EXPO_PUBLIC_KAKAO_MAP_JS_KEY=your-kakao-javascript-key
 const KAKAO_MAP_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAP_JS_KEY ?? '';
+const EMPTY_SEGMENTS: RouteSegment[] = [];
 const KAKAO_MAP_INTERACTION_STYLE = {
   cursor: 'grab',
   touchAction: 'none',
@@ -93,13 +94,6 @@ function loadKakaoSdk(appKey: string) {
   }
 
   return kakaoScriptPromise;
-}
-
-function normalizeSearchText(place: RoutePlace) {
-  const address = place.address?.trim() ?? '';
-  const name = place.name.trim();
-
-  return isUsableSearchText(address) ? address : name;
 }
 
 function createPlaceSearchQueries(place: RoutePlace) {
@@ -235,22 +229,6 @@ function pushUniqueQuery(queries: string[], query: string) {
   }
 
   queries.push(query);
-}
-
-function createRouteSearchQueries(origin: RoutePlace, destination: RoutePlace, segments: RouteSegment[] = []) {
-  const sortedSegments = [...segments].sort((left, right) => left.order - right.order);
-  const queries: string[] = [];
-
-  pushUniqueQuery(queries, normalizeSearchText(origin));
-
-  sortedSegments.forEach((segment) => {
-    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.startName));
-    pushUniqueQuery(queries, normalizeSegmentSearchText(segment.endName));
-  });
-
-  pushUniqueQuery(queries, normalizeSearchText(destination));
-
-  return queries;
 }
 
 function createWaypointSearchQueries(segments: RouteSegment[] = []) {
@@ -399,17 +377,13 @@ function filterRoutePoints(originPoint: KakaoPoint | null, destinationPoint: Kak
   return [originPoint, ...removeConsecutiveDuplicatePoints(filteredMiddlePoints), destinationPoint];
 }
 
-export default function KakaoRouteMap({ origin, destination, segments = [], style }: KakaoMapProps) {
+export default function KakaoRouteMap({ origin, destination, segments = EMPTY_SEGMENTS, style }: KakaoMapProps) {
   const mapContainerRef = useRef<View | null>(null);
   const mapRef = useRef<any>(null);
   const originMarkerRef = useRef<any>(null);
   const destinationMarkerRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
-  const searchKey = useMemo(
-    () => createRouteSearchQueries(origin, destination, segments).join('::'),
-    [destination, origin, segments],
-  );
   const handleZoomIn = () => {
     const map = mapRef.current;
     if (!map) {
@@ -481,7 +455,7 @@ export default function KakaoRouteMap({ origin, destination, segments = [], styl
 
         const searchPoint = (query: string) =>
           new Promise<KakaoPoint | null>((resolve) => {
-            const handleResults = (results: Array<{ x: string; y: string }>, status: string) => {
+            const handleResults = (results: { x: string; y: string }[], status: string) => {
               if (status === kakao.services.Status.OK && results.length > 0) {
                 const [firstResult] = results;
                 const lat = Number(firstResult.y);
@@ -501,7 +475,7 @@ export default function KakaoRouteMap({ origin, destination, segments = [], styl
 
             return new Promise<KakaoPoint | null>((resolve) => {
               const places = new kakao.services.Places();
-              places.keywordSearch(query, (results: Array<{ x: string; y: string }>, status: string) => {
+              places.keywordSearch(query, (results: { x: string; y: string }[], status: string) => {
                 if (status === kakao.services.Status.OK && results.length > 0) {
                   const [firstResult] = results;
                   const lat = Number(firstResult.y);
@@ -646,7 +620,7 @@ export default function KakaoRouteMap({ origin, destination, segments = [], styl
         mapRef.current = null;
       }
     };
-  }, [searchKey]);
+  }, [origin, destination, segments]);
 
   return (
     <View ref={mapContainerRef} style={[styles.container, KAKAO_MAP_INTERACTION_STYLE, style]}>

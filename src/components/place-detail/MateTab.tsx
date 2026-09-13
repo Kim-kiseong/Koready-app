@@ -143,6 +143,20 @@ export default function MateTab({
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const selectedProfileFallback = selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId);
   const matesApiPlaceId = placeNumericId != null ? String(placeNumericId) : placeId;
+  const loadKey = JSON.stringify([
+    hasHydrated, buddyProfileExists, hasCheckedProfileExists, language, matesApiPlaceId, reloadToken,
+  ]);
+  const [previousLoadKey, setPreviousLoadKey] = useState(loadKey);
+  if (previousLoadKey !== loadKey) {
+    setPreviousLoadKey(loadKey);
+    setIsLoading(!hasHydrated || buddyProfileExists || !hasCheckedProfileExists);
+    setIsLoadingMore(false);
+    setError(null);
+    setProfileOptions(null);
+    setMates([]);
+    setNextCursor(null);
+    setHasMore(false);
+  }
   const openMessageCompose = (profileId: number) => {
     router.push({
       pathname: '/message-threads/new',
@@ -167,14 +181,6 @@ export default function MateTab({
 
     if (!buddyProfileExists) {
       if (!hasCheckedProfileExists) {
-        setIsLoading(true);
-        setIsLoadingMore(false);
-        setError(null);
-        setProfileOptions(null);
-        setMates([]);
-        setNextCursor(null);
-        setHasMore(false);
-
         fetchMyBuddyProfile()
           .then((profileResponse) => {
             if (cancelled) {
@@ -203,25 +209,8 @@ export default function MateTab({
         };
       }
 
-      if (!buddyProfileExists) {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setError(null);
-        setProfileOptions(null);
-        setMates([]);
-        setNextCursor(null);
-        setHasMore(false);
-      }
       return;
     }
-
-    setIsLoading(true);
-    setIsLoadingMore(false);
-    setError(null);
-    setProfileOptions(null);
-    setMates([]);
-    setNextCursor(null);
-    setHasMore(false);
 
     (async () => {
       const [optionsResult, matesResult] = await Promise.allSettled([

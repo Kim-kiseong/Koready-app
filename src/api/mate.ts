@@ -1,6 +1,6 @@
 import { client } from './client';
-import type { BuddyProfile } from './types';
 import type {
+  BuddyProfile,
   PlaceMate,
   PlaceMatesEnvelope,
   PlaceMatesResponse,

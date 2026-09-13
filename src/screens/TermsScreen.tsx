@@ -96,18 +96,30 @@ export default function TermsScreen() {
   // this screen ever gets a chance to show anything. Skip the real call
   // entirely for that session instead of letting it round-trip and fail.
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
-  const [terms, setTerms] = useState<RequiredTermItem[] | null>(null);
-  const [agreedMap, setAgreedMap] = useState<Record<number, boolean>>({});
+  const [terms, setTerms] = useState<RequiredTermItem[] | null>(
+    () => isDevMockSession ? DEV_FALLBACK_TERMS : null,
+  );
+  const [agreedMap, setAgreedMap] = useState<Record<number, boolean>>(
+    () => isDevMockSession
+      ? Object.fromEntries(DEV_FALLBACK_TERMS.map((term) => [term.termVersionId, term.agreed]))
+      : {},
+  );
   // Client-only requirement — there's no backend term or age-verification
   // logic for this, so it's never sent to submitTermAgreements. We just take
   // the user's word for it.
   const [age14Agreed, setAge14Agreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousMockSession, setPreviousMockSession] = useState(isDevMockSession);
+  if (previousMockSession !== isDevMockSession) {
+    setPreviousMockSession(isDevMockSession);
+    setTerms(isDevMockSession ? DEV_FALLBACK_TERMS : null);
+    setAgreedMap(isDevMockSession
+      ? Object.fromEntries(DEV_FALLBACK_TERMS.map((term) => [term.termVersionId, term.agreed]))
+      : {});
+  }
 
   useEffect(() => {
     if (isDevMockSession) {
-      setTerms(DEV_FALLBACK_TERMS);
-      setAgreedMap(Object.fromEntries(DEV_FALLBACK_TERMS.map((term) => [term.termVersionId, term.agreed])));
       return;
     }
 

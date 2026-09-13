@@ -85,8 +85,8 @@ export type RouteSegment = {
   startY?: number | string | null;
   endX?: number | string | null;
   endY?: number | string | null;
-  path?: Array<RouteCoordinate | [number | string, number | string]> | null;
-  polyline?: Array<RouteCoordinate | [number | string, number | string]> | string | null;
+  path?: (RouteCoordinate | [number | string, number | string])[] | null;
+  polyline?: (RouteCoordinate | [number | string, number | string])[] | string | null;
   mode: TransportMode;
   routeName?: string | null;
   durationMinutes: number;

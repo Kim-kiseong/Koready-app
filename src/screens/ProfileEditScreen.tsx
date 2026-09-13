@@ -7,7 +7,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { SymbolView } from 'expo-symbols';
 import { fetch as expoFetch } from 'expo/fetch';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -1244,7 +1244,7 @@ function normalizeProfileImageMimeType(
   return null;
 }
 
-function firstNonEmptyString(...values: Array<string | null | undefined>) {
+function firstNonEmptyString(...values: (string | null | undefined)[]) {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) {
@@ -1655,16 +1655,22 @@ function SelectionModal({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const isListPresentation = presentation === 'list';
-  const renderOptionLabel =
-    optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
+  const renderOptionLabel = useCallback(
+    (option: ProfileOptionItem) => optionLabelFormatter
+      ? optionLabelFormatter(option)
+      : getOptionLabel(option, language),
+    [optionLabelFormatter, language],
+  );
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ selectedCodes, visible });
+  if (draftSource.selectedCodes !== selectedCodes || draftSource.visible !== visible) {
+    setDraftSource({ selectedCodes, visible });
     if (visible) {
       setDraft(selectedCodes);
       setSearchQuery('');
       setIsSearchFocused(false);
     }
-  }, [selectedCodes, visible]);
+  }
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1855,17 +1861,21 @@ function SnsEditorOverlay({
   const t = useTranslation();
   const copy = t.profileEdit.modals.sns;
   const insets = useSafeAreaInsets();
-  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(value);
+  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(
+    () => sortSocialLinks(value, options),
+  );
   const [focusedSnsCode, setFocusedSnsCode] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
   const platformCardWidth = Math.max(0, Math.floor((windowWidth - 16 * 2 - 8) / 2));
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ options, value, visible });
+  if (draftSource.options !== options || draftSource.value !== value || draftSource.visible !== visible) {
+    setDraftSource({ options, value, visible });
     if (visible) {
       setDraftLinks(sortSocialLinks(value, options));
       setFocusedSnsCode(null);
     }
-  }, [options, value, visible]);
+  }
 
   if (!visible) return null;
 

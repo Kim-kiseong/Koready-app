@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sortButtonEnglish: {
-    width: 124,
+    width: 126,
   },
   sortButtonText: {
     fontFamily: FontFamily.pretendard.medium,
