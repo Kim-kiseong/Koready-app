@@ -172,7 +172,7 @@ export const KTX_STEP3_DETAIL_EN = {
   note:
     "The KTX station name may be different from your destination name.\nMake sure to enter the correct station name.",
   screenshot: require("@/assets/images/guides/ktx-step3-korail-en.jpg"),
-  screenshotCaption: "Actual KorailTalk App Screen",
+  screenshotCaption: "Actual Korail+ App Screen",
   tipBody:
     'For a trip to Gyeongju, you may need to search for **"Singyeongju"** instead of **"Gyeongju"**!',
   stationColumns: [

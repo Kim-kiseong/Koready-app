@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -44,13 +44,6 @@ const EN_MONTH_NAMES = [
 const GRID_COLUMNS = 2;
 const GRID_GAP = 13;
 const SCREEN_PADDING = 16;
-// useWindowDimensions() reports the OS/browser window size, not the grid
-// View's actual rendered content width — on web a vertical scrollbar (when
-// the page is tall enough to need one) eats a further ~15-20pt that the
-// window-size math never accounts for. That's enough overshoot to push the
-// second 2-column card past the true available width every time, collapsing
-// the grid to a single column. Native has no scrollbar, so this stays 0 there.
-const WEB_SCROLLBAR_ALLOWANCE = Platform.OS === 'web' ? 20 : 0;
 
 export default function EventListScreen() {
   const router = useRouter();
@@ -61,8 +54,7 @@ export default function EventListScreen() {
   // 375pt reference width — on any other device width that leaves either dead
   // space or (if hardcoded) a rounding-driven wrap down to a single column.
   // Deriving it from the actual window width keeps the 2-column grid exact.
-  const gridCardWidth =
-    (windowWidth - SCREEN_PADDING * 2 - WEB_SCROLLBAR_ALLOWANCE - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+  const gridCardWidth = (windowWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const orderedMonths = useMemo(() => {
     const currentMonth = new Date().getMonth() + 1;

@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { googleLogin, socialLogin } from '@/api/auth';
-import { GoogleSignInCancelledError, signInWithApple, signInWithGoogle } from '@/api/socialAuth';
-import type { ApiErrorEnvelope, SocialProvider } from '@/api/types';
+import { googleLogin } from '@/api/auth';
+import { GoogleSignInCancelledError, signInWithGoogle } from '@/api/socialAuth';
+import type { ApiErrorEnvelope } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -79,23 +79,14 @@ export default function LoginScreen() {
   const setSession = useAuthStore((state) => state.setSession);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSocialLogin = async (provider: SocialProvider) => {
+  const handleGoogleLogin = async () => {
     setIsSubmitting(true);
     try {
-      if (provider === 'GOOGLE') {
-        const { idToken } = await signInWithGoogle();
-        if (!idToken) {
-          throw new Error('Google sign-in did not return an ID token.');
-        }
-        const session = await googleLogin({ idToken, deviceId });
-        setSession(session);
-        await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
-        router.replace(resolveNextStepRoute(session.nextStep));
-        return;
+      const { idToken } = await signInWithGoogle();
+      if (!idToken) {
+        throw new Error('Google sign-in did not return an ID token.');
       }
-
-      const { idToken, authorizationCode } = await signInWithApple();
-      const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
+      const session = await googleLogin({ idToken, deviceId });
       setSession(session);
       await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
       router.replace(resolveNextStepRoute(session.nextStep));
@@ -185,16 +176,7 @@ export default function LoginScreen() {
             borderColor={Palette.grey200}
             textColor={Palette.grey900}
             disabled={buttonsDisabled}
-            onPress={() => handleSocialLogin('GOOGLE')}
-          />
-          <SocialButton
-            label={t.login.appleButton}
-            icon={require('@/assets/images/apple.svg')}
-            iconSize={{ width: 16, height: 20 }}
-            backgroundColor={Palette.appleBlack}
-            textColor="#ffffff"
-            disabled={buttonsDisabled}
-            onPress={() => handleSocialLogin('APPLE')}
+            onPress={handleGoogleLogin}
           />
         </SafeAreaView>
       </View>

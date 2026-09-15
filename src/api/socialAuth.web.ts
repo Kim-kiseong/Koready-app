@@ -1,5 +1,6 @@
 import { GOOGLE_WEB_CLIENT_ID } from '@/constants/env';
 
+import { GOOGLE_LOGIN_REQUEST, GOOGLE_LOGIN_RESULT, isEmbeddedInIframe } from './googleLoginBridge';
 import { GoogleSignInCancelledError, signInWithApple } from './socialAuth.shared';
 import type { SocialAuthResult } from './socialAuth.shared';
 
@@ -81,7 +82,35 @@ async function ensureGoogleButtonReady(): Promise<HTMLElement> {
   return button;
 }
 
+// Runs only when this page is the 440x956 iframe inside PcIframeShell (see
+// components/PcIframeShell.web.tsx). GIS won't render its button here, so
+// this asks the parent — a real top-level window — to sign in for us.
+function signInWithGoogleViaParentBridge(): Promise<SocialAuthResult> {
+  return new Promise((resolve, reject) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string; requestId?: string; idToken?: string; error?: boolean };
+      if (data?.type !== GOOGLE_LOGIN_RESULT || data.requestId !== requestId) return;
+
+      window.removeEventListener('message', onMessage);
+      if (data.error || !data.idToken) {
+        reject(new GoogleSignInCancelledError());
+      } else {
+        resolve({ idToken: data.idToken });
+      }
+    };
+    window.addEventListener('message', onMessage);
+    window.parent.postMessage({ type: GOOGLE_LOGIN_REQUEST, requestId }, window.location.origin);
+  });
+}
+
 export async function signInWithGoogle(): Promise<SocialAuthResult> {
+  if (isEmbeddedInIframe()) {
+    return signInWithGoogleViaParentBridge();
+  }
+
   const button = await ensureGoogleButtonReady();
 
   return new Promise<SocialAuthResult>((resolve, reject) => {
