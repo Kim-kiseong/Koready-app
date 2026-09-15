@@ -647,13 +647,12 @@ function PicksFlipCard({
       const isSwipeRight = event.translationX > SWIPE_THRESHOLD || event.velocityX > SWIPE_VELOCITY_THRESHOLD;
       const isSwipeLeft = event.translationX < -SWIPE_THRESHOLD || event.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
-      if (isSwipeRight && canSwipeNext) {
-        translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
+      // Swiping either direction only ever advances to the next card —
+      // there's no swipe gesture for going back to the previous one anymore.
+      if ((isSwipeRight || isSwipeLeft) && canSwipeNext) {
+        const exitX = isSwipeRight ? screenWidth : -screenWidth;
+        translateX.value = withTiming(exitX, { duration: 250 }, (finished) => {
           if (finished) runOnJS(onSwipeNext)();
-        });
-      } else if (isSwipeLeft && canSwipePrev) {
-        translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
-          if (finished) runOnJS(onSwipePrev)();
         });
       } else {
         translateX.value = withSpring(0);

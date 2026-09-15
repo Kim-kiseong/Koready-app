@@ -56,7 +56,6 @@ export default function EventListScreen() {
   const router = useRouter();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
-  const isEnglish = language === 'EN';
   const { width: windowWidth } = useWindowDimensions();
   // Figma's grid card is a fixed 165pt that only fits 2-per-row at exactly the
   // 375pt reference width — on any other device width that leaves either dead
@@ -124,9 +123,7 @@ export default function EventListScreen() {
           </View>
 
           <View style={styles.toolsRow}>
-            <Pressable
-              style={[styles.sortButton, isEnglish && styles.sortButtonEnglish]}
-              onPress={() => setSortSheetOpen(true)}>
+            <Pressable style={styles.sortButton} onPress={() => setSortSheetOpen(true)}>
               <CustomText style={styles.sortButtonText}>
                 {sortOrder === 'RECOMMENDED' ? t.eventList.sortRecommended : t.eventList.sortDeadline}
               </CustomText>
@@ -238,13 +235,11 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     justifyContent: 'center',
   },
-  sortButtonEnglish: {
-    width: 124,
-  },
   sortButtonText: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
+    letterSpacing: -0.26,
     color: Palette.grey500,
   },
   filterButton: {
