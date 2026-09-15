@@ -278,7 +278,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 14,
+    letterSpacing: -0.28,
     color: Palette.text,
     padding: 0,
   },

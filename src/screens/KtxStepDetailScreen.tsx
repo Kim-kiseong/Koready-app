@@ -95,7 +95,7 @@ export default function KtxStepDetailScreen() {
         <NoteBox text={detail.note} />
 
         <View style={styles.screenshotGroup}>
-          <Image source={detail.screenshot} style={styles.screenshot} contentFit="cover" />
+          <Image source={detail.screenshot} style={styles.screenshot} contentFit="contain" />
           <CustomText style={styles.screenshotCaption}>{detail.screenshotCaption}</CustomText>
         </View>
 
@@ -142,9 +142,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   screenshot: {
+    // The source screenshots are ~1080x1086 (EN) / 1080x1137 (KO) — close to
+    // square, not the tall 459:555 box this used to force via contentFit
+    // "cover", which cropped the sides (KORAIL logo, hamburger menu) off.
+    // "contain" plus a near-square box keeps the whole screenshot visible.
     width: '100%',
-    aspectRatio: 459 / 555,
+    aspectRatio: 1,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Palette.grey200,
+    backgroundColor: '#ffffff',
   },
   screenshotCaption: {
     fontFamily: FontFamily.pretendard.medium,
