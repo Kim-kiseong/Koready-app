@@ -819,6 +819,9 @@ const styles = StyleSheet.create({
   },
   messageInput: {
     flex: 1,
+    // A flex item's default min-width is its content's intrinsic width —
+    // without this a long draft refuses to shrink and pushes past the row.
+    minWidth: 0,
     width: '100%',
     minHeight: 68,
     fontFamily: FontFamily.pretendard.medium,
