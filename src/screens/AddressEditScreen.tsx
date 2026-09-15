@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -87,11 +86,7 @@ export default function AddressEditScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <OnboardingHeader
-        onBack={() => goBackOrRoot(router)}
-        title={t.addressEdit.title}
-        rightIcon={<Image source={require('@/assets/images/pencil.svg')} style={styles.pencilIcon} />}
-      />
+      <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.addressEdit.title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.list}>
@@ -156,10 +151,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   list: {},
-  pencilIcon: {
-    width: 24,
-    height: 24,
-  },
   deleteChip: {
     borderRadius: 8,
     borderWidth: 1,

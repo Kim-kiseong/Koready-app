@@ -11,17 +11,18 @@ export type AddressRowProps = {
   subtitle?: string;
   badge?: string;
   right: ReactNode;
+  selected?: boolean;
   onPress?: () => void;
 };
 
-export default function AddressRow({ title, subtitle, badge, right, onPress }: AddressRowProps) {
+export default function AddressRow({ title, subtitle, badge, right, selected, onPress }: AddressRowProps) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={[styles.row, selected && styles.rowSelected]} onPress={onPress}>
       <Image source={require('@/assets/images/map-pin.svg')} style={styles.pin} />
       <View style={styles.textGroup}>
         <CustomText style={styles.title}>{title}</CustomText>
         {badge ? (
-          <View style={styles.badge}>
+          <View style={[styles.badge, selected && styles.badgeOnSelected]}>
             <CustomText style={styles.badgeText}>{badge}</CustomText>
           </View>
         ) : subtitle ? (
@@ -41,6 +42,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: Palette.grey150,
+  },
+  rowSelected: {
+    backgroundColor: Palette.secondary,
   },
   pin: {
     width: 24,
@@ -68,6 +72,11 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 12,
     paddingVertical: 3,
+  },
+  // Selected rows already fill with Palette.secondary, so the badge needs a
+  // white fill of its own here or it would blend invisibly into the row.
+  badgeOnSelected: {
+    backgroundColor: Palette.white,
   },
   badgeText: {
     fontFamily: FontFamily.pretendard.medium,

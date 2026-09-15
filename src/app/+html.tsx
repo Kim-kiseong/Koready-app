@@ -34,6 +34,34 @@ export default function Root({ children }: PropsWithChildren) {
             __html: `@supports (height: 100dvh) { html, body, #root { height: 100dvh; } }`,
           }}
         />
+        {/* This app is mobile-only UI — on an actual phone (or anything under
+            DESKTOP_BREAKPOINT) it should fill the viewport exactly like
+            today. On a wider viewport (a PC opening the web build) it's
+            clamped to an iPhone 16 Pro's frame (440x956) and centered, same
+            idea as Twitter/Instagram's web clients, instead of stretching
+            phone-only layouts across a desktop window. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @media (min-width: 501px) {
+                html, body { height: 100%; background: #d9dde3; }
+                body {
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                }
+                #root {
+                  width: 440px;
+                  height: 956px;
+                  max-height: 100vh;
+                  overflow: hidden;
+                  border-radius: 24px;
+                  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 24px 60px rgba(0, 0, 0, 0.28);
+                }
+              }
+            `,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

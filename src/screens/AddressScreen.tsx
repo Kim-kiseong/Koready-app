@@ -63,15 +63,10 @@ export default function AddressScreen() {
     }
   };
 
-  // The currently-active location is always the first row; the server's
-  // default=true entry is dropped from the list below to avoid showing it
-  // twice. setDefaultAddress keeps `default` mutually exclusive across the
-  // whole list, so this is a precise, id-backed check — matching by label
-  // text instead (as this used to) hides the WRONG row whenever two saved
-  // addresses share a display name (e.g. the same place saved once via a
-  // Korean search and once via an English one), since the current selection
-  // and its same-named duplicate become indistinguishable by text alone.
-  const otherAddresses = savedAddresses.filter((option) => !option.default);
+  // Every row renders from this single savedAddresses array in its existing
+  // order — the default one is never pulled out to a separate top slot, so
+  // picking a different address just moves the highlight, not the row.
+  const hasDefaultAddress = savedAddresses.some((option) => option.default);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -94,22 +89,28 @@ export default function AddressScreen() {
         </Pressable>
 
         <View style={styles.savedList}>
-          {location && (
+          {savedAddresses.map((option) => (
+            <AddressRow
+              key={option.locationId}
+              title={option.customLabel ?? option.displayName}
+              subtitle={!option.default ? (option.roadAddress ?? option.address ?? undefined) : undefined}
+              badge={option.default ? t.address.currentAddressBadge : undefined}
+              right={<Checkbox selected={option.default} />}
+              selected={option.default}
+              onPress={option.default ? undefined : () => handleSelectSaved(option)}
+            />
+          ))}
+          {/* Fallback for before savedAddresses has loaded or has no entry
+              flagged default yet — show the onboarding-store location so the
+              screen isn't empty, without risking it also showing below. */}
+          {!hasDefaultAddress && location && (
             <AddressRow
               title={location.displayAddress}
               badge={t.address.currentAddressBadge}
               right={<Checkbox selected />}
+              selected
             />
           )}
-          {otherAddresses.map((option) => (
-            <AddressRow
-              key={option.locationId}
-              title={option.customLabel ?? option.displayName}
-              subtitle={option.roadAddress ?? option.address ?? undefined}
-              right={<Checkbox selected={false} />}
-              onPress={() => handleSelectSaved(option)}
-            />
-          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -155,7 +156,8 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 16,
+    fontSize: 13,
+    letterSpacing: -0.26,
     color: Palette.grey400,
   },
   savedList: {},
