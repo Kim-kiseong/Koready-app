@@ -41,6 +41,14 @@ function formatFareValue(amount: number | null, language: 'KO' | 'EN') {
   return language === 'EN' ? `₩${formatted}` : `${formatted}원`;
 }
 
+function formatEstimatedTimeText(value: string, language: 'KO' | 'EN') {
+  if (language === 'EN') {
+    return value.replace(/(\bAbout\s+\d+\s+hr)\s+0\s+min\b/g, '$1');
+  }
+
+  return value.replace(/(약\s*\d+시간)\s*0분/g, '$1');
+}
+
 function getDifficultyLabel(
   difficulty: BuddyRoute['summary']['difficulty'],
   labels: {
@@ -153,7 +161,7 @@ export default function BuddyRouteTab({ placeId, destinationPlaceId, destination
   const statCards = [
     {
       label: routeCopy.statLabels.estimatedTime,
-      value: summary.estimatedOneWayTimeText,
+      value: formatEstimatedTimeText(summary.estimatedOneWayTimeText, language),
       Icon: Schedule,
       iconWidth: 50,
       iconHeight: 50,
@@ -250,7 +258,7 @@ export default function BuddyRouteTab({ placeId, destinationPlaceId, destination
           </CustomText>
         </View>
         <View style={styles.fareDivider} />
-        <CustomText style={styles.disclaimer}>{summary.fare.disclaimer}</CustomText>
+        <CustomText style={styles.disclaimer}>{routeCopy.fareDisclaimer}</CustomText>
       </View>
 
       <Pressable style={styles.detailButton} onPress={() => onViewDetail(loadedRoute.routeId)}>
@@ -265,7 +273,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text, paddingBottom: 4 },
   subtitle: { marginTop: 6, fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: Palette.grey600 },
   locationCard: { marginTop: 16, paddingHorizontal: 16, backgroundColor: Palette.grey100, borderRadius: 12 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   locationText: { marginLeft: 8, fontFamily: FontFamily.pretendard.medium, fontSize: 14, color: Palette.text },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: Palette.grey200, marginVertical: 2 },
   sectionTitle: { marginTop: 32, marginBottom: 16, fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text, lineHeight: 24 },

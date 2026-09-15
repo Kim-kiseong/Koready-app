@@ -136,8 +136,6 @@ export const en: DeepPartial<Translations> = {
     alerts: {
       errorTitle: 'Error',
       logoutFailed: 'Failed to log out.',
-      privacyComingSoonTitle: 'Coming soon',
-      privacyComingSoonBody: 'The Privacy Policy screen will be connected in a future step.',
       withdrawComingSoonTitle: 'Coming soon',
       withdrawComingSoonBody: 'Account deletion will be connected in a future step.',
     },
@@ -408,7 +406,7 @@ export const en: DeepPartial<Translations> = {
       sentTitle: 'Message Sent!',
       sentDescription: 'Replies may take some time.\nYou can check new replies in Messages.',
       viewMessages: 'View Messages',
-      sendAgain: 'Send Message',
+      continueBrowsing: 'Continue browsing',
       unsavedMessage: "Your message hasn't been sent yet.\nAre you sure you want to leave?",
       unsavedCancel: 'Cancel',
       unsavedLeave: 'Leave',
@@ -454,11 +452,11 @@ export const en: DeepPartial<Translations> = {
     dateLabel: 'Date',
     dateAll: 'All',
     dateOptions: {
-      THIS_WEEK: 'This week',
-      THIS_MONTH: 'This month',
-      NEXT_MONTH: 'Next month',
+      THIS_WEEK: 'This Week',
+      THIS_MONTH: 'This Month',
+      NEXT_MONTH: 'Next Month',
     },
-    dateCustomButton: 'Choose dates',
+    dateCustomButton: 'Select Dates',
     typeLabel: 'Travel type',
     typeOptions: {
       LOCAL_FOOD: 'Local Food',

@@ -8,6 +8,8 @@ import { secureStorage } from './secure-storage';
 import { useAddressStore } from './address-store';
 import { useLanguageStore } from './language-store';
 import { useOnboardingStore } from './onboarding-store';
+import { useSavedPlaceStore } from './saved-place-store';
+import { useMessageThreadStore } from './message-thread-store';
 
 type AuthState = {
   accessToken: string | null;
@@ -30,7 +32,7 @@ type AuthState = {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accessToken: null,
       refreshToken: null,
       accessTokenExpiresAt: null,
@@ -42,7 +44,10 @@ export const useAuthStore = create<AuthState>()(
       deviceId: Crypto.randomUUID(),
       hasHydrated: false,
       setSession: (session) => {
+        useSavedPlaceStore.getState().prepareForUser(session.user.publicId);
+        useMessageThreadStore.getState().prepareForUser(session.user.publicId);
         set({
+          unreadMessageCount: get().user?.publicId === session.user.publicId ? get().unreadMessageCount : 0,
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,
           accessTokenExpiresAt: session.accessTokenExpiresAt,
@@ -72,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
         })),
       setNextStep: (nextStep) => set({ nextStep }),
       clearSession: () => {
+        useMessageThreadStore.getState().reset();
         set({
           accessToken: null,
           refreshToken: null,
@@ -84,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
         });
         useOnboardingStore.getState().reset();
         useAddressStore.getState().reset();
+        useSavedPlaceStore.getState().reset();
       },
     }),
     {
@@ -101,6 +108,9 @@ export const useAuthStore = create<AuthState>()(
         deviceId: state.deviceId,
       }),
       onRehydrateStorage: () => () => {
+        const publicId = useAuthStore.getState().user?.publicId;
+        if (publicId) useMessageThreadStore.getState().prepareForUser(publicId);
+        else useMessageThreadStore.getState().reset();
         useAuthStore.setState({ hasHydrated: true });
       },
     },

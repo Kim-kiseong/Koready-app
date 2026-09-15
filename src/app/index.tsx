@@ -15,21 +15,24 @@ export default function Index() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const nextStep = useAuthStore((state) => state.nextStep);
   const [route, setRoute] = useState<Href | null>(null);
+  const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
 
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (!accessToken || !nextStep) {
-      setRoute('/login');
-      return;
-    }
+    if (!hasHydrated || !accessToken || !nextStep) return;
+    let cancelled = false;
 
     const routeFromNextStep = (step: NextStep) => {
+      if (cancelled) return;
       if (step === 'ONBOARDING') {
         // Resume on the exact onboarding screen the server has progress for,
         // instead of always restarting at /location.
         resolveOnboardingResumeRoute()
-          .then(setRoute)
-          .catch(() => setRoute(resolveNextStepRoute(step)));
+          .then((nextRoute) => {
+            if (!cancelled) setRoute(nextRoute);
+          })
+          .catch(() => {
+            if (!cancelled) setRoute(resolveNextStepRoute(step));
+          });
         return;
       }
       setRoute(resolveNextStepRoute(step));
@@ -38,10 +41,19 @@ export default function Index() {
     // The dev-mock session isn't a real backend user — GET /users/me would
     // 401, triggering client.ts's refresh-then-logout cascade. Route from the
     // cached nextStep instead, same as every other mock-aware screen.
-    const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
     if (isDevMockSession) {
-      routeFromNextStep(nextStep);
-      return;
+      if (nextStep === 'ONBOARDING') {
+        resolveOnboardingResumeRoute()
+          .then((nextRoute) => {
+            if (!cancelled) setRoute(nextRoute);
+          })
+          .catch(() => {
+            if (!cancelled) setRoute(resolveNextStepRoute(nextStep));
+          });
+      }
+      return () => {
+        cancelled = true;
+      };
     }
 
     // GET /users/me is now implemented on the real backend — refresh the
@@ -51,6 +63,7 @@ export default function Index() {
     // location id).
     fetchMyUser()
       .then((me) => {
+        if (cancelled) return;
         useAuthStore.setState((state) => ({
           nextStep: me.nextStep,
           buddyProfileExists: me.buddyProfileExists,
@@ -66,8 +79,16 @@ export default function Index() {
         routeFromNextStep(me.nextStep);
       })
       .catch(() => routeFromNextStep(nextStep));
-  }, [hasHydrated, accessToken, nextStep]);
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, accessToken, nextStep, isDevMockSession]);
 
+  if (!hasHydrated) return null;
+  if (!accessToken || !nextStep) return <Redirect href="/login" />;
+  if (isDevMockSession && nextStep !== 'ONBOARDING') {
+    return <Redirect href={resolveNextStepRoute(nextStep)} />;
+  }
   if (!route) return null;
   return <Redirect href={route} />;
 }

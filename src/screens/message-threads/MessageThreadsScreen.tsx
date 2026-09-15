@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, ListRenderItemInfo, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,13 +10,13 @@ import { fetchMessageThreads } from '@/api/messages';
 import { useAuthStore } from '@/store/auth-store';
 import type {
   MessageThreadListItem,
-  MessageThreadMessage,
+  MessageThreadProfile,
   MessageThreadResponse,
-  MessageThreadsResponse,
   ProfileOptionItem,
   ProfileOptionsResponse,
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { goBackOrRoot } from '@/navigation/safe-back';
@@ -25,7 +24,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { useTranslation } from '@/i18n/useTranslation';
-import { getCountryDisplayName, getCountryFlag, normalizeCountryCode } from '@/utils/country';
+import { formatCountryDisplay, getCountryDisplayName, normalizeCountryCode } from '@/utils/country';
 import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { resolveProfileImageUri } from '@/utils/profile-image';
 
@@ -46,162 +45,23 @@ const FALLBACK_COUNTRY_OPTIONS: ProfileOptionItem[] = [
   { code: 'GB', labelKo: '영국', labelEn: 'United Kingdom', displayOrder: 7 },
 ];
 
-const MOCK_THREAD_SUMMARY: MessageThreadsResponse = {
-  items: [
-    {
-      threadId: 'mock-thread-emma',
-      place: {
-        placeId: 1101,
-        title: '김천 김밥축제',
-        imageUrl: 'https://picsum.photos/id/1040/600/400',
-        routeId: 'gimcheon-gimbap-festival',
-        address: '경상북도 김천시 직지사길 130 (대항면 운수리)',
-      },
-      otherProfile: {
-        profileId: 501,
-        nickname: 'Emma',
-        profileImageUrl: 'https://picsum.photos/id/1027/300/300',
-        nationalityCode: 'FR',
-        nationality: 'France',
-      },
-      preview: '안녕하세요! 연락 주셔서 반가워요 😊 같이 가기...',
-      lastSentAt: '2026-08-05T10:40:00.000Z',
-      unreadCount: 2,
-      blocked: false,
-      canReply: true,
-    },
-    {
-      threadId: 'mock-thread-liam',
-      place: {
-        placeId: 1102,
-        title: '성산일출봉',
-        imageUrl: 'https://picsum.photos/id/1056/600/400',
-        routeId: 'seongsan-ilchulbong',
-        address: '제주특별자치도 서귀포시 성산읍 성산리 78',
-      },
-      otherProfile: {
-        profileId: 502,
-        nickname: 'Liam',
-        profileImageUrl: 'https://picsum.photos/id/1005/300/300',
-        nationalityCode: 'US',
-        nationality: 'United States',
-      },
-      preview: '안녕하세요! 저도 다음 주말에 거기 가볼까 해요.',
-      lastSentAt: '2026-08-04T03:20:00.000Z',
-      unreadCount: 1,
-      blocked: false,
-      canReply: true,
-    },
-    {
-      threadId: 'mock-thread-sophie',
-      place: {
-        placeId: 1103,
-        title: '인사동',
-        imageUrl: 'https://picsum.photos/id/1050/600/400',
-        routeId: 'insadong',
-        address: '서울 종로구 인사동길 일대',
-      },
-      otherProfile: {
-        profileId: 503,
-        nickname: 'Sophie',
-        profileImageUrl: 'https://picsum.photos/id/1011/300/300',
-        nationalityCode: 'GB',
-        nationality: 'United Kingdom',
-      },
-      preview: '추천해주실 만한 찻집이 있을까요?',
-      lastSentAt: '2026-08-03T16:10:00.000Z',
-      unreadCount: 0,
-      blocked: false,
-      canReply: true,
-    },
-    {
-      threadId: 'mock-thread-yuki',
-      place: {
-        placeId: 1104,
-        title: '남산타워',
-        imageUrl: 'https://picsum.photos/id/1069/600/400',
-        routeId: 'namsan-tower',
-        address: '서울 용산구 남산공원길 105',
-      },
-      otherProfile: {
-        profileId: 504,
-        nickname: 'Yuki',
-        profileImageUrl: 'https://picsum.photos/id/1025/300/300',
-        nationalityCode: 'JP',
-        nationality: 'Japan',
-      },
-      preview: '좋네요! 다녀오면 어땠는지 알려주세요.',
-      lastSentAt: '2026-08-01T05:15:00.000Z',
-      unreadCount: 0,
-      blocked: false,
-      canReply: true,
-    },
-  ],
-  nextCursor: null,
-  hasMore: false,
-  unreadTotal: 3,
-};
-
-const ENGLISH_THREAD_SUMMARY_COPY: Record<
-  string,
-  {
-    title: string;
-    address: string;
-    preview: string;
-  }
-> = {
-  'mock-thread-emma': {
-    title: 'Gimcheon Gimbap Festival',
-    address: '130 Jikjisa-gil, Daehang-myeon, Gimcheon-si, Gyeongsangbuk-do',
-    preview: 'Hi! Thanks for reaching out 😊 I’d love to join.',
-  },
-  'mock-thread-liam': {
-    title: 'Seongsan Ilchulbong',
-    address: '78 Seongsan-ri, Seongsan-eup, Seogwipo-si, Jeju-do',
-    preview: "Hi! I'm thinking of going there next weekend too.",
-  },
-  'mock-thread-sophie': {
-    title: 'Insadong',
-    address: 'Insadong-gil area, Jongno-gu, Seoul',
-    preview: 'Do you know any tea houses you would recommend?',
-  },
-  'mock-thread-yuki': {
-    title: 'N Seoul Tower',
-    address: '105 Namsan Park-gil, Yongsan-gu, Seoul',
-    preview: 'Sounds great! Please let me know how it was when you go.',
-  },
-};
-
-function cloneMockItems(language: 'KO' | 'EN' = useLanguageStore.getState().language) {
-  return MOCK_THREAD_SUMMARY.items.map((item) => ({
-    ...item,
-    place:
-      language === 'EN'
-        ? {
-            ...item.place,
-            title: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.title ?? item.place.title,
-            address: ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.address ?? item.place.address,
-          }
-        : { ...item.place },
-    otherProfile: { ...item.otherProfile },
-    preview:
-      language === 'EN'
-        ? ENGLISH_THREAD_SUMMARY_COPY[item.threadId]?.preview ?? item.preview
-        : item.preview,
-  }));
-}
-
-function createMockThreadState(language: 'KO' | 'EN'): MessageThreadsScreenState {
-  const items = cloneMockItems(language);
-  return {
-    items,
-    nextCursor: MOCK_THREAD_SUMMARY.nextCursor,
-    hasMore: MOCK_THREAD_SUMMARY.hasMore,
-    unreadTotal: items.reduce((total, item) => total + item.unreadCount, 0),
-  };
-}
-
 export default function MessageThreadsScreen() {
+  const [reloadToken, setReloadToken] = useState(0);
+  const language = useLanguageStore((state) => state.language);
+  const publicId = useAuthStore((state) => state.user?.publicId);
+  const ownerPublicId = useMessageThreadStore((state) => state.ownerPublicId);
+  const sessionVersion = useMessageThreadStore((state) => state.sessionVersion);
+  if (!publicId || publicId !== ownerPublicId) return null;
+  return (
+    <MessageThreadsContent
+      key={`${publicId}:${sessionVersion}:${language}:${reloadToken}`}
+      sessionVersion={sessionVersion}
+      onRetry={() => setReloadToken((value) => value + 1)}
+    />
+  );
+}
+
+function MessageThreadsContent({ onRetry, sessionVersion }: { onRetry: () => void; sessionVersion: number }) {
   const router = useRouter();
   const language = useLanguageStore((state) => state.language);
   const t = useTranslation();
@@ -210,7 +70,6 @@ export default function MessageThreadsScreen() {
   const [profileOptions, setProfileOptions] = useState<ProfileOptionsResponse | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [threadState, setThreadState] = useState<MessageThreadsScreenState>({
     items: [],
@@ -224,7 +83,7 @@ export default function MessageThreadsScreen() {
     [selectedProfileId],
   );
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
 
     (async () => {
@@ -245,25 +104,13 @@ export default function MessageThreadsScreen() {
 
       if (threadsResult.status === 'fulfilled') {
         const nextThreads = threadsResult.value;
-        setThreadState(
-          __DEV__ && nextThreads.items.length === 0 ? createMockThreadState(language) : nextThreads,
-        );
+        setThreadState(nextThreads);
         setLoadError(null);
       } else {
-        if (__DEV__) {
-          setThreadState(createMockThreadState(language));
-          setLoadError(null);
-        } else {
-          setThreadState({
-            items: [],
-            nextCursor: null,
-            hasMore: false,
-            unreadTotal: 0,
-          });
-          setLoadError(
-            extractErrorMessage(threadsResult.reason, t.messages.threads.errorDescriptionFallback),
-          );
-        }
+        setThreadState({ items: [], nextCursor: null, hasMore: false, unreadTotal: 0 });
+        setLoadError(
+          extractErrorMessage(threadsResult.reason, t.messages.threads.errorDescriptionFallback),
+        );
       }
 
       setIsLoading(false);
@@ -272,7 +119,7 @@ export default function MessageThreadsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [language, reloadToken, t.messages.threads.errorDescriptionFallback]);
+  }, [t.messages.threads.errorDescriptionFallback]));
 
   const displayItems = useMemo(() => {
     const baseItems = threadState.items;
@@ -284,15 +131,28 @@ export default function MessageThreadsScreen() {
 
     const prependItems: MessageThreadListItem[] = [];
     storeItems.forEach((item) => {
-      if (apiMap.has(item.threadId)) {
-        apiMap.set(item.threadId, item);
+      const summary = apiMap.get(item.threadId);
+      if (summary) {
+        if (Date.parse(item.lastSentAt) > Date.parse(summary.lastSentAt)) {
+          apiMap.set(item.threadId, {
+            ...summary,
+            preview: item.preview,
+            lastSentAt: item.lastSentAt,
+            unreadCount: item.unreadCount,
+          });
+          return;
+        }
+        // A read detail supersedes the cached summary until a newer message arrives.
+        if (item.unreadCount === 0 && Date.parse(item.lastSentAt) >= Date.parse(summary.lastSentAt)) {
+          apiMap.set(item.threadId, { ...summary, unreadCount: 0 });
+        }
         return;
       }
 
       prependItems.push(item);
     });
 
-    return [...prependItems, ...Array.from(apiMap.values())];
+    return [...prependItems, ...Array.from(apiMap.values())].sort(compareThreadsByLastSentAt);
   }, [countryOptions, storeThreads, threadState.items]);
 
   const unreadTotal = useMemo(
@@ -301,16 +161,12 @@ export default function MessageThreadsScreen() {
   );
 
   useEffect(() => {
+    if (useMessageThreadStore.getState().sessionVersion !== sessionVersion) return;
     useAuthStore.setState({ unreadMessageCount: unreadTotal });
-  }, [unreadTotal]);
+  }, [sessionVersion, unreadTotal]);
 
   const handlePressThread = useCallback(
     (item: MessageThreadListItem) => {
-      const existingThread = useMessageThreadStore.getState().threads[item.threadId];
-      if (!existingThread) {
-        useMessageThreadStore.getState().upsertThread(buildThreadFromSummary(item));
-      }
-
       router.push({
         pathname: '/message-threads/[threadId]',
         params: { threadId: item.threadId },
@@ -339,11 +195,7 @@ export default function MessageThreadsScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
-            onPress={() => {
-              setIsLoading(true);
-              setLoadError(null);
-              setReloadToken((prev) => prev + 1);
-            }}>
+            onPress={onRetry}>
             <CustomText style={styles.retryButtonText}>{t.messages.threads.retry}</CustomText>
           </Pressable>
         </View>
@@ -355,12 +207,7 @@ export default function MessageThreadsScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
 
         <View style={styles.headerTitleWrap}>
@@ -427,11 +274,11 @@ function MessageThreadCard({
   onPress: () => void;
 }) {
   const avatarPressActiveRef = useRef(false);
-  const country = getCountryDisplayName(
-    item.otherProfile.nationalityCode ?? item.otherProfile.nationality ?? '',
+  const countryLabel = formatCountryDisplay(
+    getProfileNationalityValue(item.otherProfile),
     countryOptions,
+    language,
   );
-  const countryFlag = getCountryFlag(item.otherProfile.nationalityCode ?? item.otherProfile.nationality ?? '', countryOptions);
   const placeLabel = item.place.title;
   const unread = item.unreadCount > 0;
 
@@ -470,11 +317,12 @@ function MessageThreadCard({
         <View style={styles.cardMeta}>
           <View style={styles.nameRow}>
             <CustomText style={styles.nickname}>{item.otherProfile.nickname}</CustomText>
-            <CustomText style={styles.dot}>·</CustomText>
-            <CustomText style={styles.country}>
-              {country}
-              {countryFlag ? ` ${countryFlag}` : ''}
-            </CustomText>
+            {countryLabel ? (
+              <>
+                <CustomText style={styles.dot}>·</CustomText>
+                <CustomText style={styles.country}>{countryLabel}</CustomText>
+              </>
+            ) : null}
           </View>
 
           <View style={styles.placeRow}>
@@ -520,36 +368,12 @@ function PlacePinIcon() {
 }
 
 function compareThreadsByLastSentAt(left: MessageThreadListItem, right: MessageThreadListItem) {
-  const lastSentDiff = right.lastSentAt.localeCompare(left.lastSentAt);
+  const lastSentDiff = Date.parse(right.lastSentAt) - Date.parse(left.lastSentAt);
   if (lastSentDiff !== 0) {
     return lastSentDiff;
   }
 
   return right.threadId.localeCompare(left.threadId);
-}
-
-function buildThreadFromSummary(item: MessageThreadListItem): MessageThreadResponse {
-  const latestMessage: MessageThreadMessage = {
-    messageId: Date.now(),
-    threadId: item.threadId,
-    senderProfileId: 0,
-    receiverProfileId: item.otherProfile.profileId,
-    placeId: item.place.placeId,
-    content: item.preview,
-    sentAt: item.lastSentAt,
-    read: item.unreadCount === 0,
-    readAt: item.unreadCount === 0 ? item.lastSentAt : null,
-  };
-
-  return {
-    threadId: item.threadId,
-    place: item.place,
-    otherProfile: item.otherProfile,
-    messages: [latestMessage],
-    nextCursor: null,
-    hasMore: false,
-    canReply: item.canReply,
-  };
 }
 
 function convertStoredThreadToListItem(
@@ -568,11 +392,12 @@ function convertStoredThreadToListItem(
     place: thread.place,
     otherProfile: {
       ...thread.otherProfile,
-      nationalityCode:
-        thread.otherProfile.nationalityCode ?? normalizeCountryCode(thread.otherProfile.nationality ?? ''),
+      nationalityCode: getProfileNationalityCode(thread.otherProfile),
       nationality:
-        thread.otherProfile.nationality ??
-        getCountryDisplayName(thread.otherProfile.nationalityCode ?? '', countryOptions),
+        getNonEmptyString(thread.otherProfile.nationality) ??
+        getNonEmptyString(thread.otherProfile.nationalityName) ??
+        getCountryDisplayName(getProfileNationalityValue(thread.otherProfile), countryOptions),
+      nationalityName: getNonEmptyString(thread.otherProfile.nationalityName),
     },
     preview,
     lastSentAt,
@@ -580,6 +405,33 @@ function convertStoredThreadToListItem(
     blocked: false,
     canReply: thread.canReply,
   };
+}
+
+function getNonEmptyString(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function getProfileNationalityValue(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
+  return (
+    getNonEmptyString(profile.nationalityCode) ??
+    getNonEmptyString(profile.nationality) ??
+    getNonEmptyString(profile.nationalityName) ??
+    ''
+  );
+}
+
+function getProfileNationalityCode(profile: MessageThreadListItem['otherProfile'] | MessageThreadProfile) {
+  const explicitCode = getNonEmptyString(profile.nationalityCode);
+  if (explicitCode) {
+    return explicitCode;
+  }
+
+  return normalizeCountryCode(
+    getNonEmptyString(profile.nationality) ??
+    getNonEmptyString(profile.nationalityName) ??
+    '',
+  );
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {

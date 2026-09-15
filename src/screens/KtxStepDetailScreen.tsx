@@ -10,8 +10,8 @@ import BulletList from '@/components/guide-blocks/BulletList';
 import HoriTipCard from '@/components/HoriTipCard';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Palette } from '@/constants/colors';
-import { FontFamily } from '@/constants/typography';
 import { KTX_STEP3_DETAIL, KTX_STEP3_DETAIL_EN, KTX_STEPS, KTX_STEPS_EN } from '@/constants/ktx-content';
+import { FontFamily } from '@/constants/typography';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   checklistText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.text,

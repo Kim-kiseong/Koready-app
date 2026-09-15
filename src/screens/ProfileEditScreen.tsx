@@ -1,13 +1,13 @@
 import { isAxiosError } from 'axios';
 import { Asset } from 'expo-asset';
-import { File } from 'expo-file-system';
+import { File as ExpoFile } from 'expo-file-system';
 import { Image, type ImageSource } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
 import { SymbolView } from 'expo-symbols';
 import { fetch as expoFetch } from 'expo/fetch';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,7 @@ import {
   requestProfileImageUploadUrl,
   updateMyBuddyProfile,
 } from '@/api/buddy-profile';
+import { fetchOnboardingProgress } from '@/api/onboarding';
 import type {
   BuddyProfileResponse,
   BuddyProfileSocialLinkInput,
@@ -41,6 +42,7 @@ import type {
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import BackIcon from '@/components/icons/BackIcon';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -139,7 +141,6 @@ export default function ProfileEditScreen() {
   const t = useTranslation();
   const copy = t.profileEdit;
   const authProfileImageUrl = useAuthStore((state) => state.user?.profileImageUrl ?? null);
-  const onboardingTravelStyles = useOnboardingStore((state) => state.travelStyles);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const isMountedRef = useRef(true);
 
@@ -162,6 +163,7 @@ export default function ProfileEditScreen() {
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const [isBypassingUnsavedChangesGuard, setIsBypassingUnsavedChangesGuard] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
+  const shouldNavigateAfterSaveRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,12 +203,28 @@ export default function ProfileEditScreen() {
         const loadedOptions = optionsResult.value;
         const loadedProfile = profileResult.value;
 
+        let defaultTravelStyles = useOnboardingStore.getState().travelStyles;
+
+        if (!loadedProfile.exists) {
+          try {
+            const onboardingProgress = await fetchOnboardingProgress();
+            if (cancelled) return;
+
+            useOnboardingStore.getState().applyProgress(onboardingProgress);
+            defaultTravelStyles = onboardingProgress.travelStyles;
+          } catch {
+            // Profile editing should remain available even if onboarding
+            // progress cannot be fetched for a completed user.
+          }
+        }
+
+        if (cancelled) return;
         setOptions(loadedOptions);
         setProfileExists(loadedProfile.exists);
         const nextForm = buildInitialForm(
           loadedProfile,
           loadedOptions,
-          onboardingTravelStyles,
+          defaultTravelStyles,
           authProfileImageUrl,
         );
         setForm(nextForm);
@@ -225,7 +243,7 @@ export default function ProfileEditScreen() {
     return () => {
       cancelled = true;
     };
-  }, [authProfileImageUrl, reloadKey, onboardingHasHydrated, onboardingTravelStyles]);
+  }, [authProfileImageUrl, copy.errors.loadOptions, reloadKey, onboardingHasHydrated]);
 
   useEffect(() => {
     return () => {
@@ -296,6 +314,18 @@ export default function ProfileEditScreen() {
     pendingNavigationActionRef.current = data.action;
     setUnsavedChangesModalOpen(true);
   });
+
+  useEffect(() => {
+    if (!isBypassingUnsavedChangesGuard || !shouldNavigateAfterSaveRef.current) return;
+
+    shouldNavigateAfterSaveRef.current = false;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    goBackOrRoot(router);
+  }, [isBypassingUnsavedChangesGuard, navigation, router]);
 
   const handleUpdateField = <K extends keyof BuddyProfileFormState>(
     key: K,
@@ -378,24 +408,16 @@ export default function ProfileEditScreen() {
       });
       if (!isMountedRef.current) return;
 
-      useAuthStore.getState().setBuddyProfileExists(true);
-      useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
-
+      shouldNavigateAfterSaveRef.current = true;
+      setIsBypassingUnsavedChangesGuard(true);
       setForm(nextForm);
       setInitialForm(nextForm);
       setProfileImagePreviewUri(null);
       setUnsavedChangesModalOpen(false);
       pendingNavigationActionRef.current = null;
 
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      if (!isMountedRef.current) return;
-
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-        return;
-      }
-
-      goBackOrRoot(router);
+      useAuthStore.getState().setBuddyProfileExists(true);
+      useAuthStore.getState().setUserProfileImageUrl(nextForm.profileImageUrl);
     } catch (error) {
       if (!isMountedRef.current) return;
       Alert.alert(copy.alerts.errorTitle, extractErrorMessage(error, copy.errors.generic));
@@ -495,8 +517,8 @@ export default function ProfileEditScreen() {
       return;
     }
 
-    const localFile = new File(asset.uri);
-    const fileSize = asset.fileSize ?? localFile.size;
+    const uploadFile = await createProfileImageUploadFile(asset);
+    const fileSize = asset.fileSize ?? uploadFile.size;
 
     if (!Number.isFinite(fileSize) || fileSize <= 0) {
       if (!isMountedRef.current) return;
@@ -532,8 +554,8 @@ export default function ProfileEditScreen() {
 
       const uploadResponse = await expoFetch(uploadUrl, {
         method: 'PUT',
-        headers: normalizeHeaders(uploadInfo.requiredHeaders),
-        body: localFile,
+        headers: normalizeUploadHeaders(uploadInfo.requiredHeaders, mimeType),
+        body: uploadFile.body,
       });
 
       if (!uploadResponse.ok) {
@@ -601,12 +623,7 @@ export default function ProfileEditScreen() {
         keyboardVerticalOffset={0}>
         <View style={styles.header}>
           <Pressable hitSlop={10} style={styles.headerButton} onPress={requestLeaveScreen}>
-            <SymbolView
-              name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-              size={18}
-              weight="semibold"
-              tintColor={Palette.text}
-            />
+            <BackIcon />
           </Pressable>
 
           <CustomText style={styles.headerTitle}>{headerTitle}</CustomText>
@@ -660,7 +677,7 @@ export default function ProfileEditScreen() {
                   />
                 </Pressable>
               ) : (
-                <View pointerEvents="none" style={[styles.fieldTrailingAction, styles.fieldTrailingPlaceholder]} />
+                <View style={[styles.fieldTrailingAction, styles.fieldTrailingPlaceholder, styles.pointerEventsNone]} />
               )}
             </View>
           </View>
@@ -677,7 +694,7 @@ export default function ProfileEditScreen() {
                 ]}>
                 {currentCountryLabel || form.nationality || copy.placeholders.nationality}
               </CustomText>
-              <View pointerEvents="none" style={styles.fieldTrailingAction}>
+              <View style={[styles.fieldTrailingAction, styles.pointerEventsNone]}>
                 <DropdownArrowIcon />
               </View>
             </Pressable>
@@ -741,7 +758,7 @@ export default function ProfileEditScreen() {
                 returnKeyType="done"
                 numberOfLines={1}
               />
-              <View pointerEvents="none" style={styles.bioIconSpacer} />
+              <View style={[styles.bioIconSpacer, styles.pointerEventsNone]} />
             </View>
             <View style={styles.counterRow}>
               <CustomText style={styles.counterValue}>{form.bio.length}</CustomText>
@@ -930,6 +947,11 @@ function buildInitialForm(
     };
   }
 
+  const initialTravelStyles =
+    !profileResponse.exists && defaultTravelStyles.length > 0
+      ? defaultTravelStyles
+      : profile.travelStyles;
+
   return {
     profileImageUrl: profile.profileImageUrl ?? fallbackProfileImageUrl,
     nickname: profile.nickname ?? '',
@@ -940,8 +962,8 @@ function buildInitialForm(
     ),
     koreanLevel: resolveProfileOptionCode(profile.koreanLevel, options.koreanLevels),
     bio: profile.bio ?? '',
-    // Keep the onboarding travel styles as the initial profile draft.
-    travelStyles: sortCodesByOptionOrder(profile.travelStyles, options.travelStyles),
+    // A first-time buddy profile should inherit the user's onboarding choices.
+    travelStyles: sortCodesByOptionOrder(initialTravelStyles, options.travelStyles),
     socialLinks: profile.socialLinks
       .map((link) => ({
         type: resolveProfileOptionCode(link.type, options.socialPlatforms),
@@ -1118,10 +1140,73 @@ function extractErrorMessage(error: unknown, fallbackMessage = 'An unknown error
   return fallbackMessage;
 }
 
-function normalizeHeaders(headers: Record<string, string | undefined | null> | undefined) {
-  return Object.fromEntries(
-    Object.entries(headers ?? {}).filter(([, value]) => typeof value === 'string' && value.length > 0),
+async function createProfileImageUploadFile(asset: ImagePicker.ImagePickerAsset) {
+  if (Platform.OS === 'web') {
+    const browserFile = (asset as ImagePicker.ImagePickerAsset & { file?: Blob }).file;
+    if (browserFile) {
+      return {
+        body: browserFile,
+        size: browserFile.size,
+      };
+    }
+
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    return {
+      body: blob,
+      size: blob.size,
+    };
+  }
+
+  const localFile = new ExpoFile(asset.uri);
+  return {
+    body: localFile,
+    size: localFile.size,
+  };
+}
+
+function normalizeUploadHeaders(
+  headers: Record<string, string | undefined | null> | string | null | undefined,
+  contentType: ProfileImageContentType,
+) {
+  const parsedHeaders = parseUploadHeaders(headers);
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(parsedHeaders).filter(([, value]) => typeof value === 'string' && value.length > 0),
   ) as Record<string, string>;
+
+  if (!hasHeader(normalizedHeaders, 'content-type')) {
+    normalizedHeaders['Content-Type'] = contentType;
+  }
+
+  return normalizedHeaders;
+}
+
+function parseUploadHeaders(
+  headers: Record<string, string | undefined | null> | string | null | undefined,
+) {
+  if (!headers) {
+    return {};
+  }
+
+  if (typeof headers !== 'string') {
+    return headers;
+  }
+
+  try {
+    const parsed = JSON.parse(headers);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, string | undefined | null>;
+    }
+  } catch {
+    return {};
+  }
+
+  return {};
+}
+
+function hasHeader(headers: Record<string, string>, headerName: string) {
+  const normalizedHeaderName = headerName.toLowerCase();
+  return Object.keys(headers).some((key) => key.toLowerCase() === normalizedHeaderName);
 }
 
 function normalizeProfileImageMimeType(
@@ -1159,7 +1244,7 @@ function normalizeProfileImageMimeType(
   return null;
 }
 
-function firstNonEmptyString(...values: Array<string | null | undefined>) {
+function firstNonEmptyString(...values: (string | null | undefined)[]) {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) {
@@ -1570,16 +1655,22 @@ function SelectionModal({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const isListPresentation = presentation === 'list';
-  const renderOptionLabel =
-    optionLabelFormatter ?? ((option: ProfileOptionItem) => getOptionLabel(option, language));
+  const renderOptionLabel = useCallback(
+    (option: ProfileOptionItem) => optionLabelFormatter
+      ? optionLabelFormatter(option)
+      : getOptionLabel(option, language),
+    [optionLabelFormatter, language],
+  );
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ selectedCodes, visible });
+  if (draftSource.selectedCodes !== selectedCodes || draftSource.visible !== visible) {
+    setDraftSource({ selectedCodes, visible });
     if (visible) {
       setDraft(selectedCodes);
       setSearchQuery('');
       setIsSearchFocused(false);
     }
-  }, [selectedCodes, visible]);
+  }
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1770,17 +1861,21 @@ function SnsEditorOverlay({
   const t = useTranslation();
   const copy = t.profileEdit.modals.sns;
   const insets = useSafeAreaInsets();
-  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(value);
+  const [draftLinks, setDraftLinks] = useState<BuddyProfileSocialLinkInput[]>(
+    () => sortSocialLinks(value, options),
+  );
   const [focusedSnsCode, setFocusedSnsCode] = useState<string | null>(null);
   const { width: windowWidth } = useWindowDimensions();
   const platformCardWidth = Math.max(0, Math.floor((windowWidth - 16 * 2 - 8) / 2));
 
-  useEffect(() => {
+  const [draftSource, setDraftSource] = useState({ options, value, visible });
+  if (draftSource.options !== options || draftSource.value !== value || draftSource.visible !== visible) {
+    setDraftSource({ options, value, visible });
     if (visible) {
       setDraftLinks(sortSocialLinks(value, options));
       setFocusedSnsCode(null);
     }
-  }, [options, value, visible]);
+  }
 
   if (!visible) return null;
 
@@ -1823,12 +1918,7 @@ function SnsEditorOverlay({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable hitSlop={10} style={styles.headerButton} onPress={close}>
-            <SymbolView
-              name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-              size={18}
-              weight="semibold"
-              tintColor={Palette.text}
-            />
+            <BackIcon />
           </Pressable>
           <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
           <View style={styles.headerButton} />
@@ -1908,7 +1998,7 @@ function SnsEditorOverlay({
                           returnKeyType="done"
                           numberOfLines={1}
                         />
-                        <View pointerEvents="none" style={styles.snsInputTrailingSpacer} />
+                        <View style={[styles.snsInputTrailingSpacer, styles.pointerEventsNone]} />
                       </View>
                     </View>
                   );
@@ -2956,5 +3046,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     color: Palette.grey700,
+  },
+  pointerEventsNone: {
+    pointerEvents: 'none',
   },
 });

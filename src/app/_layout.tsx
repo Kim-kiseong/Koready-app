@@ -1,7 +1,7 @@
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { LogBox, Platform, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -9,6 +9,25 @@ import PcIframeShell from '@/components/PcIframeShell';
 import { FontFamily } from '@/constants/typography';
 
 SplashScreen.preventAutoHideAsync();
+LogBox.ignoreLogs([
+  'Sending `onAnimatedValueUpdate` with no listeners registered.',
+  'props.pointerEvents is deprecated. Use style.pointerEvents',
+]);
+
+if (Platform.OS === 'web') {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    const firstArg = args[0];
+    if (
+      typeof firstArg === 'string' &&
+      firstArg.includes('props.pointerEvents is deprecated. Use style.pointerEvents')
+    ) {
+      return;
+    }
+
+    originalWarn(...args);
+  };
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

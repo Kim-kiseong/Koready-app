@@ -62,7 +62,7 @@ export type ProfileImageUploadUrlResponse = {
   imageId: string;
   uploadUrl: string;
   expiresAt: string;
-  requiredHeaders: Record<string, string>;
+  requiredHeaders: Record<string, string> | string | null;
   profileImageUrl?: string | null;
 };
 
@@ -99,7 +99,7 @@ export type ProfileImageCompleteEnvelope = {
 export type BuddyProfileSocialLink = {
   type: string;
   displayValue: string;
-  url: string;
+  url: string | null;
 };
 
 export type PlaceMateSocialLink = BuddyProfileSocialLink;
@@ -240,11 +240,13 @@ export type MessageThreadProfile = {
   profileImageUrl: string | null;
   nationalityCode?: string | null;
   nationality?: string | null;
+  nationalityName?: string | null;
 };
 
 export type MessageThreadListProfile = MessageThreadProfile & {
   nationalityCode?: string | null;
   nationality?: string | null;
+  nationalityName?: string | null;
 };
 
 export type MessageThreadListItem = {
@@ -385,6 +387,7 @@ export type BuddyProfileEnvelope = {
 export type BuddyProfileDetail = Omit<BuddyProfile, 'nationality'> & {
   nationality?: string;
   nationalityCode?: string;
+  nationalityName?: string;
 };
 
 export type BuddyProfileDetailEnvelope = {

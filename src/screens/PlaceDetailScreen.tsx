@@ -2,7 +2,6 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import {
   useEffect,
   useState,
@@ -23,11 +22,13 @@ import {
 } from '@/api/place';
 import {
   buildSavedPlaceFromPlaceDetail,
+  fetchSavedPlaceStatus,
   savePlace,
   unsavePlace,
 } from '@/api/saved-place';
 import { recordRecommendationEvent } from '@/api/picks';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
 import EnjoyPoints from '@/components/place-detail/EnjoyPoints';
 import MateTab from '@/components/place-detail/MateTab';
@@ -40,6 +41,7 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
+import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
 
@@ -78,6 +80,7 @@ function resolveVisiblePlaceTabs(tabs?: PlaceDetailTab[]): PlaceDetailTab[] {
 }
 
 export default function PlaceDetailScreen() {
+  const viewerPublicId = useAuthStore((state) => state.user?.publicId ?? null);
   const { placeId, tab, deckId } =
     useLocalSearchParams<{
       placeId: string;
@@ -89,7 +92,7 @@ export default function PlaceDetailScreen() {
 
   return (
     <PlaceDetailScreenContent
-      key={placeId ?? 'unknown'}
+      key={`${viewerPublicId ?? 'guest'}:${placeId ?? 'unknown'}`}
       placeId={placeId}
       normalizedTab={normalizedTab}
       deckId={normalizedDeckId}
@@ -124,15 +127,6 @@ function PlaceDetailScreenContent({
       (state) => state.hasHydrated,
     );
 
-  const localSavedState =
-    useSavedPlaceStore((state) =>
-      placeId ? state.savedByPlaceId[placeId] : undefined,
-    );
-
-  const savedPlaceSnapshot = useSavedPlaceStore((state) =>
-    placeId ? state.savedPlacesByPlaceId[placeId] : undefined,
-  );
-
   const upsertSavedPlace =
     useSavedPlaceStore(
       (state) => state.upsertSavedPlace,
@@ -145,8 +139,6 @@ function PlaceDetailScreenContent({
 
   const isSaved =
     optimisticSavedState ??
-    savedPlaceSnapshot?.saved ??
-    localSavedState ??
     place?.isSaved ??
     false;
 
@@ -164,10 +156,16 @@ function PlaceDetailScreenContent({
 
     let isMounted = true;
 
-    fetchPlaceDetail(placeId).then(
-      (detail) => {
+    Promise.all([
+      fetchPlaceDetail(placeId),
+      fetchSavedPlaceStatus(placeId),
+    ]).then(
+      ([detail, verifiedSavedState]) => {
         if (isMounted) {
-          setPlace(detail);
+          setPlace({
+            ...detail,
+            isSaved: verifiedSavedState,
+          });
         }
       },
     );
@@ -177,19 +175,16 @@ function PlaceDetailScreenContent({
     };
   }, [placeId, language]);
 
-  /*
-   * SecureStore 복원이 끝난 뒤에만
-   * API/mock 초기값을 스토어에 반영합니다.
-   *
-   * 이미 로컬 저장 이력이 있는 장소는
-   * initializePlace 내부에서 덮어쓰지 않습니다.
-   */
+  // The protected saved-list check is the source of truth when entering this
+  // screen. Local state is only used for the current optimistic toggle, so a
+  // previous account can never override the current viewer's saved status.
   useEffect(() => {
-    if (!placeId || !place || !hasHydrated || !place.isSaved) {
+    if (!placeId || !place || !hasHydrated) {
       return;
     }
 
-    if (localSavedState === false) {
+    if (!place.isSaved) {
+      removeSavedPlace(placeId);
       return;
     }
 
@@ -198,7 +193,7 @@ function PlaceDetailScreenContent({
     hasHydrated,
     place,
     placeId,
-    localSavedState,
+    removeSavedPlace,
     upsertSavedPlace,
   ]);
 
@@ -277,16 +272,7 @@ function PlaceDetailScreenContent({
           hitSlop={12}
           onPress={() => goBackOrRoot(router)}
         >
-          <SymbolView
-            name={{
-              ios: 'chevron.left',
-              android: 'arrow_back_ios',
-              web: 'arrow_back_ios',
-            }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
       </View>
 

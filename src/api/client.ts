@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from 'axios';
+import axios, { create, type AxiosRequestConfig } from 'axios';
 import { router } from 'expo-router';
 
 import { API_V1_BASE_URL } from '@/constants/env';
@@ -13,7 +13,7 @@ type RetryableRequestConfig = AxiosRequestConfig & { _retry?: boolean };
 // ...) left the caller waiting forever with no error and no loading feedback.
 const REQUEST_TIMEOUT_MS = 15_000;
 
-export const client = axios.create({
+export const client = create({
   baseURL: API_V1_BASE_URL,
   timeout: REQUEST_TIMEOUT_MS,
 });

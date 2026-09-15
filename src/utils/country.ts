@@ -53,10 +53,11 @@ const COUNTRY_LABEL_BY_CODE_KO: Record<string, string> = {
 
 export function resolveCountryOption(value: string, options?: ProfileOptionItem[]) {
   const normalizedValue = value.trim();
+  const normalizedCode = normalizedValue.toUpperCase();
   return (
     options?.find(
       (option) =>
-        option.code === normalizedValue ||
+        option.code.trim().toUpperCase() === normalizedCode ||
         option.labelKo === normalizedValue ||
         option.labelEn === normalizedValue,
     ) ?? null

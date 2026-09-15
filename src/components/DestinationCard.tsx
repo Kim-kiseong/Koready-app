@@ -1,5 +1,5 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     lineHeight: 16.8,
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     color: '#ffffff',
   },
 });

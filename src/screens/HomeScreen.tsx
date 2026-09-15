@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop:24,
+    paddingTop: 16,
   },
   locationRow: {
     flexDirection: 'row',
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     flexShrink: 1,
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
   },
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   languageTextInactive: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     color: Palette.grey600,
   },

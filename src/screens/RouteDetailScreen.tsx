@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ApiErrorEnvelope } from '@/api/client';
 import { createBuddyRoute, fetchBuddyRouteDetail, type BuddyRoute, type RouteSegment, type RouteTip, type TransportMode } from '@/api/route';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
+import KakaoRouteMap from '@/components/place-detail/KakaoRouteMap';
 import {
   Component13,
   Component15,
@@ -37,7 +39,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { formatTransportModeLabel } from '@/utils/transport-labels';
 
-const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number }>; width: number; height: number }> = {
+const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: number; height?: number; hideOuterBorder?: boolean }>; width: number; height: number }> = {
   WALK: { Icon: Component13, width: 40, height: 40 },
   SUBWAY: { Icon: Component15, width: 40, height: 40 },
   BUS: { Icon: Component17, width: 40, height: 40 },
@@ -49,7 +51,7 @@ const SEGMENT_ICON: Record<TransportMode, { Icon: React.ComponentType<{ width?: 
 };
 
 const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; borderColor: string }> = {
-  WALK: { backgroundColor: '#F1F7FF', borderColor: '#D9E9FF' },
+  WALK: { backgroundColor: '#F1F7FF', borderColor: '#E8EEF2' },
   SUBWAY: { backgroundColor: '#FAF5FF', borderColor: '#F3E6FF' },
   BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
   EXPRESS_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
@@ -59,7 +61,8 @@ const SEGMENT_MARKER_STYLE: Record<TransportMode, { backgroundColor: string; bor
   SHUTTLE_BUS: { backgroundColor: '#F4FFF8', borderColor: '#D4F7E4' },
 };
 
-const HANDLE_OVERLAP = 180;
+const WEB_HANDLE_OVERLAP = 320;
+const APP_HANDLE_OVERLAP = 170;
 const ITEM_GAP = 16; // 카드-카드 사이 간격 (선이 이 구간까지 이어져야 함)
 
 function formatTemplate(template: string, values: Record<string, string>) {
@@ -109,11 +112,79 @@ function formatSummaryDayTripLabel(label: string, language: 'KO' | 'EN') {
 }
 
 function formatSummaryTimeLabel(label: string, language: 'KO' | 'EN') {
+  const normalizedLabel = language === 'EN'
+    ? label.replace(/(\bAbout\s+\d+\s+hr)\s+0\s+min\b/g, '$1')
+    : label.replace(/(약\s*\d+시간)\s*0분/g, '$1');
+
   if (language !== 'EN') {
-    return label;
+    return normalizedLabel;
   }
 
-  return label.replace(/\shr\s+/, ' hr\n');
+  return normalizedLabel.replace(/\shr\s+/, ' hr\n');
+}
+
+function formatSummaryTransportLabel(label: string) {
+  return label.replace(/\s*\+\s*/g, ', ');
+}
+
+function formatRoutePointName(name: string, language: 'KO' | 'EN') {
+  if (language !== 'EN') {
+    return name;
+  }
+
+  if (name === '출발지') {
+    return 'Departure';
+  }
+
+  if (name === '도착지') {
+    return 'Destination';
+  }
+
+  return name;
+}
+
+function formatSegmentPointName(name: string, segmentMode: TransportMode, language: 'KO' | 'EN') {
+  const displayName = formatRoutePointName(name, language);
+  const trimmedName = displayName.trim();
+
+  if (language === 'EN' && (segmentMode === 'SUBWAY' || segmentMode === 'TRAIN')) {
+    return trimmedName.endsWith('Station') ? displayName : `${trimmedName} Station`;
+  }
+
+  if (language === 'EN' && segmentMode === 'EXPRESS_BUS') {
+    return trimmedName.endsWith('Terminal') ? displayName : `${trimmedName} Terminal`;
+  }
+
+  if (language !== 'KO') {
+    return displayName;
+  }
+
+  if (!trimmedName) {
+    return displayName;
+  }
+
+  if (segmentMode === 'SUBWAY' || segmentMode === 'TRAIN') {
+    return trimmedName.endsWith('역') ? displayName : `${trimmedName}역`;
+  }
+
+  if (segmentMode === 'EXPRESS_BUS') {
+    const terminalName = trimmedName.replace(/\s+/g, '');
+    return terminalName.endsWith('터미널') ? terminalName : `${terminalName}터미널`;
+  }
+
+  return displayName;
+}
+
+function formatWalkSegmentSummary(segment: RouteSegment, language: 'KO' | 'EN', nextSegmentMode?: TransportMode) {
+  const endName = nextSegmentMode === 'SUBWAY' || nextSegmentMode === 'TRAIN' || nextSegmentMode === 'EXPRESS_BUS'
+    ? formatSegmentPointName(segment.endName, nextSegmentMode, language)
+    : formatRoutePointName(segment.endName, language);
+
+  if (language === 'EN') {
+    return `Walk to ${endName} (${segment.durationMinutes} min)`;
+  }
+
+  return `${endName}까지 도보 (${segment.durationMinutes}분)`;
 }
 
 function isRouteExpiredError(error: unknown) {
@@ -132,6 +203,7 @@ export default function RouteDetailScreen() {
   const [hasError, setHasError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const language = useLanguageStore((state) => state.language);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const currentLocationId = useOnboardingStore((state) => state.currentLocationId);
@@ -169,13 +241,8 @@ export default function RouteDetailScreen() {
   }, [destinationPlaceId]);
 
   const handleKtxCtaPress = useCallback(() => {
-    Alert.alert(
-      isEnglish ? 'Coming soon' : '준비 중',
-      isEnglish
-        ? 'KTX booking information will be connected in a future step.'
-        : 'KTX 예매 안내는 추후 연결될 예정입니다.',
-    );
-  }, [isEnglish]);
+    router.push('/guides/ktx');
+  }, [router]);
 
   const [mapAreaHeight, setMapAreaHeight] = useState(0);
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -186,6 +253,10 @@ export default function RouteDetailScreen() {
 
   useEffect(() => {
     if (!routeId || !authHasHydrated || !onboardingHasHydrated) return;
+    if (!accessToken) {
+      router.replace('/login');
+      return;
+    }
 
     let active = true;
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -248,11 +319,12 @@ export default function RouteDetailScreen() {
     return () => {
       active = false;
     };
-  }, [authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
+  }, [accessToken, authHasHydrated, currentLocationId, destination, onboardingHasHydrated, reloadToken, resolvedDestinationPlaceId, routeCopy.error, routeId, router]);
 
   const snapPoints = useMemo(() => {
-    if (!mapAreaHeight) return ['50%', '100%'];
-    return [Math.max(mapAreaHeight - HANDLE_OVERLAP, 0), '100%'];
+    const handleOverlap = Platform.OS === 'web' ? WEB_HANDLE_OVERLAP : APP_HANDLE_OVERLAP;
+    if (!mapAreaHeight) return [Platform.OS === 'web' ? '30%' : '50%', '100%'];
+    return [Math.max(mapAreaHeight - handleOverlap, 0), '100%'];
   }, [mapAreaHeight]);
 
   const handleMapAreaLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
@@ -289,8 +361,8 @@ export default function RouteDetailScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
-        <Pressable hitSlop={12} onPress={() => goBackOrRoot(router)}>
-          <CustomText style={styles.back}>‹</CustomText>
+        <Pressable style={styles.headerIconSlot} hitSlop={12} onPress={() => goBackOrRoot(router)}>
+          <BackIcon />
         </Pressable>
         <CustomText style={styles.headerTitle}>{isEnglish ? 'Detailed Route' : '상세 이동 경로'}</CustomText>
         <View style={styles.headerSpacer} />
@@ -310,7 +382,12 @@ export default function RouteDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.mapMock} />
+          <KakaoRouteMap
+            origin={route.origin}
+            destination={route.destination}
+            segments={route.segments}
+            style={styles.mapMock}
+          />
         </View>
 
         <BottomSheet
@@ -327,7 +404,10 @@ export default function RouteDetailScreen() {
             contentContainerStyle={styles.sheetContent}
           >
             <View style={styles.summaryBox}>
-              <SummaryItem label={routeCopy.summaryLabels.transport} value={route.summary.recommendedTransportText} />
+              <SummaryItem
+                label={routeCopy.summaryLabels.transport}
+                value={formatSummaryTransportLabel(route.summary.recommendedTransportText)}
+              />
               <SummaryItem label={routeCopy.summaryLabels.time} value={summaryTimeLabel} />
               <SummaryItem label={routeCopy.statLabels.dayTrip} value={summaryDayTripLabel} highlight />
             </View>
@@ -335,12 +415,14 @@ export default function RouteDetailScreen() {
             {route.summary.horiTips?.[0] ? <TipCard tip={route.summary.horiTips[0]} /> : null}
 
             <View style={[styles.timeline, route.summary.horiTips?.[0] && styles.timelineAttached]}>
-              {route.segments.map((segment) => {
+              {route.segments.map((segment, index) => {
                 const tip = segment.horiTips?.[0];
+                const nextSegmentMode = route.segments[index + 1]?.mode;
                 return (
                   <TimelineItem
                     key={segment.order}
                     segment={segment}
+                    nextSegmentMode={nextSegmentMode}
                     tip={tip}
                     onCtaPress={handleKtxCtaPress}
                     language={language}
@@ -379,7 +461,7 @@ export default function RouteDetailScreen() {
                 </CustomText>
               </View>
               <View style={styles.fareDivider} />
-              <CustomText style={styles.disclaimer}>{route.summary.fare.disclaimer}</CustomText>
+              <CustomText style={styles.disclaimer}>{routeCopy.fareDisclaimer}</CustomText>
             </View>
           </BottomSheetScrollView>
         </BottomSheet>
@@ -456,9 +538,12 @@ function SegmentCardBody({
   };
   isEnglish: boolean;
 }) {
+  const startName = formatSegmentPointName(segment.startName, segment.mode, language);
+  const endName = formatSegmentPointName(segment.endName, segment.mode, language);
+
   return (
     <>
-      <CustomText style={styles.segmentTitle}>{segment.startName} → {segment.endName}</CustomText>
+      <CustomText style={styles.segmentTitle}>{startName} → {endName}</CustomText>
       <View style={styles.segmentMetaRow}>
         <RouteMetaIcon type={segment.mode} />
         <CustomText style={styles.segmentMeta}>{formatTransportModeLabel(segment.mode, language)}</CustomText>
@@ -471,9 +556,11 @@ function SegmentCardBody({
           <CustomText style={styles.segmentInstruction}>{segment.instruction}</CustomText>
         </>
       ) : null}
-      {segment.routeName?.toUpperCase() === 'KTX' ? (
+      {segment.mode === 'TRAIN' ? (
         <Pressable style={styles.ctaButton} onPress={onCtaPress}>
-          <CustomText style={styles.ctaButtonText}>{isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}</CustomText>
+          <CustomText style={styles.ctaButtonText}>
+            {isEnglish ? 'How to Book KTX' : 'KTX 예매하는 법 확인하기'}
+          </CustomText>
         </Pressable>
       ) : null}
     </>
@@ -493,6 +580,7 @@ function SegmentCardBody({
  */
 function TimelineItem({
   segment,
+  nextSegmentMode,
   tip,
   onCtaPress,
   language,
@@ -500,6 +588,7 @@ function TimelineItem({
   isEnglish,
 }: {
   segment: RouteSegment;
+  nextSegmentMode?: TransportMode;
   tip?: RouteTip;
   onCtaPress: () => void;
   language: 'KO' | 'EN';
@@ -517,21 +606,31 @@ function TimelineItem({
       <View style={styles.timelineRail}>
         <View style={styles.railLine} />
         <View style={[styles.segmentMarker, SEGMENT_MARKER_STYLE[segment.mode]]}>
-          <Icon width={SEGMENT_ICON[segment.mode].width} height={SEGMENT_ICON[segment.mode].height} />
+          <Icon
+            width={SEGMENT_ICON[segment.mode].width}
+            height={SEGMENT_ICON[segment.mode].height}
+            hideOuterBorder={Platform.OS === 'web'}
+          />
         </View>
       </View>
 
       <View style={styles.timelineContent}>
         {tip ? <SegmentTipContent tip={tip} /> : null}
-        <View style={styles.segmentCard}>
-          <SegmentCardBody
-            segment={segment}
-            onCtaPress={onCtaPress}
-            language={language}
-            timeFormats={timeFormats}
-            isEnglish={isEnglish}
-          />
-        </View>
+        {segment.mode === 'WALK' ? (
+          <View style={styles.walkSegmentSummaryRow}>
+            <CustomText style={styles.walkSegmentSummary}>{formatWalkSegmentSummary(segment, language, nextSegmentMode)}</CustomText>
+          </View>
+        ) : (
+          <View style={styles.segmentCard}>
+            <SegmentCardBody
+              segment={segment}
+              onCtaPress={onCtaPress}
+              language={language}
+              timeFormats={timeFormats}
+              isEnglish={isEnglish}
+            />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -570,12 +669,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontFamily: FontFamily.pretendard.regular, fontSize: 36, lineHeight: 36, color: Palette.text },
-  headerTitle: { fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },
+  headerIconSlot: { width: 40, height: 40, alignItems: 'flex-start', justifyContent: 'center' },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },
   headerSpacer: { width: 40 },
 
   contentArea: { flex: 1, position: 'relative' },
-  mapArea: { position: 'absolute', top: 0, left: 0, right: 0 },
+  mapArea: { position: 'absolute', top: 0, left: 0, right: 0, width: '100%' },
 
   locationCard: {
     marginHorizontal: 16,
@@ -603,21 +702,25 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     marginHorizontal: 16,
   },
-  mapMock: { height: 372, backgroundColor: '#EAF1F7' },
+  mapMock: { width: '100%', height: 372, backgroundColor: '#EAF1F7' },
 
   bottomSheetBackground: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   bottomSheetShadow: {
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+        }),
     elevation: 8,
   },
-  sheetHandle: { width: 118, height: 8, backgroundColor: '#E5E7EB' },
+  sheetHandle: { width: 50, height: 5, backgroundColor: '#E5E7EB' },
   sheetContent: { paddingBottom: 36 },
 
   summaryBox: { marginTop: 24, marginHorizontal: 16, backgroundColor: '#F6F9FB', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -682,6 +785,19 @@ const styles = StyleSheet.create({
   segmentMarker: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, borderWidth: 1 },
 
   timelineContent: { marginLeft: 52 },
+  walkSegmentSummaryRow: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingLeft: 10,
+    paddingRight: 4,
+  },
+  walkSegmentSummary: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 14,
+    lineHeight: 19.6,
+    letterSpacing: -0.28,
+    color: '#6B7684',
+  },
 
   segmentCard: {
     padding: 16,
@@ -703,8 +819,24 @@ const styles = StyleSheet.create({
   segmentMeta: { fontFamily: FontFamily.pretendard.regular, fontSize: 14, color: '#6B7684' },
   segmentDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB', marginTop: 12, marginBottom: 12 },
   segmentInstruction: { fontFamily: FontFamily.pretendard.regular, fontSize: 13, lineHeight: 21, color: '#4E5968' },
-  ctaButton: { alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, backgroundColor: '#59C0A7' },
-  ctaButtonText: { fontFamily: FontFamily.pretendard.medium, fontSize: 14, color: '#FFFFFF' },
+  ctaButton: {
+    alignSelf: 'flex-start',
+    marginTop: 16,
+    height: 36,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#59C0A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaButtonText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
   sectionTitle: { marginTop: 10, marginHorizontal: 16, marginBottom: 12, fontFamily: FontFamily.pretendard.semiBold, fontSize: 18, color: Palette.text },
   fareCard: { marginHorizontal: 16, padding: 16, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, backgroundColor: '#F6F9FB' },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

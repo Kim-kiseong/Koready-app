@@ -137,8 +137,6 @@ export interface Translations {
     alerts: {
       errorTitle: string;
       logoutFailed: string;
-      privacyComingSoonTitle: string;
-      privacyComingSoonBody: string;
       withdrawComingSoonTitle: string;
       withdrawComingSoonBody: string;
     };
@@ -477,7 +475,7 @@ export interface Translations {
       sentTitle: string;
       sentDescription: string;
       viewMessages: string;
-      sendAgain: string;
+      continueBrowsing: string;
       unsavedMessage: string;
       unsavedCancel: string;
       unsavedLeave: string;
@@ -579,7 +577,7 @@ export const ko: Translations = {
     searchPlaceholder: "오늘은 어떤 여행을 해보실래요?",
     featuredTitlePrefix: "한국",
     featuredTitleConnector: "에 왔으면,",
-    featuredTitleSuffix: "월엔 '이건' 해야지!",
+    featuredTitleSuffix: "월에 '이건' 해야지!",
     guidesSectionTitle: "호리가 알려주는 한국 여행 가이드",
     seeAll: "전체보기",
     languageKo: "한국어",
@@ -656,9 +654,6 @@ export const ko: Translations = {
     alerts: {
       errorTitle: "오류",
       logoutFailed: "로그아웃에 실패했습니다.",
-      privacyComingSoonTitle: "준비 중",
-      privacyComingSoonBody:
-        "개인정보 처리방침 화면은 다음 단계에서 연결됩니다.",
       withdrawComingSoonTitle: "준비 중",
       withdrawComingSoonBody: "회원 탈퇴는 다음 단계에서 연결됩니다.",
     },
@@ -1073,7 +1068,7 @@ export const ko: Translations = {
       sentDescription:
         "답장은 바로 오지 않을 수 있어요.\n새로운 답장은 쪽지함에서 확인할 수 있어요.",
       viewMessages: "쪽지함 보기",
-      sendAgain: "쪽지 보내기",
+      continueBrowsing: "계속 둘러보기",
       unsavedMessage: "아직 쪽지가 전송되지 않았어요\n정말 나가실건가요?",
       unsavedCancel: "취소",
       unsavedLeave: "나가기",

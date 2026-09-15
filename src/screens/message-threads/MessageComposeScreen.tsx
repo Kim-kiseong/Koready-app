@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { usePreventRemove } from 'expo-router/build/react-navigation/core';
-import { SymbolView } from 'expo-symbols';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,14 +28,15 @@ import type {
   ProfileOptionsResponse,
 } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
 import { useMessageThreadStore } from '@/store/message-thread-store';
-import { formatCountryDisplay, normalizeCountryCode } from '@/utils/country';
+import { useAuthStore } from '@/store/auth-store';
+import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { resolveProfileImageUri } from '@/utils/profile-image';
 
@@ -50,95 +50,17 @@ type MessageComposeParams = {
   placeNumericId?: string;
 };
 
-type UnsavedChangesModalProps = {
-  visible: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
-
-const FALLBACK_PROFILE_OPTIONS: Pick<ProfileOptionsResponse, 'countries' | 'languages' | 'koreanLevels'> = {
-  countries: [
-    { code: 'FR', labelKo: '프랑스', labelEn: 'France', displayOrder: 1 },
-    { code: 'KR', labelKo: '한국', labelEn: 'Korea', displayOrder: 2 },
-    { code: 'JP', labelKo: '일본', labelEn: 'Japan', displayOrder: 3 },
-    { code: 'US', labelKo: '미국', labelEn: 'United States', displayOrder: 4 },
-    { code: 'CN', labelKo: '중국', labelEn: 'China', displayOrder: 5 },
-    { code: 'TW', labelKo: '대만', labelEn: 'Taiwan', displayOrder: 6 },
-  ],
-  languages: [
-    { code: 'EN', labelKo: '영어', labelEn: 'English', displayOrder: 1 },
-    { code: 'KO', labelKo: '한국어', labelEn: 'Korean', displayOrder: 2 },
-    { code: 'JA', labelKo: '일본어', labelEn: 'Japanese', displayOrder: 3 },
-    { code: 'ZH', labelKo: '중국어', labelEn: 'Chinese', displayOrder: 4 },
-    { code: 'FR', labelKo: '프랑스어', labelEn: 'French', displayOrder: 5 },
-    { code: 'TH', labelKo: '태국어', labelEn: 'Thai', displayOrder: 6 },
-    { code: 'VI', labelKo: '베트남어', labelEn: 'Vietnamese', displayOrder: 7 },
-    { code: 'MN', labelKo: '몽골어', labelEn: 'Mongolian', displayOrder: 8 },
-    { code: 'RU', labelKo: '러시아어', labelEn: 'Russian', displayOrder: 9 },
-    { code: 'ID', labelKo: '인도네시아어', labelEn: 'Indonesian', displayOrder: 10 },
-    { code: 'ES', labelKo: '스페인어', labelEn: 'Spanish', displayOrder: 11 },
-    { code: 'DE', labelKo: '독일어', labelEn: 'German', displayOrder: 12 },
-    { code: 'AR', labelKo: '아랍어', labelEn: 'Arabic', displayOrder: 13 },
-  ],
-  koreanLevels: [
-    { code: 'BEGINNER', labelKo: '초급', labelEn: 'Beginner', displayOrder: 1 },
-    { code: 'INTERMEDIATE', labelKo: '중급', labelEn: 'Intermediate', displayOrder: 2 },
-    { code: 'ADVANCED', labelKo: '고급', labelEn: 'Advanced', displayOrder: 3 },
-  ],
-};
-
 const MAX_MESSAGE_LENGTH = 500;
-const MOCK_MESSAGE_COMPOSE_PROFILE: BuddyProfileDetail = {
-  profileId: 501,
-  profileImageUrl: 'https://picsum.photos/id/1027/300/300',
-  nickname: 'Emma',
-  nationality: 'France',
-  nationalityCode: 'FR',
-  availableLanguages: ['EN', 'KO'],
-  koreanLevel: 'BEGINNER',
-  travelStyles: ['LOCAL_FOOD', 'NATURE'],
-  bio: '한국 전통 문화와 로컬 맛집을 좋아해요 :)',
-  socialLinks: [
-    {
-      type: 'INSTAGRAM',
-      displayValue: '@emma.travels',
-      url: 'https://instagram.com/emma.travels',
-    },
-    {
-      type: 'KAKAOTALK',
-      displayValue: 'emma_kr',
-      url: 'https://open.kakao.com/o/emma_kr',
-    },
-  ],
-  profilePublic: true,
-  snsPublic: true,
-  allowsMessages: true,
-  canMessage: true,
-  blockedByMe: false,
-  updatedAt: '2026-08-06T00:00:00.000Z',
-};
-
-function buildMockComposeProfile(profileId: number | null, language: 'KO' | 'EN'): BuddyProfileDetail {
-  if (profileId != null) {
-    const mockProfile = getMockBuddyProfileDetailById(profileId);
-    if (mockProfile) {
-      return {
-        ...mockProfile,
-        nationalityCode: normalizeCountryCode(mockProfile.nationality ?? '') || '',
-      };
-    }
-  }
-
-  return {
-    ...MOCK_MESSAGE_COMPOSE_PROFILE,
-    bio:
-      language === 'EN'
-        ? 'I love Korean traditional culture and exploring local food spots :)'
-        : MOCK_MESSAGE_COMPOSE_PROFILE.bio,
-  };
-}
 
 export default function MessageComposeScreen() {
+  const publicId = useAuthStore((state) => state.user?.publicId);
+  const ownerPublicId = useMessageThreadStore((state) => state.ownerPublicId);
+  const sessionVersion = useMessageThreadStore((state) => state.sessionVersion);
+  if (!publicId || publicId !== ownerPublicId) return null;
+  return <MessageComposeContent key={`${publicId}:${sessionVersion}`} sessionVersion={sessionVersion} />;
+}
+
+function MessageComposeContent({ sessionVersion }: { sessionVersion: number }) {
   const router = useRouter();
   const navigation = useNavigation();
   const language = useLanguageStore((state) => state.language);
@@ -186,29 +108,30 @@ export default function MessageComposeScreen() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [normalizedReceiverProfileId]);
 
-  const [profile, setProfile] = useState<BuddyProfileDetail | null>(() =>
-    buildMockComposeProfile(parsedReceiverProfileId, useLanguageStore.getState().language),
-  );
-  const [options, setOptions] = useState<Pick<
-    ProfileOptionsResponse,
-    'countries' | 'languages' | 'koreanLevels'
-  > | null>(() => ({
-    ...FALLBACK_PROFILE_OPTIONS,
-    countries: [...FALLBACK_PROFILE_OPTIONS.countries],
-    languages: [...FALLBACK_PROFILE_OPTIONS.languages],
-    koreanLevels: [...FALLBACK_PROFILE_OPTIONS.koreanLevels],
-  }));
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadState, setLoadState] = useState<{
+    key: string;
+    profile: BuddyProfileDetail | null;
+    options: Pick<ProfileOptionsResponse, 'countries' | 'languages' | 'koreanLevels'> | null;
+    error: string | null;
+  } | null>(null);
   const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [sentThread, setSentThread] = useState<MessageThreadResponse | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const loadKey = JSON.stringify([language, parsedReceiverProfileId, reloadKey]);
+  const currentLoad = loadState?.key === loadKey ? loadState : null;
+  const profile = currentLoad?.profile ?? null;
+  const options = currentLoad?.options ?? null;
+  const isLoading = parsedReceiverProfileId != null && currentLoad == null;
+  const loadError = parsedReceiverProfileId == null
+    ? t.messages.compose.errorDescriptionFallback
+    : currentLoad?.error ?? null;
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
   const pendingNavigationActionRef = useRef<any>(null);
+  const sendInFlightRef = useRef(false);
+  const messageInputRef = useRef<TextInput | null>(null);
 
-  const resolvedOptions = options ?? FALLBACK_PROFILE_OPTIONS;
   const sendDisabled = !content.trim() || isSending;
   const contentLength = content.length;
   const hasUnsavedChanges = content.trim().length > 0 && !successVisible;
@@ -234,20 +157,9 @@ export default function MessageComposeScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoadError(null);
-    setProfile(buildMockComposeProfile(parsedReceiverProfileId, language));
-    setOptions({
-      ...FALLBACK_PROFILE_OPTIONS,
-      countries: [...FALLBACK_PROFILE_OPTIONS.countries],
-      languages: [...FALLBACK_PROFILE_OPTIONS.languages],
-      koreanLevels: [...FALLBACK_PROFILE_OPTIONS.koreanLevels],
-    });
 
     if (parsedReceiverProfileId == null) {
-      setIsLoading(false);
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     (async () => {
@@ -260,41 +172,36 @@ export default function MessageComposeScreen() {
         return;
       }
 
-      if (profileResult.status === 'fulfilled') {
-        setProfile(profileResult.value);
-      }
-
-      if (optionsResult.status === 'fulfilled') {
-        setOptions({
-          countries: optionsResult.value.countries,
-          languages: optionsResult.value.languages,
-          koreanLevels: optionsResult.value.koreanLevels,
-        });
-      }
-
-      setIsLoading(false);
+      setLoadState({
+        key: loadKey,
+        profile: profileResult.status === 'fulfilled' ? profileResult.value : null,
+        options: optionsResult.status === 'fulfilled' ? optionsResult.value : null,
+        error: profileResult.status === 'rejected'
+          ? extractErrorMessage(profileResult.reason, t.messages.compose.errorDescriptionFallback)
+          : null,
+      });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [language, parsedPlaceId, parsedPlaceNumericId, parsedReceiverProfileId, reloadKey, router]);
+  }, [loadKey, parsedReceiverProfileId, t.messages.compose.errorDescriptionFallback]);
 
   const languageChips = useMemo(() => {
-    if (!profile) {
+    if (!profile || !options) {
       return [];
     }
 
-    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, resolvedOptions.languages);
+    const sortedLanguages = sortLanguageCodesByOptionOrder(profile.availableLanguages, options.languages);
     return buildLanguageDisplayLabels(
       sortedLanguages,
       profile.koreanLevel,
-      (code) => getLabel(code, resolvedOptions.languages),
-      (level) => getLabel(level, resolvedOptions.koreanLevels),
+      (code) => getLabel(code, options.languages, language),
+      (level) => getLabel(level, options.koreanLevels, language),
       '',
-      { koreanLevelPlacement: 'append' },
+      { koreanLevelPlacement: 'append', koreanLabelFallback: '' },
     );
-  }, [profile, resolvedOptions.koreanLevels, resolvedOptions.languages]);
+  }, [language, options, profile]);
 
   const handleSend = useCallback(async () => {
     if (!profile) {
@@ -302,11 +209,12 @@ export default function MessageComposeScreen() {
     }
 
     const trimmedContent = content.trim();
-    if (!trimmedContent || isSending) {
+    if (!trimmedContent || isSending || sendInFlightRef.current) {
       return;
     }
 
     try {
+      sendInFlightRef.current = true;
       setIsSending(true);
       const receiverId = parsedReceiverProfileId ?? profile.profileId;
       const placeIdValue = parsedPlaceNumericId ?? parsedPlaceId ?? 0;
@@ -338,12 +246,13 @@ export default function MessageComposeScreen() {
           }
         : threadResponse;
 
-      useMessageThreadStore.getState().upsertThread(nextThread);
+      useMessageThreadStore.getState().upsertThread(nextThread, sessionVersion);
       setSentThread(nextThread);
       setSuccessVisible(true);
     } catch (error) {
       Alert.alert(t.messages.compose.sendFailedTitle, extractErrorMessage(error, t.messages.compose.errorDescriptionFallback));
     } finally {
+      sendInFlightRef.current = false;
       setIsSending(false);
     }
   }, [
@@ -352,12 +261,12 @@ export default function MessageComposeScreen() {
     normalizedPlaceAddress,
     normalizedPlaceImageUrl,
     normalizedPlaceId,
-    normalizedPlaceNumericId,
     normalizedPlaceRouteId,
     normalizedPlaceTitle,
     parsedPlaceId,
     parsedPlaceNumericId,
     parsedReceiverProfileId,
+    sessionVersion,
     profile,
     isSending,
   ]);
@@ -376,7 +285,11 @@ export default function MessageComposeScreen() {
     setSuccessVisible(false);
     setContent('');
     setSentThread(null);
-  }, []);
+    const placeId = normalizedPlaceNumericId ?? normalizedPlaceId ?? normalizedPlaceRouteId;
+    goBackOrRoot(router, placeId
+      ? { pathname: '/places/[placeId]', params: { placeId, tab: 'MATES' } }
+      : '/home');
+  }, [normalizedPlaceId, normalizedPlaceNumericId, normalizedPlaceRouteId, router]);
 
   const requestLeaveScreen = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -454,12 +367,7 @@ export default function MessageComposeScreen() {
         <View style={styles.screen}>
           <View style={styles.header}>
             <Pressable hitSlop={12} onPress={requestLeaveScreen}>
-              <SymbolView
-                name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-                size={18}
-                weight="semibold"
-                tintColor={Palette.text}
-              />
+              <BackIcon />
             </Pressable>
 
             <CustomText style={styles.headerTitle}>{t.messages.compose.title}</CustomText>
@@ -480,7 +388,14 @@ export default function MessageComposeScreen() {
                   <CustomText style={styles.nickname}>{profile.nickname}</CustomText>
                   <CustomText style={styles.dot}>·</CustomText>
                   <CustomText style={styles.country}>
-                    {formatCountryDisplay(profile.nationalityCode ?? profile.nationality ?? '', resolvedOptions.countries)}
+                    {formatCountryDisplay(
+                      profile.nationalityCode ??
+                        profile.nationality ??
+                        profile.nationalityName ??
+                        '',
+                      options?.countries,
+                      language,
+                    )}
                   </CustomText>
                 </View>
 
@@ -499,8 +414,9 @@ export default function MessageComposeScreen() {
             <View style={styles.messageSection}>
               <CustomText style={styles.sectionTitle}>{t.messages.compose.sectionMessage}</CustomText>
 
-              <View style={styles.messageBox}>
+              <Pressable style={styles.messageBox} onPress={() => messageInputRef.current?.focus()}>
                 <TextInput
+                  ref={messageInputRef}
                   value={content}
                   onChangeText={setContent}
                   placeholder={t.messages.compose.placeholder}
@@ -512,7 +428,7 @@ export default function MessageComposeScreen() {
                   style={styles.messageInput}
                   textAlignVertical="top"
                 />
-              </View>
+              </Pressable>
 
               <View style={styles.counterRow}>
                 <CustomText style={styles.counterCurrent}>{contentLength}</CustomText>
@@ -586,7 +502,7 @@ export default function MessageComposeScreen() {
                 </Pressable>
 
                 <Pressable style={styles.successSecondaryButton} onPress={handleContinueBrowsing}>
-                  <CustomText style={styles.successSecondaryButtonText}>{t.messages.compose.sendAgain}</CustomText>
+                  <CustomText style={styles.successSecondaryButtonText}>{t.messages.compose.continueBrowsing}</CustomText>
                 </Pressable>
               </View>
             </View>
@@ -640,27 +556,6 @@ function ProfileAvatar({ imageUrl, nickname }: { imageUrl: string | null; nickna
   );
 }
 
-function sortCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
-  return [...codes].sort((left, right) => {
-    const leftIndex = options.findIndex((option) => option.code === left);
-    const rightIndex = options.findIndex((option) => option.code === right);
-
-    if (leftIndex === -1 && rightIndex === -1) {
-      return left.localeCompare(right);
-    }
-
-    if (leftIndex === -1) {
-      return 1;
-    }
-
-    if (rightIndex === -1) {
-      return -1;
-    }
-
-    return leftIndex - rightIndex;
-  });
-}
-
 function sortLanguageCodesByOptionOrder(codes: string[], options: ProfileOptionItem[]) {
   const order = new Map(
     options.map((option, index) => [normalizeLanguageCode(option.code), index] as const),
@@ -690,8 +585,13 @@ function sortLanguageCodesByOptionOrder(codes: string[], options: ProfileOptionI
   });
 }
 
-function getLabel(code: string, options: ProfileOptionItem[]) {
-  return options.find((option) => option.code === code)?.labelKo ?? code;
+function getLabel(code: string, options: ProfileOptionItem[], language: 'KO' | 'EN') {
+  const option = options.find((item) => normalizeLanguageCode(item.code) === normalizeLanguageCode(code));
+  if (!option) {
+    return '';
+  }
+
+  return language === 'EN' ? option.labelEn : option.labelKo;
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {
@@ -922,6 +822,8 @@ const styles = StyleSheet.create({
     // A flex item's default min-width is its content's intrinsic width —
     // without this a long draft refuses to shrink and pushes past the row.
     minWidth: 0,
+    width: '100%',
+    minHeight: 68,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     lineHeight: 22.4,
@@ -957,14 +859,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.26,
   },
   noticeCard: {
-    marginTop: 180,
+    marginTop: Platform.select({ web: 147, default: 180 }),
     borderRadius: 12,
     backgroundColor: '#F6F9FB',
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
   noticeCardEnglish: {
-    marginTop: 130,
+    marginTop: Platform.select({ web: 110, default: 130 }),
   },
   noticeText: {
     fontFamily: FontFamily.pretendard.regular,
@@ -1090,7 +992,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   successSecondaryButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: FontFamily.pretendard.semiBold,
     fontWeight: '500',
     fontSize: 18,
     lineHeight: 25.2,

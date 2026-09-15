@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BottomNavBar from '@/components/BottomNavBar';
@@ -14,6 +14,7 @@ export default function MapScreen() {
   const { width } = useWindowDimensions();
   const t = useTranslation();
   const screenScale = width / BASE_WIDTH;
+  const mapWidth = Platform.OS === 'web' ? width * 0.93 : width;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -27,7 +28,7 @@ export default function MapScreen() {
           <CustomText style={styles.instructionText}>{t.map.instruction}</CustomText>
         </View>
 
-        <KoreaMap width={width} />
+        <KoreaMap width={mapWidth} />
       </ScrollView>
 
       <BottomNavBar active="map" />

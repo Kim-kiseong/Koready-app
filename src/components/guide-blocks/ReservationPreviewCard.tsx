@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
@@ -70,13 +70,17 @@ const styles = StyleSheet.create({
   shadowWrap: {
     width: 175.2,
     borderRadius: 16,
-    shadowColor: '#7A8794',
-    shadowOpacity: 0.28,
-    shadowRadius: 34,
-    shadowOffset: {
-      width: 0,
-      height: 18,
-    },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 18px 34px rgba(122, 135, 148, 0.28)' } as object)
+      : {
+          shadowColor: '#7A8794',
+          shadowOpacity: 0.28,
+          shadowRadius: 34,
+          shadowOffset: {
+            width: 0,
+            height: 18,
+          },
+        }),
     elevation: 12,
   },
   card: {

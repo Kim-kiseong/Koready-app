@@ -15,8 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { logout } from '@/api/auth';
+import { signOutOfGoogle } from '@/api/socialAuth';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import CustomText from '@/components/CustomText';
+import BackIcon from '@/components/icons/BackIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -51,19 +53,13 @@ export default function SettingsScreen() {
   const [pendingAccountAction, setPendingAccountAction] = useState<'logout' | 'withdraw' | null>(null);
 
   const handleLogout = async () => {
-    if (!refreshToken) {
-      clearSession();
-      router.replace('/login');
-      return;
+    if (refreshToken) {
+      await logout({ refreshToken, deviceId }).catch(() => undefined);
     }
 
-    try {
-      await logout({ refreshToken, deviceId });
-      clearSession();
-      router.replace('/login');
-    } catch {
-      Alert.alert(copy.alerts.errorTitle, copy.alerts.logoutFailed);
-    }
+    await signOutOfGoogle();
+    clearSession();
+    router.replace('/login');
   };
 
   const closeAccountActionModal = () => {
@@ -90,12 +86,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable hitSlop={10} style={styles.headerButton} onPress={() => goBackOrRoot(router)}>
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back_ios', web: 'arrow_back_ios' }}
-            size={18}
-            weight="semibold"
-            tintColor={Palette.text}
-          />
+          <BackIcon />
         </Pressable>
 
         <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
@@ -118,14 +109,22 @@ export default function SettingsScreen() {
             label={copy.rows.termsOfService}
             icon={<TermsIcon />}
             showDivider
-            onPress={() => router.push('/terms')}
+            onPress={() =>
+              router.push({
+                pathname: '/terms/[code]',
+                params: { code: 'SERVICE_TERMS', from: 'settings' },
+              })
+            }
           />
           <SettingRow
             label={copy.rows.privacyPolicy}
             icon={<PrivacyPolicyIcon />}
             showDivider
             onPress={() =>
-              Alert.alert(copy.alerts.privacyComingSoonTitle, copy.alerts.privacyComingSoonBody)
+              router.push({
+                pathname: '/terms/[code]',
+                params: { code: 'PRIVACY_POLICY', from: 'settings' },
+              })
             }
           />
           <SettingRow
@@ -277,9 +276,9 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    width: '100%',
     alignSelf: 'stretch',
-    marginHorizontal: 20,
+    marginLeft: -16,
+    marginRight: -16,
     backgroundColor: Palette.grey150,
   },
   sectionContent: {
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontFamily: Platform.select({
-      web: 'Inter',
+      web: FontFamily.pretendard.medium,
       default: FontFamily.pretendard.medium,
     }),
     fontSize: 16,

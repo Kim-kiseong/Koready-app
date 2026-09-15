@@ -1,12 +1,12 @@
+import { SymbolView } from 'expo-symbols';
 import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import Svg, { Path } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
-import { FontFamily } from '@/constants/typography';
 import type { IconFlowIcon } from '@/constants/guide-content';
+import { FontFamily } from '@/constants/typography';
 
 type IconName = IconFlowIcon;
 
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderColor: '#D4F7E4',
   },
   numberText: {
-    fontFamily: FontFamily.inter.medium,
+    fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
     color: Palette.primary,

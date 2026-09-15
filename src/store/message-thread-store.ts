@@ -3,8 +3,12 @@ import { create } from 'zustand';
 import type { MessageThreadResponse } from '@/api/types';
 
 type MessageThreadState = {
+  ownerPublicId: string | null;
+  sessionVersion: number;
   threads: Record<string, MessageThreadResponse>;
-  upsertThread: (thread: MessageThreadResponse) => void;
+  prepareForUser: (publicId: string) => void;
+  upsertThread: (thread: MessageThreadResponse, sessionVersion: number) => void;
+  replaceThread: (thread: MessageThreadResponse, sessionVersion: number) => void;
   clearThread: (threadId: string) => void;
   reset: () => void;
 };
@@ -34,9 +38,15 @@ function mergeThreadMessages(
 }
 
 export const useMessageThreadStore = create<MessageThreadState>()((set) => ({
+  ownerPublicId: null,
+  sessionVersion: 0,
   threads: {},
-  upsertThread: (thread) =>
+  prepareForUser: (publicId) => set((state) => state.ownerPublicId === publicId
+    ? state
+    : { ownerPublicId: publicId, sessionVersion: state.sessionVersion + 1, threads: {} }),
+  upsertThread: (thread, sessionVersion) =>
     set((state) => {
+      if (!state.ownerPublicId || state.sessionVersion !== sessionVersion) return state;
       const existingThread = state.threads[thread.threadId];
 
       if (!existingThread) {
@@ -59,6 +69,13 @@ export const useMessageThreadStore = create<MessageThreadState>()((set) => ({
         },
       };
     }),
+  replaceThread: (thread, sessionVersion) =>
+    set((state) => !state.ownerPublicId || state.sessionVersion !== sessionVersion ? state : ({
+      threads: {
+        ...state.threads,
+        [thread.threadId]: thread,
+      },
+    })),
   clearThread: (threadId) =>
     set((state) => {
       if (!(threadId in state.threads)) {
@@ -69,5 +86,9 @@ export const useMessageThreadStore = create<MessageThreadState>()((set) => ({
       delete nextThreads[threadId];
       return { threads: nextThreads };
     }),
-  reset: () => set({ threads: {} }),
+  reset: () => set((state) => ({
+    ownerPublicId: null,
+    sessionVersion: state.sessionVersion + 1,
+    threads: {},
+  })),
 }));

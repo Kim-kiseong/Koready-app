@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -14,6 +14,7 @@ import DateRangeBottomSheet, {
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/language-store';
 import {
   DEFAULT_PLACE_FILTER_SELECTION,
   formatPlaceDateRangeLabel,
@@ -84,6 +85,7 @@ function formatDateOnly(date: DateOnly) {
 }
 
 const ANIMATION_DURATION = 220;
+const shouldUseNativeDriver = Platform.OS !== 'web';
 
 export default function PlaceFilterBottomSheet({
   visible,
@@ -92,6 +94,7 @@ export default function PlaceFilterBottomSheet({
   onClose,
 }: PlaceFilterBottomSheetProps) {
   const t = useTranslation();
+  const language = useLanguageStore((state) => state.language);
   const { height: windowHeight } = useWindowDimensions();
   const [draftFilter, setDraftFilter] = useState<PlaceFilterSelection>(value);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
@@ -105,13 +108,13 @@ export default function PlaceFilterBottomSheet({
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 1,
         duration: ANIMATION_DURATION,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
   }, [visible, translateY, overlayOpacity]);
@@ -125,13 +128,13 @@ export default function PlaceFilterBottomSheet({
         toValue: windowHeight,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 0,
         duration: ANIMATION_DURATION,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start(({ finished }) => {
       if (finished) onDone();
@@ -190,6 +193,31 @@ export default function PlaceFilterBottomSheet({
   const customDateRangeLabel = hasCustomDateRange
     ? formatPlaceDateRangeLabel(draftFilter.dateRange.startDate!, draftFilter.dateRange.endDate!)
     : null;
+  const firstDateRowPresetIds =
+    language === 'EN'
+      ? EVENT_DATE_FILTER_IDS.filter((id) => id !== 'NEXT_MONTH')
+      : EVENT_DATE_FILTER_IDS;
+
+  const dateSelectButton = (
+    <Pressable
+      style={[
+        styles.dateSelectButton,
+        hasCustomDateRange ? styles.dateSelectButtonSelected : null,
+      ]}
+      onPress={() => setIsDateSheetOpen((current) => !current)}
+    >
+      <CalendarIcon color={hasCustomDateRange ? Palette.white : Palette.grey500} />
+      <CustomText
+        numberOfLines={1}
+        style={[
+          styles.dateSelectText,
+          hasCustomDateRange ? styles.dateSelectTextSelected : null,
+        ]}
+      >
+        {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
+      </CustomText>
+    </Pressable>
+  );
 
   if (!visible) return null;
 
@@ -217,7 +245,7 @@ export default function PlaceFilterBottomSheet({
 
             <View style={styles.filterHeaderRow}>
               <View style={styles.filterHeaderSpacer} />
-              <View pointerEvents="none" style={styles.filterHeaderTitleWrap}>
+              <View style={[styles.filterHeaderTitleWrap, styles.pointerEventsNone]}>
                 <CustomText style={styles.filterHeaderTitle}>{t.eventFilter.title}</CustomText>
               </View>
               <Pressable hitSlop={8} onPress={resetFilterDraft}>
@@ -232,42 +260,38 @@ export default function PlaceFilterBottomSheet({
             >
               <View style={styles.section}>
                 <CustomText style={styles.sectionLabel}>{t.eventFilter.dateLabel}</CustomText>
-                <View style={styles.chipWrap}>
-                  <FilterChip
-                    label={t.eventFilter.dateAll}
-                    selected={!hasCustomDateRange && draftFilter.datePreset === 'ALL'}
-                    onPress={() => handleDatePresetSelect('ALL')}
-                  />
-                  {EVENT_DATE_FILTER_IDS.map((id) => (
+                <View style={styles.dateRows}>
+                  <View style={styles.chipWrap}>
                     <FilterChip
-                      key={id}
-                      label={t.eventFilter.dateOptions[id]}
-                      selected={!hasCustomDateRange && draftFilter.datePreset === id}
-                      onPress={() => handleDatePresetSelect(id)}
+                      label={t.eventFilter.dateAll}
+                      selected={!hasCustomDateRange && draftFilter.datePreset === 'ALL'}
+                      onPress={() => handleDatePresetSelect('ALL')}
                     />
-                  ))}
-                </View>
+                    {firstDateRowPresetIds.map((id) => (
+                      <FilterChip
+                        key={id}
+                        label={t.eventFilter.dateOptions[id]}
+                        selected={!hasCustomDateRange && draftFilter.datePreset === id}
+                        onPress={() => handleDatePresetSelect(id)}
+                      />
+                    ))}
+                  </View>
 
-                <Pressable
-                  style={[
-                    styles.dateSelectButton,
-                    hasCustomDateRange ? styles.dateSelectButtonSelected : null,
-                  ]}
-                  onPress={() => setIsDateSheetOpen((current) => !current)}
-                >
-                  <CalendarIcon
-                    color={hasCustomDateRange ? Palette.white : Palette.grey500}
-                  />
-                  <CustomText
-                    numberOfLines={1}
-                    style={[
-                      styles.dateSelectText,
-                      hasCustomDateRange ? styles.dateSelectTextSelected : null,
-                    ]}
-                  >
-                    {customDateRangeLabel ?? t.eventFilter.dateCustomButton}
-                  </CustomText>
-                </Pressable>
+                  {language === 'EN' ? (
+                    <View style={styles.chipWrap}>
+                      <FilterChip
+                        label={t.eventFilter.dateOptions.NEXT_MONTH}
+                        selected={
+                          !hasCustomDateRange && draftFilter.datePreset === 'NEXT_MONTH'
+                        }
+                        onPress={() => handleDatePresetSelect('NEXT_MONTH')}
+                      />
+                      {dateSelectButton}
+                    </View>
+                  ) : (
+                    dateSelectButton
+                  )}
+                </View>
               </View>
 
               <View style={styles.section}>
@@ -384,6 +408,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pointerEventsNone: {
+    pointerEvents: 'none',
+  },
   filterHeaderTitle: {
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 18,
@@ -409,6 +436,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19.6,
     color: Palette.text,
+  },
+  dateRows: {
+    gap: 8,
   },
   chipWrap: {
     flexDirection: 'row',

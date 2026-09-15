@@ -55,25 +55,30 @@ export default function LocationScreen() {
 
   const [query, setQuery] = useState(location?.displayAddress ?? '');
   const [isFocused, setIsFocused] = useState(false);
-  const [results, setResults] = useState<LocationSearchItem[]>([]);
+  const [results, setResults] = useState<LocationSearchItem[]>(
+    () => isDevMockSession && query.trim().length >= 2 ? DEV_MOCK_SEARCH_RESULTS : [],
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [searchSource, setSearchSource] = useState({ isDevMockSession, language });
+  if (searchSource.isDevMockSession !== isDevMockSession || searchSource.language !== language) {
+    setSearchSource({ isDevMockSession, language });
+    setResults(isDevMockSession && query.trim().length >= 2 ? DEV_MOCK_SEARCH_RESULTS : []);
+  }
 
   useEffect(() => {
     const q = query.trim();
     // The API accepts 1 char, but 2+ keeps result quality reasonable.
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
-    if (isDevMockSession) {
-      setResults(DEV_MOCK_SEARCH_RESULTS);
+    if (q.length < 2 || isDevMockSession) {
       return;
     }
     const controller = new AbortController();
     const timer = setTimeout(() => {
       searchLocations(q, language, 10, controller.signal)
-        .then((items) => setResults(items))
+        .then((items) => {
+          if (!controller.signal.aborted) setResults(items);
+        })
         .catch((error) => {
+          if (controller.signal.aborted) return;
           if (isAxiosError(error) && error.code === 'ERR_CANCELED') return;
           setResults([]);
           if (isAxiosError(error) && error.response?.status === 503) {
@@ -87,6 +92,11 @@ export default function LocationScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, isDevMockSession, language]);
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setResults(isDevMockSession && value.trim().length >= 2 ? DEV_MOCK_SEARCH_RESULTS : []);
+  };
 
   const handleSelectResult = async (item: LocationSearchItem) => {
     if (isSaving) return;
@@ -142,7 +152,7 @@ export default function LocationScreen() {
     router.push('/travel-style');
   };
 
-  const showResults = query.length > 0 && results.length > 0;
+  const showResults = query.trim().length >= 2 && results.length > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -171,7 +181,7 @@ export default function LocationScreen() {
           />
           <TextInput
             value={query}
-            onChangeText={setQuery}
+            onChangeText={handleQueryChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={t.location.searchPlaceholder}

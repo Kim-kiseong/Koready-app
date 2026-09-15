@@ -8,6 +8,7 @@ import {
   Easing,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -61,7 +62,7 @@ const TRAVEL_STYLE_LABELS: Record<LanguageCode, Record<string, string>> = {
   },
 };
 
-function createLocalizedLabelMap(entries: Array<[string, string]>) {
+function createLocalizedLabelMap(entries: [string, string][]) {
   const ko: Record<string, string> = {};
   const en: Record<string, string> = {};
 
@@ -94,6 +95,16 @@ export default function SavedScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSortSheetVisible, setIsSortSheetVisible] = useState(false);
   const [savedPlacesSnapshot, setSavedPlacesSnapshot] = useState<SavedPlaceItem[]>([]);
+  const loadKey = JSON.stringify([language, hasAuthHydrated]);
+  const [previousLoadKey, setPreviousLoadKey] = useState(loadKey);
+  if (previousLoadKey !== loadKey) {
+    setPreviousLoadKey(loadKey);
+    setSavedPlacesSnapshot([]);
+    setCursor(null);
+    setHasMore(false);
+    setIsLoading(true);
+    setIsLoadingMore(false);
+  }
 
   const loadSavedPlaces = useCallback(
     async (nextCursor: string | null = null, isMore = false) => {
@@ -137,18 +148,25 @@ export default function SavedScreen() {
       return;
     }
 
-    setSavedPlacesSnapshot([]);
-    setCursor(null);
-    setHasMore(false);
-
-    const timeout = setTimeout(() => {
-      void loadSavedPlaces(null, false);
-    }, 0);
+    let cancelled = false;
+    fetchSavedPlaces(null, 20)
+      .then((result) => {
+        if (cancelled) return;
+        setSavedPlacesSnapshot([...new Map(result.items.map((item) => [item.placeId, item])).values()]);
+        setCursor(result.nextCursor);
+        setHasMore(result.hasMore);
+      })
+      .catch(() => {
+        // Keep the empty list usable if its initial request fails.
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
 
     return () => {
-      clearTimeout(timeout);
+      cancelled = true;
     };
-  }, [language, hasAuthHydrated, loadSavedPlaces]);
+  }, [language, hasAuthHydrated]);
 
   const savedPlaces = useMemo(() => {
     const items = savedPlacesSnapshot.filter((item) => item.saved !== false);
@@ -696,10 +714,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Palette.grey200,
     backgroundColor: Palette.white,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 5, height: 5 },
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '5px 5px 10px rgba(0, 0, 0, 0.08)' } as object)
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+          shadowOffset: { width: 5, height: 5 },
+        }),
     elevation: 100,
     zIndex: 100,
   },
