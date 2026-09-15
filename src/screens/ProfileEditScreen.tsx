@@ -2178,6 +2178,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     height: 24,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
@@ -2341,6 +2342,7 @@ const styles = StyleSheet.create({
   },
   bioInput: {
     flex: 1,
+    minWidth: 0,
     height: 24,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
@@ -2660,6 +2662,7 @@ const styles = StyleSheet.create({
   },
   snsInput: {
     flex: 1,
+    minWidth: 0,
     height: 24,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
@@ -2730,6 +2733,7 @@ const styles = StyleSheet.create({
   },
   sheetSearchInput: {
     flex: 1,
+    minWidth: 0,
     height: 22,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 15,

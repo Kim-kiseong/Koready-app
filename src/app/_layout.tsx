@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import PcIframeShell from '@/components/PcIframeShell';
 import { FontFamily } from '@/constants/typography';
 
 SplashScreen.preventAutoHideAsync();
@@ -25,19 +26,22 @@ export default function RootLayout() {
 
   // Native splash stays up (preventAutoHideAsync above) until fonts are ready.
   // AnimatedSplashOverlay calls SplashScreen.hideAsync() itself once it mounts.
-  if (!fontsLoaded) {
-    return null;
-  }
-
+  // PcIframeShell short-circuits ahead of the fontsLoaded gate below — on a
+  // wide top-level web tab it never needs this tree at all, just the static
+  // phone-frame shell around its iframe, so it shouldn't wait on fonts first.
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-        </Stack>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <PcIframeShell>
+      {fontsLoaded ? (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AnimatedSplashOverlay />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </ThemeProvider>
+        </GestureHandlerRootView>
+      ) : null}
+    </PcIframeShell>
   );
 }

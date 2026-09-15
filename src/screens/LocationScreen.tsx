@@ -277,6 +277,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    // Without this a flex item's min-width defaults to its content's
+    // intrinsic width, so a long placeholder/value refuses to shrink and
+    // pushes the input past the search bar's edge instead of clipping.
+    minWidth: 0,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 14,
     letterSpacing: -0.28,

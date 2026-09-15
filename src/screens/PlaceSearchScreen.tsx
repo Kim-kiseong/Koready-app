@@ -258,6 +258,11 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    // A flex item's default min-width is its content's intrinsic width, not
+    // 0 — without this, the long placeholder ("오늘은 어떤 여행을 해보실래요?")
+    // refuses to shrink and pushes the input (and its focus border) past
+    // the search bar's right edge instead of just clipping/scrolling.
+    minWidth: 0,
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
     color: Palette.text,
