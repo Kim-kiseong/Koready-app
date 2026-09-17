@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import {
@@ -12,10 +13,28 @@ import { FontFamily } from '@/constants/typography';
 
 type Props = { description?: PlaceDescriptionData | null; images: PlaceImage[] };
 
+function getImageKey(image: PlaceImage) {
+  const source = image.source;
+  const uri =
+    typeof source === 'object' && source && !Array.isArray(source) && 'uri' in source
+      ? source.uri
+      : null;
+
+  return `${image.order}:${typeof uri === 'string' ? uri : ''}`;
+}
+
 export default function PlaceDescription({ description, images }: Props) {
   const { width } = useWindowDimensions();
+  const [failedImageKeys, setFailedImageKeys] = useState<Set<string>>(() => new Set());
   const normalizedDescription = normalizePlaceDescription(description);
-  const detailImages = [...images].sort((a, b) => a.order - b.order).slice(1);
+  const detailImages = useMemo(
+    () =>
+      [...images]
+        .sort((a, b) => a.order - b.order)
+        .slice(1)
+        .filter((image) => !failedImageKeys.has(getImageKey(image))),
+    [failedImageKeys, images],
+  );
   const heroImage = detailImages[0];
   const galleryImages = detailImages.slice(1, 3);
   const galleryImageSize = (width - 16 * 2 - 16) / 2;
@@ -43,6 +62,10 @@ export default function PlaceDescription({ description, images }: Props) {
           style={styles.heroImage}
           contentFit="cover"
           accessibilityLabel={heroImage.altText}
+          onError={() => {
+            const key = getImageKey(heroImage);
+            setFailedImageKeys((current) => new Set(current).add(key));
+          }}
         />
       ) : null}
 
@@ -52,11 +75,15 @@ export default function PlaceDescription({ description, images }: Props) {
         <View style={styles.gallery}>
           {galleryImages.map((image) => (
             <Image
-              key={image.order}
+              key={getImageKey(image)}
               source={image.source}
               style={[styles.galleryImage, { width: galleryImageSize, height: galleryImageSize }]}
               contentFit="cover"
               accessibilityLabel={image.altText}
+              onError={() => {
+                const key = getImageKey(image);
+                setFailedImageKeys((current) => new Set(current).add(key));
+              }}
             />
           ))}
         </View>

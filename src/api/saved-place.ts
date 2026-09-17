@@ -3,11 +3,13 @@ import { API_V1_BASE_URL } from '@/constants/env';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+import { prefetchImageUrls } from '@/utils/image-prefetch';
 
 import {
   normalizePlaceDescription,
   type PlaceDetail,
 } from './place';
+import { clearApiCache } from './cache';
 import type { PicksCard } from './picks';
 import type {
   PlaceListItem,
@@ -359,6 +361,7 @@ export async function fetchSavedPlaces(
     });
     const items = response.data.data.items.map(cloneSavedPlaceItem);
     mergeSavedPlacesIntoCache(items);
+    prefetchImageUrls(items.map((item) => item.imageUrl));
     return {
       ...response.data.data,
       items,
@@ -398,12 +401,16 @@ export async function savePlace(
       );
     }
 
+    clearApiCache('places:');
+    clearApiCache('home');
     return result;
   } catch {
     if (snapshot) {
       mergeSavedPlaceIntoCache(snapshot, true);
     }
 
+    clearApiCache('places:');
+    clearApiCache('home');
     return {
       placeId: Number.isFinite(numericPlaceId) ? numericPlaceId : snapshot?.placeId ?? 0,
       saved: true,
@@ -419,5 +426,7 @@ export async function unsavePlace(placeId: number | string): Promise<void> {
     // Keep the optimistic local removal.
   } finally {
     removeSavedPlaceFromCache(placeId);
+    clearApiCache('places:');
+    clearApiCache('home');
   }
 }
