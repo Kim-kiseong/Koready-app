@@ -141,6 +141,7 @@ export const en: DeepPartial<Translations> = {
   },
   my: {
     title: 'My',
+    loading: 'Loading your profile.',
     profileBadgePublic: 'Public Profile',
     profileBadgePrivate: 'Private Profile',
     editProfile: 'Edit Profile',

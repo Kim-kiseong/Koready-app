@@ -142,6 +142,7 @@ export interface Translations {
   };
   my: {
     title: string;
+    loading: string;
     profileBadgePublic: string;
     profileBadgePrivate: string;
     editProfile: string;
@@ -658,6 +659,7 @@ export const ko: Translations = {
   },
   my: {
     title: "마이페이지",
+    loading: "마이페이지를 불러오는 중이에요.",
     profileBadgePublic: "프로필 공개 중",
     profileBadgePrivate: "프로필 비공개",
     editProfile: "프로필 수정",
@@ -972,7 +974,7 @@ export const ko: Translations = {
     routeTab: {
       title: "Buddy Route",
       subtitle: "추천 여행지까지 가는 방법을 확인해보세요.",
-      loading: "이동 경로를 불러오는 중이에요.",
+      loading: "상세 이동 경로를 불러오는 중이에요.",
       error: "이동 경로를 불러오지 못했어요.",
       retry: "다시 시도",
       summaryLabels: {
