@@ -5,10 +5,10 @@ import { signInWithGoogle } from '@/api/socialAuth';
 import { GOOGLE_LOGIN_REQUEST, GOOGLE_LOGIN_RESULT, isEmbeddedInIframe } from '@/api/googleLoginBridge';
 
 // Mirrors the old +html.tsx CSS breakpoint: below this width (an actual
-// phone, or this shell's own 440px iframe) the app renders directly.
+// phone, or this shell's own 393px iframe) the app renders directly.
 const DESKTOP_BREAKPOINT = 501;
-const PHONE_WIDTH = 440;
-const PHONE_HEIGHT = 956;
+const PHONE_WIDTH = 393;
+const PHONE_HEIGHT = 852;
 // Breathing room between the frame and the browser window's edges.
 const FRAME_MARGIN = 48;
 // Keeps the frame from either shrinking illegibly on a short window or
@@ -21,11 +21,11 @@ const MAX_SCALE = 2.2;
 // of the render path.
 const isTopLevel = !isEmbeddedInIframe();
 
-// This app is mobile-only UI. On an actual phone (or the 440px iframe below)
+// This app is mobile-only UI. On an actual phone (or the 393px iframe below)
 // it fills the viewport exactly like before. On a wide top-level browser tab
 // (a PC opening the web build) it instead renders a static phone-frame shell
-// containing an iframe that reloads this same app at 440x956 — giving that
-// inner instance a real 440-wide `window` so useWindowDimensions/Dimensions
+// containing an iframe that reloads this same app at 393x852 — giving that
+// inner instance a real 393-wide `window` so useWindowDimensions/Dimensions
 // and RN Modal's document.body portal both resolve against the phone frame
 // instead of the PC's actual window. Google Identity Services refuses to
 // render its sign-in button inside any iframe though, so the inner app asks
@@ -37,7 +37,7 @@ export default function PcIframeShell({ children }: { children: ReactNode }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [href] = useState(() => window.location.href);
   const showShell = isTopLevel && width >= DESKTOP_BREAKPOINT;
-  // The iframe itself always stays exactly 440x956 (so the app inside keeps
+  // The iframe itself always stays exactly 393x852 (so the app inside keeps
   // seeing a consistent phone-sized `window`) — only its visual size scales,
   // via CSS transform, to fill however big the actual browser window is.
   const scale = Math.min(

@@ -1,7 +1,7 @@
 // Message contract for the Google sign-in bridge between the PC-web outer
 // shell (components/PcIframeShell.web.tsx — a real top-level window, where
 // Google Identity Services works normally) and the app instance running
-// inside its 440x956 iframe (socialAuth.web.ts). GIS refuses to render its
+// inside its 393x852 iframe (socialAuth.web.ts). GIS refuses to render its
 // button inside any iframe, same-origin or not, so the iframe can't sign
 // in on its own and has to ask its parent to do it on its behalf.
 export const GOOGLE_LOGIN_REQUEST = 'koready:pc-shell:google-login-request';
