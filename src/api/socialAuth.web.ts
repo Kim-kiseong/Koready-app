@@ -82,7 +82,7 @@ async function ensureGoogleButtonReady(): Promise<HTMLElement> {
   return button;
 }
 
-// Runs only when this page is the 440x956 iframe inside PcIframeShell (see
+// Runs only when this page is the 393x852 iframe inside PcIframeShell (see
 // components/PcIframeShell.web.tsx). GIS won't render its button here, so
 // this asks the parent — a real top-level window — to sign in for us.
 function signInWithGoogleViaParentBridge(): Promise<SocialAuthResult> {
