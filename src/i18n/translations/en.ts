@@ -8,6 +8,7 @@ export const en: DeepPartial<Translations> = {
   login: {
     googleButton: 'Continue with Google',
     appleButton: 'Continue with Apple',
+    mobileRecommendation: 'The Koready service recommends using\na mobile environment.',
   },
   language: {
     title: 'Choose your language',

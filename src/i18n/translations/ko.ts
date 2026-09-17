@@ -11,6 +11,7 @@ export interface Translations {
   login: {
     googleButton: string;
     appleButton: string;
+    mobileRecommendation: string;
   };
   language: {
     title: string;
@@ -503,6 +504,7 @@ export const ko: Translations = {
   login: {
     googleButton: "Google로 시작하기",
     appleButton: "Apple로 시작하기",
+    mobileRecommendation: "Koready 서비스는 모바일 환경 접속을 권장합니다.",
   },
   language: {
     title: "언어를 선택해주세요",
