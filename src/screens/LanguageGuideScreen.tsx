@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import CustomText from '@/components/CustomText';
@@ -118,6 +118,7 @@ function SummaryCardView({ card }: { card: Extract<LanguageCard, { kind: 'summar
 export default function LanguageGuideScreen() {
   const router = useRouter();
   const t = useTranslation();
+  const insets = useSafeAreaInsets();
   const language = useLanguageStore((state) => state.language);
   const cards = language === 'EN' ? LANGUAGE_CARDS_EN : LANGUAGE_CARDS;
   const [index, setIndex] = useState(0);
@@ -126,7 +127,7 @@ export default function LanguageGuideScreen() {
   const isLast = index === cards.length - 1;
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
         onBack={() => goBackOrRoot(router)}
         progress={{ currentStep: index + 1, totalSteps: cards.length }}
@@ -145,7 +146,7 @@ export default function LanguageGuideScreen() {
         {card.kind === 'summary' && <SummaryCardView card={card} />}
       </ScrollView>
 
-      <SafeAreaView edges={['bottom']} style={styles.buttonBar}>
+      <View style={[styles.buttonBar, { paddingBottom: Math.max(insets.bottom, 34) }]}>
         <View style={styles.buttonRow}>
           {!isFirst && (
             <Pressable style={styles.secondaryButton} onPress={() => setIndex((current) => current - 1)}>
@@ -158,7 +159,7 @@ export default function LanguageGuideScreen() {
             <CustomText style={styles.primaryButtonText}>{isLast ? t.languageGuide.close : t.languageGuide.next}</CustomText>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -180,9 +181,9 @@ const styles = StyleSheet.create({
   buttonBar: {
     backgroundColor: '#ffffff',
     paddingTop: 14,
-    // Fallback so the buttons keep breathing room from the screen edge even
-    // when the safe-area bottom inset is 0 (e.g. web preview, gesture-nav Android).
-    paddingBottom: -20,
+    // paddingBottom comes from insets.bottom at the call site (Figma's own
+    // reference frame reserves 34px here for the iPhone home indicator —
+    // Math.max keeps that same floor on devices/web with a 0 inset).
   },
   buttonRow: {
     flexDirection: 'row',

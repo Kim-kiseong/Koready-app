@@ -34,6 +34,64 @@ export default function Root({ children }: PropsWithChildren) {
             __html: `@supports (height: 100dvh) { html, body, #root { height: 100dvh; } }`,
           }}
         />
+        {/* ScrollViewStyleReset (above) only sets body's overflow to hidden,
+            not #root's — on a real phone that's never mattered because
+            #root's own content happens to fit its box exactly, but at
+            exactly 440x956 (the phone-frame size PcIframeShell's iframe
+            uses, see src/components) some screens overflow by a few
+            pixels, which without this shows up as a real OS scrollbar
+            (glaring in an iframe, which can't inherit the outer page's
+            overlay-scrollbar styling). Clip it here unconditionally instead
+            of re-deriving it per screen. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `#root { overflow: hidden; }`,
+          }}
+        />
+        {/* RN Web's ScrollView is a plain div with overflow-y:auto, so any
+            screen with more content than fits (e.g. the home feed) gets a
+            real OS scrollbar on desktop Chrome — barely noticeable at full
+            browser width, but a chunky classic-style bar eating into a
+            440px-wide phone frame, breaking the native-app illusion
+            entirely. Mouse wheel/trackpad/drag-scroll all keep working;
+            this only removes the visible track/thumb chrome, the same
+            trick Twitter/Instagram's web clients use. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              * { scrollbar-width: none; }
+              *::-webkit-scrollbar { display: none; }
+            `,
+          }}
+        />
+        {/* RN Web's TextInput renders a plain native <input>. Screens that
+            autoFocus one (e.g. PlaceSearchScreen) trigger Chrome's
+            focus-visible heuristic for programmatic focus, drawing its
+            default black focus ring tightly around the placeholder text
+            instead of the app's own pill-shaped search-bar styling —
+            visually reads as the text being doubled/outlined. This app has
+            no keyboard-nav flow that needs the native ring to begin with. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `input, textarea { outline: none; }`,
+          }}
+        />
+        {/* This app is mobile-only UI. On a wide top-level web tab (a PC
+            opening the web build), PcIframeShell (src/components) swaps in a
+            phone-frame shell around an iframe that reloads the app at
+            440x956 — CSS alone can't clamp the *inside* of that box (see its
+            doc comment for why), so this just keeps the page backdrop calm
+            for the brief moment before React mounts and PcIframeShell takes
+            over. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @media (min-width: 501px) {
+                html, body { height: 100%; background: #d9dde3; }
+              }
+            `,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

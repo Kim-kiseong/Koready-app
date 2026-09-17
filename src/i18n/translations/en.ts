@@ -136,8 +136,7 @@ export const en: DeepPartial<Translations> = {
     alerts: {
       errorTitle: 'Error',
       logoutFailed: 'Failed to log out.',
-      withdrawComingSoonTitle: 'Coming soon',
-      withdrawComingSoonBody: 'Account deletion will be connected in a future step.',
+      withdrawFailed: 'Failed to request account deletion. Please try again shortly.',
     },
   },
   my: {

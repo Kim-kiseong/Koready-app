@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { googleLogin, socialLogin } from '@/api/auth';
-import { GoogleSignInCancelledError, signInWithApple, signInWithGoogle } from '@/api/socialAuth';
-import type { ApiErrorEnvelope, SocialProvider } from '@/api/types';
+import { googleLogin } from '@/api/auth';
+import { GoogleSignInCancelledError, signInWithGoogle } from '@/api/socialAuth';
+import type { ApiErrorEnvelope } from '@/api/types';
 import CustomText from '@/components/CustomText';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
@@ -44,16 +44,22 @@ const DEV_HOME_SESSION = {
   nextStep: 'COMPLETED' as const,
 };
 
-// Reference: Figma frame "로그인" (node 1329:9556), 375x812.
+// Reference: Figma frame "스플래시" (node 2286:13137), 375x812 — the same
+// background image as the old "로그인" (1329:9556) frame this was built
+// from, but with title/mascot/shadow/fade all shifted down 69px as a block
+// (their spacing relative to each other is identical, only the block's
+// position within the frame moved). BUTTON_GROUP_TOP has no counterpart in
+// this frame (it has no buttons) so it's extrapolated by the same +69,
+// which keeps its gap below the fade's top edge unchanged (was 70px, still is).
 const FRAME_WIDTH = 375;
 const FRAME_HEIGHT = 812;
-const TITLE_TOP = 177;
-const MASCOT_TOP = 391;
+const TITLE_TOP = 246;
+const MASCOT_TOP = 460;
 const MASCOT_WIDTH = 164;
 const MASCOT_BOTTOM = MASCOT_TOP + 210;
-const SHADOW_TOP = 586;
-const BUTTON_GROUP_TOP = 630;
-const BOTTOM_FADE_TOP = 560;
+const SHADOW_TOP = 655;
+const BUTTON_GROUP_TOP = 699;
+const BOTTOM_FADE_TOP = 629;
 const BOTTOM_FADE_HEIGHT = 187;
 // Figma's "Image_fx 2" reflection layer fades to solid white by 22.722% into
 // this band — past that point it's opaque white, which is what makes the
@@ -79,23 +85,14 @@ export default function LoginScreen() {
   const setSession = useAuthStore((state) => state.setSession);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSocialLogin = async (provider: SocialProvider) => {
+  const handleGoogleLogin = async () => {
     setIsSubmitting(true);
     try {
-      if (provider === 'GOOGLE') {
-        const { idToken } = await signInWithGoogle();
-        if (!idToken) {
-          throw new Error('Google sign-in did not return an ID token.');
-        }
-        const session = await googleLogin({ idToken, deviceId });
-        setSession(session);
-        await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
-        router.replace(resolveNextStepRoute(session.nextStep));
-        return;
+      const { idToken } = await signInWithGoogle();
+      if (!idToken) {
+        throw new Error('Google sign-in did not return an ID token.');
       }
-
-      const { idToken, authorizationCode } = await signInWithApple();
-      const session = await socialLogin({ provider, idToken, authorizationCode, deviceId });
+      const session = await googleLogin({ idToken, deviceId });
       setSession(session);
       await refreshSavedLocationsAndRestoreCurrentLocation().catch(() => undefined);
       router.replace(resolveNextStepRoute(session.nextStep));
@@ -185,16 +182,7 @@ export default function LoginScreen() {
             borderColor={Palette.grey200}
             textColor={Palette.grey900}
             disabled={buttonsDisabled}
-            onPress={() => handleSocialLogin('GOOGLE')}
-          />
-          <SocialButton
-            label={t.login.appleButton}
-            icon={require('@/assets/images/apple.svg')}
-            iconSize={{ width: 16, height: 20 }}
-            backgroundColor={Palette.appleBlack}
-            textColor="#ffffff"
-            disabled={buttonsDisabled}
-            onPress={() => handleSocialLogin('APPLE')}
+            onPress={handleGoogleLogin}
           />
         </SafeAreaView>
       </View>

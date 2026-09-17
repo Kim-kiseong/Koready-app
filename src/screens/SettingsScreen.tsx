@@ -16,6 +16,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { logout } from '@/api/auth';
 import { signOutOfGoogle } from '@/api/socialAuth';
+import { requestMyWithdrawal } from '@/api/user';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import CustomText from '@/components/CustomText';
 import BackIcon from '@/components/icons/BackIcon';
@@ -76,9 +77,19 @@ export default function SettingsScreen() {
     }
 
     if (action === 'withdraw') {
-      InteractionManager.runAfterInteractions(() => {
-        Alert.alert(copy.alerts.withdrawComingSoonTitle, copy.alerts.withdrawComingSoonBody);
-      });
+      try {
+        // Revokes every refresh token server-side (including the one this
+        // request just used), so from here on the client must behave like
+        // it just logged out rather than trying to keep the session alive.
+        await requestMyWithdrawal();
+        await signOutOfGoogle();
+        clearSession();
+        router.replace('/login');
+      } catch {
+        InteractionManager.runAfterInteractions(() => {
+          Alert.alert(copy.alerts.errorTitle, copy.alerts.withdrawFailed);
+        });
+      }
     }
   };
 
