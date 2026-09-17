@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { clearApiCache } from '@/api/cache';
 import type { AuthUser, LanguageResponse, NextStep, TokenResponse } from '@/api/types';
 
 import { secureStorage } from './secure-storage';
@@ -44,6 +45,9 @@ export const useAuthStore = create<AuthState>()(
       deviceId: Crypto.randomUUID(),
       hasHydrated: false,
       setSession: (session) => {
+        if (get().user?.publicId !== session.user.publicId) {
+          clearApiCache();
+        }
         useSavedPlaceStore.getState().prepareForUser(session.user.publicId);
         useMessageThreadStore.getState().prepareForUser(session.user.publicId);
         set({
@@ -77,6 +81,7 @@ export const useAuthStore = create<AuthState>()(
         })),
       setNextStep: (nextStep) => set({ nextStep }),
       clearSession: () => {
+        clearApiCache();
         useMessageThreadStore.getState().reset();
         set({
           accessToken: null,

@@ -2,6 +2,7 @@ import { Asset } from "expo-asset";
 import type { ImageSource } from "expo-image";
 
 import { formatPlaceRegionName } from "@/utils/place-i18n";
+import { prefetchImageUrls } from "@/utils/image-prefetch";
 import { useAuthStore } from "@/store/auth-store";
 import { useLanguageStore } from "@/store/language-store";
 import type { ServiceRegionCode, TravelStyleId } from "./onboarding";
@@ -13,6 +14,7 @@ import type {
 } from "./types";
 
 import { client } from "./client";
+import { buildApiCacheKey, getCachedOrFetch } from "./cache";
 
 export type PlaceDetailTab = "DESCRIPTION" | "ROUTE" | "MATES";
 
@@ -169,7 +171,8 @@ export type PlaceDetail = {
   travelStyle?: string | null;
 };
 
-const PLACE_DETAIL_IN_FLIGHT_REQUESTS = new Map<string, Promise<PlaceDetail>>();
+const PLACE_LIST_CACHE_TTL_MS = 60_000;
+const PLACE_DETAIL_CACHE_TTL_MS = 5 * 60_000;
 
 function isWithinRequestedDateRange(
   place: { festivalOccurrence: SavedPlaceFestivalOccurrence | null },
@@ -278,7 +281,15 @@ const DEFAULT_PLACE_LIST_SIZE = 20;
 export async function fetchPlaces(
   params: FetchPlacesParams,
 ): Promise<PlaceListResponse> {
-  try {
+  const viewerPublicId = useAuthStore.getState().user?.publicId ?? "guest";
+  const language = useLanguageStore.getState().language;
+  const cacheKey = buildApiCacheKey("places:list", [
+    viewerPublicId,
+    language,
+    params,
+  ]);
+
+  const result = await getCachedOrFetch(cacheKey, PLACE_LIST_CACHE_TTL_MS, async () => {
     const query = new URLSearchParams();
     query.set("serviceRegionCode", params.serviceRegionCode);
     if (params.travelStyles && params.travelStyles.length > 0) {
@@ -299,25 +310,26 @@ export async function fetchPlaces(
     const response = await client.get<PlaceListEnvelope>(
       `/places?${query.toString()}`,
     );
-    const result = mapPlaceListResponse(response.data.data);
+    const mappedResult = mapPlaceListResponse(response.data.data);
 
     // GET /places has no dateFrom/dateTo param — the backend contract only
     // supports serviceRegionCode/travelStyles/sort/cursor/size — so the date
     // filter picked in PlaceFilterBottomSheet has to be applied here instead,
     // otherwise it's silently ignored against the real API.
     if (!params.dateFrom && !params.dateTo) {
-      return result;
+      return mappedResult;
     }
 
     return {
-      ...result,
-      items: result.items.filter((item) =>
+      ...mappedResult,
+      items: mappedResult.items.filter((item) =>
         isWithinRequestedDateRange(item, params.dateFrom, params.dateTo),
       ),
     };
-  } catch (error) {
-    throw error;
-  }
+  });
+
+  prefetchImageUrls(result.items.map((item) => item.imageUrl));
+  return result;
 }
 
 // GET /places/search — called from the home search bar. Unlike /places (map
@@ -349,7 +361,9 @@ export async function searchPlaces(
       params,
       signal,
     });
-    return mapPlaceListResponse(response.data.data);
+    const result = mapPlaceListResponse(response.data.data);
+    prefetchImageUrls(result.items.map((item) => item.imageUrl));
+    return result;
   } catch (error) {
     throw error;
   }
@@ -429,28 +443,31 @@ export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail> {
   if (Number.isFinite(numericId) && numericId > 0) {
     const viewerPublicId = useAuthStore.getState().user?.publicId ?? "guest";
     const language = useLanguageStore.getState().language;
-    const cacheKey = `${viewerPublicId}:${language}:${numericId}`;
-    const inflightRequest = PLACE_DETAIL_IN_FLIGHT_REQUESTS.get(cacheKey);
+    const cacheKey = buildApiCacheKey("places:detail", [
+      viewerPublicId,
+      language,
+      numericId,
+    ]);
 
-    if (inflightRequest) {
-      return inflightRequest;
-    }
+    const detail = await getCachedOrFetch(cacheKey, PLACE_DETAIL_CACHE_TTL_MS, async () => {
+      const response = await client.get<PlaceDetailEnvelope>(
+        `/places/${numericId}`,
+      );
+      return mapPlaceDetailResponse(response.data.data);
+    });
 
-    const request = (async () => {
-      try {
-        const response = await client.get<PlaceDetailEnvelope>(
-          `/places/${numericId}`,
-        );
-        return mapPlaceDetailResponse(response.data.data);
-      } catch (error) {
-        throw error;
-      } finally {
-        PLACE_DETAIL_IN_FLIGHT_REQUESTS.delete(cacheKey);
-      }
-    })();
+    prefetchImageUrls([
+      ...detail.images
+        .map((image) => image.source)
+        .map((source) =>
+          typeof source === "object" && source && "uri" in source
+            ? source.uri
+            : null,
+        ),
+      ...detail.relatedPlaces.map((place) => place.imageUrl),
+    ]);
 
-    PLACE_DETAIL_IN_FLIGHT_REQUESTS.set(cacheKey, request);
-    return request;
+    return detail;
   }
 
   throw new Error(`Invalid place id: ${placeId}`);

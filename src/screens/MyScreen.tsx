@@ -135,6 +135,7 @@ export default function MyScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={Palette.primary} />
+            <CustomText style={styles.loadingText}>{copy.loading}</CustomText>
           </View>
         ) : profileLoadError ? (
           <ErrorState
@@ -449,6 +450,13 @@ const styles = StyleSheet.create({
     minHeight: 420,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
   },
   profileContent: {
     gap: 16,

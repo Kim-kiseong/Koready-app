@@ -36,12 +36,12 @@ import type {
   BuddyProfileResponse,
   BuddyProfileSocialLinkInput,
   BuddyProfileSocialLinkRequest,
+  ProfileImageUploadUrlRequest,
   ProfileOptionItem,
   ProfileOptionsResponse,
-  ProfileImageUploadUrlRequest,
 } from '@/api/types';
-import CustomText from '@/components/CustomText';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import CustomText from '@/components/CustomText';
 import BackIcon from '@/components/icons/BackIcon';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
@@ -132,6 +132,8 @@ const SOCIAL_PLATFORM_ICON_URIS = {
   LINE: Asset.fromModule(require('../assets/images/social/line.svg')).uri,
   KAKAOTALK: Asset.fromModule(require('../assets/images/social/kakaotalk.svg')).uri,
 } as const;
+
+const SNS_EDITOR_BOTTOM_SPACE = 120;
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -1604,13 +1606,22 @@ function SocialLinkRow({
           <CustomText style={styles.socialLinkValue}>{value}</CustomText>
         </View>
       </View>
-      <SymbolView
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        size={14}
-        weight="semibold"
-        tintColor={Palette.grey400}
-      />
+      <SocialLinkChevronIcon />
     </Pressable>
+  );
+}
+
+function SocialLinkChevronIcon() {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 20 20" fill="none">
+      <Path
+        d="M7.5 4.16667L12.5 10L7.5 15.8333"
+        stroke={Palette.grey400}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
   );
 }
 
@@ -1926,7 +1937,10 @@ function SnsEditorOverlay({
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.snsContent, { paddingBottom: insets.bottom}]}
+          contentContainerStyle={[
+            styles.snsContent,
+            { paddingBottom: Math.max(insets.bottom + SNS_EDITOR_BOTTOM_SPACE, SNS_EDITOR_BOTTOM_SPACE) },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
@@ -2947,6 +2961,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
+    paddingTop: 8,
   },
   sheetCancelButtonLarge: {
     flex: 1,
