@@ -459,7 +459,15 @@ export async function fetchEventListings(
       travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
       sort,
     });
-    return result.items.map(toEventListing);
+    // Places with a festival date are more actionable (time-sensitive) than
+    // ones without, so surface them first while keeping the backend's
+    // relative ordering within each group (Array.sort is stable).
+    return result.items.map(toEventListing).sort((a, b) => {
+      const aHasDate = a.dateRangeLabel !== '';
+      const bHasDate = b.dateRangeLabel !== '';
+      if (aHasDate === bHasDate) return 0;
+      return aHasDate ? -1 : 1;
+    });
   } catch {
     return [];
   }
