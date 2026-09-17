@@ -43,7 +43,7 @@ const COUNTRY_LABEL_BY_CODE: Record<string, string> = {
 
 const COUNTRY_LABEL_BY_CODE_KO: Record<string, string> = {
   FR: '프랑스',
-  KR: '한국',
+  KR: '대한민국',
   JP: '일본',
   US: '미국',
   CN: '중국',
@@ -89,11 +89,15 @@ export function getCountryDisplayName(
   language: LanguageCode = 'EN',
 ) {
   const option = resolveCountryOption(value, options);
+  const normalizedCode = normalizeCountryCode(option?.code ?? value);
+  if (language === 'KO' && normalizedCode === 'KR') {
+    return COUNTRY_LABEL_BY_CODE_KO.KR;
+  }
+
   if (option) {
     return language === 'EN' ? option.labelEn : option.labelKo;
   }
 
-  const normalizedCode = normalizeCountryCode(value);
   if (normalizedCode) {
     return language === 'EN'
       ? COUNTRY_LABEL_BY_CODE[normalizedCode] ?? value.trim()

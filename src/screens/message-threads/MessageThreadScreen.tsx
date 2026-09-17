@@ -113,7 +113,6 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
         setThreadState(readThread);
         setPlaceDetail(null);
         setProfileOptions(null);
-        setLoadStatus({ key: loadKey, error: null });
 
         void markMessageThreadRead(normalizedThreadId)
           .then((readResult) => {
@@ -135,6 +134,7 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
 
         setProfileOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : null);
         setPlaceDetail(placeResult.status === 'fulfilled' ? placeResult.value : null);
+        setLoadStatus({ key: loadKey, error: null });
       } catch (error) {
         if (!cancelled) {
           setLoadStatus({
@@ -168,6 +168,7 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
       visibleThread?.otherProfile.nationalityName ??
       '',
     countryOptions,
+    language,
   );
 
   const handleLoadOlderMessages = useCallback(async () => {
