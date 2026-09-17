@@ -44,16 +44,22 @@ const DEV_HOME_SESSION = {
   nextStep: 'COMPLETED' as const,
 };
 
-// Reference: Figma frame "로그인" (node 1329:9556), 375x812.
+// Reference: Figma frame "스플래시" (node 2286:13137), 375x812 — the same
+// background image as the old "로그인" (1329:9556) frame this was built
+// from, but with title/mascot/shadow/fade all shifted down 69px as a block
+// (their spacing relative to each other is identical, only the block's
+// position within the frame moved). BUTTON_GROUP_TOP has no counterpart in
+// this frame (it has no buttons) so it's extrapolated by the same +69,
+// which keeps its gap below the fade's top edge unchanged (was 70px, still is).
 const FRAME_WIDTH = 375;
 const FRAME_HEIGHT = 812;
-const TITLE_TOP = 177;
-const MASCOT_TOP = 391;
+const TITLE_TOP = 246;
+const MASCOT_TOP = 460;
 const MASCOT_WIDTH = 164;
 const MASCOT_BOTTOM = MASCOT_TOP + 210;
-const SHADOW_TOP = 586;
-const BUTTON_GROUP_TOP = 630;
-const BOTTOM_FADE_TOP = 560;
+const SHADOW_TOP = 655;
+const BUTTON_GROUP_TOP = 699;
+const BOTTOM_FADE_TOP = 629;
 const BOTTOM_FADE_HEIGHT = 187;
 // Figma's "Image_fx 2" reflection layer fades to solid white by 22.722% into
 // this band — past that point it's opaque white, which is what makes the

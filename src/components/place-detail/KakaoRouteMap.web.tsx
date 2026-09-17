@@ -4,9 +4,6 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 import CustomText from '@/components/CustomText';
 
 import type { RouteCoordinate, RoutePlace, RouteSegment } from '@/api/route';
-
-// Set this in .env.local and Vercel Environment Variables.
-// EXPO_PUBLIC_KAKAO_MAP_JS_KEY=your-kakao-javascript-key
 const KAKAO_MAP_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAP_JS_KEY ?? '';
 const EMPTY_SEGMENTS: RouteSegment[] = [];
 const KAKAO_MAP_INTERACTION_STYLE = {

@@ -23,7 +23,6 @@ import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
@@ -79,10 +78,6 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
   const scrollRef = useRef<ScrollView | null>(null);
 
   const visibleThread = threadState?.threadId === normalizedThreadId ? threadState : null;
-  const selectedProfileFallback = useMemo(
-    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId, language)),
-    [language, selectedProfileId],
-  );
 
   useEffect(() => {
     if (!normalizedThreadId) {
@@ -113,7 +108,6 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
         setThreadState(readThread);
         setPlaceDetail(null);
         setProfileOptions(null);
-        setLoadStatus({ key: loadKey, error: null });
 
         void markMessageThreadRead(normalizedThreadId)
           .then((readResult) => {
@@ -135,6 +129,7 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
 
         setProfileOptions(optionsResult.status === 'fulfilled' ? optionsResult.value : null);
         setPlaceDetail(placeResult.status === 'fulfilled' ? placeResult.value : null);
+        setLoadStatus({ key: loadKey, error: null });
       } catch (error) {
         if (!cancelled) {
           setLoadStatus({
@@ -168,6 +163,7 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
       visibleThread?.otherProfile.nationalityName ??
       '',
     countryOptions,
+    language,
   );
 
   const handleLoadOlderMessages = useCallback(async () => {
@@ -462,7 +458,6 @@ function MessageThreadContent({ sessionVersion }: { sessionVersion: number }) {
         visible={selectedProfileId !== null}
         profileId={selectedProfileId}
         options={profileOptions}
-        fallbackProfile={selectedProfileFallback}
         onClose={() => setSelectedProfileId(null)}
       />
     </ScreenShell>

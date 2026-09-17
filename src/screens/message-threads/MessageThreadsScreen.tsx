@@ -25,7 +25,6 @@ import { useMessageThreadStore } from '@/store/message-thread-store';
 import BuddyProfileModal from '@/components/place-detail/BuddyProfileModal';
 import { useTranslation } from '@/i18n/useTranslation';
 import { formatCountryDisplay, getCountryDisplayName, normalizeCountryCode } from '@/utils/country';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { resolveProfileImageUri } from '@/utils/profile-image';
 
 type MessageThreadsScreenState = {
@@ -78,10 +77,6 @@ function MessageThreadsContent({ onRetry, sessionVersion }: { onRetry: () => voi
     unreadTotal: 0,
   });
   const countryOptions = profileOptions?.countries?.length ? profileOptions.countries : FALLBACK_COUNTRY_OPTIONS;
-  const selectedProfileFallback = useMemo(
-    () => (selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId)),
-    [selectedProfileId],
-  );
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
@@ -253,7 +248,6 @@ function MessageThreadsContent({ onRetry, sessionVersion }: { onRetry: () => voi
         visible={selectedProfileId !== null}
         profileId={selectedProfileId}
         options={profileOptions}
-        fallbackProfile={selectedProfileFallback}
         onClose={() => setSelectedProfileId(null)}
       />
     </SafeAreaView>

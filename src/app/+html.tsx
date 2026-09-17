@@ -1,6 +1,19 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { type PropsWithChildren } from 'react';
 
+import { WEB_PRETENDARD_FAMILY } from '@/constants/typography';
+
+// Metro resolves font assets to URLs in the web HTML bundle.
+const pretendardFaces: [number, string][] = [
+  [100, require('@/assets/fonts/Pretendard-Thin.ttf')],
+  [300, require('@/assets/fonts/Pretendard-Light.ttf')],
+  [400, require('@/assets/fonts/Pretendard-Regular.ttf')],
+  [500, require('@/assets/fonts/Pretendard-Medium.ttf')],
+  [600, require('@/assets/fonts/Pretendard-SemiBold.ttf')],
+  [700, require('@/assets/fonts/Pretendard-Bold.ttf')],
+  [900, require('@/assets/fonts/Pretendard-Black.ttf')],
+];
+
 // Customizes Expo Router's default root HTML document (web only) — see
 // https://docs.expo.dev/router/reference/static-rendering/#root-html.
 export default function Root({ children }: PropsWithChildren) {
@@ -18,6 +31,19 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
         <ScrollViewStyleReset />
+        {/* Use a single web family with explicit weights for the same native
+            assets; do not mix these faces with expo-font's weight-400 aliases. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: pretendardFaces.map(([weight, url]) => `@font-face {
+              font-family: ${JSON.stringify(WEB_PRETENDARD_FAMILY)};
+              src: url(${JSON.stringify(url)}) format('truetype');
+              font-weight: ${weight};
+              font-style: normal;
+              font-display: block;
+            }`).join('\n'),
+          }}
+        />
         <style
           // ScrollViewStyleReset (above) sets html/body/#root to height:100%.
           // On iOS Safari that resolves against the "large" viewport — the

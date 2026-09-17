@@ -459,6 +459,25 @@ export type MyUserEnvelope = {
   traceId: string;
 };
 
+export type AccountWithdrawalStatus = 'ACTIVE' | 'WITHDRAWAL_PENDING' | 'WITHDRAWN';
+
+export type AccountWithdrawalResponse = {
+  status: AccountWithdrawalStatus;
+  // 7-day grace period timestamps — all null until a withdrawal is requested.
+  requestedAt: string | null;
+  scheduledFor: string | null;
+  confirmedAt: string | null;
+  messagePurgeAt: string | null;
+};
+
+export type AccountWithdrawalEnvelope = {
+  success: true;
+  code: string;
+  message: string;
+  data: AccountWithdrawalResponse;
+  traceId: string;
+};
+
 export type ApiFieldError = {
   field: string;
   rejectedValue: string | null;

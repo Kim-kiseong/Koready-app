@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -12,6 +11,7 @@ import { fetchMessageThreads } from '@/api/messages';
 import type { BuddyProfile, ProfileOptionItem, ProfileOptionsResponse } from '@/api/types';
 import BottomNavBar from '@/components/BottomNavBar';
 import CustomText from '@/components/CustomText';
+import SettingsIcon from '@/components/icons/SettingsIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -124,12 +124,7 @@ export default function MyScreen() {
         <View style={styles.headerSpacer} />
         <CustomText style={styles.headerTitle}>{copy.title}</CustomText>
         <Pressable style={styles.headerIconButton} onPress={handleOpenSettings} hitSlop={10}>
-          <SymbolView
-            name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
-            size={24}
-            weight="regular"
-            tintColor={Palette.text}
-          />
+          <SettingsIcon />
         </Pressable>
       </View>
 
