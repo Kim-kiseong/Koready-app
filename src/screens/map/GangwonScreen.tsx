@@ -304,7 +304,11 @@ export default function GangwonScreen() {
               <View style={styles.toolsRow}>
                 <View style={styles.sortControl}>
                   <Pressable
-                    style={[styles.sortButton, isEnglish && styles.sortButtonEnglish]}
+                    style={[
+                      styles.sortButton,
+                      isEnglish && styles.sortButtonEnglish,
+                      isEnglish && sortOrder === 'DEADLINE' && styles.sortButtonEnglishDeadline,
+                    ]}
                     onPress={() => setIsSortMenuOpen((current) => !current)}
                   >
                     <CustomText numberOfLines={1} style={styles.sortButtonText}>{currentSortLabel}</CustomText>
@@ -478,8 +482,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   countRow: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
@@ -495,6 +502,7 @@ const styles = StyleSheet.create({
     color: Palette.primary,
   },
   toolsRow: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -522,7 +530,12 @@ const styles = StyleSheet.create({
   sortButtonEnglish: {
     width: 126,
   },
+  sortButtonEnglishDeadline: {
+    width: 112,
+  },
   sortButtonText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 13,
     lineHeight: 18.2,
