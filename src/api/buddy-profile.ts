@@ -21,7 +21,6 @@ import type {
 } from './types';
 
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useAuthStore } from '@/store/auth-store';
 
 const NOW_ISO = '2026-07-31T02:49:51.377Z';
@@ -267,32 +266,11 @@ export async function updateMyBuddyProfile(
 
 export async function fetchBuddyProfile(profileId: number): Promise<BuddyProfileDetail> {
   try {
-    if (isDevMockSession()) {
-      const mockProfile = getMockBuddyProfileDetailById(profileId);
-      if (mockProfile) {
-        return cloneBuddyProfile(mockProfile);
-      }
-    }
-
     const response = await client.get<BuddyProfileDetailEnvelope>(`/buddy-profiles/${profileId}`);
     return cloneBuddyProfile(response.data.data);
   } catch (error) {
     if (isAxiosError(error) && error.response?.status === 404) {
-      if (isDevMockSession()) {
-        const mockProfile = getMockBuddyProfileDetailById(profileId);
-        if (mockProfile) {
-          return cloneBuddyProfile(mockProfile);
-        }
-      }
-
       throw new BuddyProfileNotFoundError();
-    }
-
-    if (isDevMockSession()) {
-      const mockProfile = getMockBuddyProfileDetailById(profileId);
-      if (mockProfile) {
-        return cloneBuddyProfile(mockProfile);
-      }
     }
 
     throw error;
