@@ -27,7 +27,6 @@ import CustomText from '@/components/CustomText';
 import SendPlaneIcon from '@/components/icons/SendPlaneIcon';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { useLanguageStore } from '@/store/language-store';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels } from '@/utils/language-display';
@@ -230,7 +229,6 @@ type BuddyProfileModalProps = {
   visible: boolean;
   profileId: number | null;
   options: ProfileOptionsResponse | null;
-  fallbackProfile?: BuddyProfileDetail | null;
   onPressMessage?: (profileId: number) => void;
   onClose: () => void;
 };
@@ -245,29 +243,24 @@ export default function BuddyProfileModal({
   visible,
   profileId,
   options,
-  fallbackProfile = null,
   onPressMessage,
   onClose,
 }: BuddyProfileModalProps) {
   const language = useLanguageStore((state) => state.language);
   const copy = PROFILE_MODAL_COPY[language];
-  const resolvedFallbackProfile = useMemo(
-    () => fallbackProfile ?? (profileId != null ? getMockBuddyProfileDetailById(profileId, language) : null),
-    [fallbackProfile, language, profileId],
-  );
   const [profile, setProfile] = useState<BuddyProfileDetail | null>(
-    () => visible && profileId != null ? resolvedFallbackProfile : null,
+    null,
   );
   const [isLoading, setIsLoading] = useState(visible && profileId != null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const loadKey = JSON.stringify([visible, profileId, language, reloadKey]);
-  const [loadSource, setLoadSource] = useState({ key: loadKey, fallback: resolvedFallbackProfile });
+  const [loadedKey, setLoadedKey] = useState(loadKey);
 
   // Reset before rendering children so a newly opened profile never shows the previous one.
-  if (loadSource.key !== loadKey || loadSource.fallback !== resolvedFallbackProfile) {
-    setLoadSource({ key: loadKey, fallback: resolvedFallbackProfile });
-    setProfile(visible && profileId != null ? resolvedFallbackProfile : null);
+  if (loadedKey !== loadKey) {
+    setLoadedKey(loadKey);
+    setProfile(null);
     setError(null);
     setIsLoading(visible && profileId != null);
   }
@@ -306,19 +299,7 @@ export default function BuddyProfileModal({
         }
 
         if (loadError instanceof BuddyProfileNotFoundError) {
-          if (resolvedFallbackProfile) {
-            setProfile(resolvedFallbackProfile);
-            setError(null);
-            return;
-          }
-
           handleClose();
-          return;
-        }
-
-        if (resolvedFallbackProfile) {
-          setProfile(resolvedFallbackProfile);
-          setError(null);
           return;
         }
 
@@ -333,7 +314,7 @@ export default function BuddyProfileModal({
     return () => {
       cancelled = true;
     };
-  }, [copy.errorTitle, handleClose, language, profileId, reloadKey, resolvedFallbackProfile, visible]);
+  }, [copy.errorTitle, handleClose, language, profileId, reloadKey, visible]);
 
   const languageChips = useMemo(() => {
     if (!profile) {

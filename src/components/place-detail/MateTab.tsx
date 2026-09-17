@@ -14,7 +14,6 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
-import { getMockBuddyProfileDetailById } from '@/mock/buddy-profiles';
 import { formatCountryDisplay } from '@/utils/country';
 import { buildLanguageDisplayLabels, normalizeLanguageCode } from '@/utils/language-display';
 import { toDisplayText, toStableListKey } from '@/utils/list-item';
@@ -141,7 +140,6 @@ export default function MateTab({
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
-  const selectedProfileFallback = selectedProfileId == null ? null : getMockBuddyProfileDetailById(selectedProfileId);
   const matesApiPlaceId = placeNumericId != null ? String(placeNumericId) : placeId;
   const loadKey = JSON.stringify([
     hasHydrated, buddyProfileExists, hasCheckedProfileExists, language, matesApiPlaceId, reloadToken,
@@ -360,7 +358,6 @@ export default function MateTab({
         visible={selectedProfileId !== null}
         profileId={selectedProfileId}
         options={profileOptions}
-        fallbackProfile={selectedProfileFallback}
         onPressMessage={(profileId) => {
           setSelectedProfileId(null);
           if (!buddyProfileExists) {
