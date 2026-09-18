@@ -9,6 +9,7 @@ import Animated, {
   interpolate,
   runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
@@ -264,6 +265,14 @@ export default function PicksScreen() {
   const [deckId, setDeckId] = useState<string | null>(null);
   const [cards, setCards] = useState<PicksCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Tells the newly-front PicksFlipCard how it arrived, so it can play a
+  // matching entrance animation instead of just popping in — 'next' grows
+  // up from the behind-stack spot it was just peeking from (see
+  // PicksFlipCard's entrance/behindAmount). 'prev' doesn't need one: the
+  // outgoing card's own live drag already hands off smoothly to it (see
+  // prevCardStyle). Reset on every fresh deck so a reload/scope-switch never
+  // inherits a stale direction.
+  const [enterDirection, setEnterDirection] = useState<'next' | 'prev' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const latestRequestIdRef = useRef(0);
@@ -289,6 +298,7 @@ export default function PicksScreen() {
     const reconciledCards = reconcileSaved(deck.cards);
     setCards(reconciledCards);
     setCurrentIndex(0);
+    setEnterDirection(null);
     setIsLoading(false);
 
     for (const card of reconciledCards) {
@@ -480,6 +490,7 @@ export default function PicksScreen() {
         {!isLoading && !hasError && card && (
           <PicksDeck
             card={card}
+            enterFrom={enterDirection}
             nextCards={getWrappedNextCards(cards, currentIndex, MAX_STACK_DEPTH)}
             prevCard={getWrappedPrevCard(cards, currentIndex)}
             onToggleSave={toggleSaved}
@@ -496,10 +507,12 @@ export default function PicksScreen() {
             }}
             onSwipeNext={() => {
               recordEvent(card.placeId, 'CARD_NEXT');
+              setEnterDirection('next');
               setCurrentIndex((i) => (i + 1) % cards.length);
             }}
             onSwipePrev={() => {
               recordEvent(card.placeId, 'CARD_PREVIOUS');
+              setEnterDirection('prev');
               setCurrentIndex((i) => (i - 1 + cards.length) % cards.length);
             }}
           />
@@ -515,6 +528,7 @@ export default function PicksScreen() {
 
 type PicksDeckProps = {
   card: PicksCard;
+  enterFrom: 'next' | 'prev' | null;
   nextCards: PicksCard[];
   prevCard: PicksCard | undefined;
   onToggleSave: () => void;
@@ -526,6 +540,7 @@ type PicksDeckProps = {
 
 function PicksDeck({
   card,
+  enterFrom,
   nextCards,
   prevCard,
   onToggleSave,
@@ -553,6 +568,7 @@ function PicksDeck({
       <PicksFlipCard
         key={card.placeId}
         card={card}
+        enterFrom={enterFrom}
         prevCard={prevCard}
         cardSize={cardSize}
         screenWidth={screenWidth}
@@ -605,6 +621,7 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
 
 type PicksFlipCardProps = {
   card: PicksCard;
+  enterFrom: 'next' | 'prev' | null;
   prevCard: PicksCard | undefined;
   cardSize: CardSize;
   screenWidth: number;
@@ -621,6 +638,7 @@ type PicksFlipCardProps = {
 // race against the index update and flicker.
 function PicksFlipCard({
   card,
+  enterFrom,
   prevCard,
   cardSize,
   screenWidth,
@@ -633,6 +651,22 @@ function PicksFlipCard({
   const t = useTranslation();
   const flip = useSharedValue(0);
   const translateX = useSharedValue(0);
+  // Frozen at mount (remounts reset it anyway) so the effect below only ever
+  // considers the value this instance actually arrived with.
+  const [shouldAnimateEntrance] = useState(enterFrom === 'next');
+  // 0 = sitting at the behind-stack spot (where this card was just peeking
+  // from as a BehindCard), 1 = settled at the front. Cards that didn't
+  // arrive via a next-swipe start at 1 and never move.
+  const entrance = useSharedValue(shouldAnimateEntrance ? 0 : 1);
+
+  useEffect(() => {
+    if (shouldAnimateEntrance) {
+      entrance.value = withTiming(1, { duration: 250 });
+    }
+    // Mount-only: shouldAnimateEntrance is frozen above specifically so this
+    // never needs to re-run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleFlip = () => {
     const isExpanding = flip.value === 0;
@@ -665,23 +699,34 @@ function PicksFlipCard({
       }
     });
 
-  // Dragging right (toward the previous card) settles this card into the
-  // depth-1 behind-stack spot (BehindCard's own offset/scale) instead of
-  // sliding off-screen, so it reads as sinking back into the deck rather
-  // than disappearing — the incoming previous card (prevCardStyle below,
-  // now layered above this one) covers it as it arrives. No rotateZ here:
-  // BehindCard itself never tilts, and animating rotation back to 0 by the
-  // time this reaches the behind position would need a second curve for no
-  // visual benefit. Dragging left (next) keeps the original off-screen
-  // slide-and-tilt exit untouched.
+  // How "into the behind-stack spot" this card currently is: driven by
+  // whichever of the two things that can pull it there is active — a
+  // rightward drag (going to the previous card puts *this* card there), or
+  // the mount entrance animation (arriving from there via a next-swipe).
+  // Shared by swipeStyle and behindTintStyle below so both move in lockstep.
+  const behindAmount = useDerivedValue(() => {
+    const dragProgress =
+      translateX.value >= 0 ? interpolate(translateX.value, [0, screenWidth], [0, 1], Extrapolation.CLAMP) : 0;
+    return Math.max(dragProgress, 1 - entrance.value);
+  });
+
+  // BehindCard reaches its stacked size by literally shrinking its
+  // width/height from its own top-left corner (see BehindCard's left/top +
+  // resized box below) — not a centered CSS scale. transformOrigin '0% 0%'
+  // makes `scale` shrink from this card's top-left the same way, so
+  // translateX/Y can use BehindCard's own offset formula directly and the
+  // two line up exactly at behindAmount 1. (A centered scale, the default,
+  // would land at a different spot — that mismatch was the visible
+  // pop/flicker when this handed off to the real BehindCard underneath.)
+  // No rotateZ in this branch: BehindCard never tilts.
   const swipeStyle = useAnimatedStyle(() => {
-    if (translateX.value >= 0) {
-      const progress = interpolate(translateX.value, [0, screenWidth], [0, 1], Extrapolation.CLAMP);
+    if (behindAmount.value > 0) {
       return {
+        transformOrigin: '0% 0%',
         transform: [
-          { translateX: interpolate(progress, [0, 1], [0, cardSize.width * BEHIND_CARD_X_OFFSET_RATIO]) },
-          { translateY: interpolate(progress, [0, 1], [0, cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO]) },
-          { scale: interpolate(progress, [0, 1], [1, 1 - BEHIND_CARD_SCALE_STEP]) },
+          { translateX: interpolate(behindAmount.value, [0, 1], [0, cardSize.width * BEHIND_CARD_X_OFFSET_RATIO]) },
+          { translateY: interpolate(behindAmount.value, [0, 1], [0, cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO]) },
+          { scale: interpolate(behindAmount.value, [0, 1], [1, 1 - BEHIND_CARD_SCALE_STEP]) },
         ],
       };
     }
@@ -693,17 +738,11 @@ function PicksFlipCard({
     };
   });
 
-  // Fades in with the same rightward-drag progress as swipeStyle above,
-  // matching BehindCard's own tint so the card looks tinted the instant it
-  // actually reaches the behind position (no separate pop from untinted to
-  // tinted on remount).
-  const behindTintStyle = useAnimatedStyle(() => {
-    const progress =
-      translateX.value >= 0 ? interpolate(translateX.value, [0, screenWidth], [0, 1], Extrapolation.CLAMP) : 0;
-    return {
-      opacity: interpolate(progress, [0, 1], [0, BEHIND_CARD_TINT_BASE_OPACITY + BEHIND_CARD_TINT_STEP_OPACITY]),
-    };
-  });
+  // Matches BehindCard's own tint exactly at behindAmount 1, for the same
+  // no-pop-on-handoff reason as swipeStyle above.
+  const behindTintStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(behindAmount.value, [0, 1], [0, BEHIND_CARD_TINT_BASE_OPACITY + BEHIND_CARD_TINT_STEP_OPACITY]),
+  }));
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` }],
