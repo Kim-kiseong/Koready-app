@@ -36,7 +36,7 @@ const DEV_MOCK_SESSION = {
     profileImageUrl: null,
     preferredLanguage: 'KO' as const,
   },
-  nextStep: 'TERMS' as const,
+  nextStep: 'LANGUAGE' as const,
 };
 
 const DEV_HOME_SESSION = {
@@ -119,10 +119,11 @@ export default function LoginScreen() {
 
   const handleDevOnboardingBypass = () => {
     setSession(DEV_MOCK_SESSION);
-    // TermsScreen has its own dev-mock fallback (DEV_FALLBACK_TERMS) that
-    // works fine with this session's fake token, so route through /terms
-    // like a real login would rather than skipping it.
-    router.replace('/terms');
+    // Language comes before Terms in the onboarding flow, so route there
+    // first, same as a real first-time login would (nextStep: 'LANGUAGE').
+    // LanguageScreen/TermsScreen each have their own dev-mock fallbacks that
+    // work fine with this session's fake token.
+    router.replace('/language');
   };
 
   const handleDevHomeShortcut = () => {

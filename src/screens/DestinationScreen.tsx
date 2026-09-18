@@ -12,6 +12,7 @@ import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
@@ -162,7 +163,7 @@ export default function DestinationScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
-        onBack={() => router.replace('/travel-style')}
+        onBack={() => goBackOrRoot(router, '/travel-style')}
         progress={{ currentStep: 3, totalSteps: 3 }}
         rightIcon={null}
       />

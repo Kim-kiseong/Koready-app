@@ -15,6 +15,7 @@ import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveOnboardingResumeRoute } from '@/navigation/next-step-route';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
@@ -138,7 +139,7 @@ export default function CompleteScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <OnboardingHeader onBack={() => router.replace('/destinations')} rightIcon={null} />
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/destinations')} rightIcon={null} />
 
       <View style={styles.content}>
         <Image
