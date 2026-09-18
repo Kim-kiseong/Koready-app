@@ -1770,7 +1770,7 @@ function SelectionModal({
 
           <ScrollView
             contentContainerStyle={styles.sheetBody}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
             showsVerticalScrollIndicator={false}>
             {isListPresentation ? (
               filteredOptions.length > 0 ? (
@@ -1780,7 +1780,8 @@ function SelectionModal({
                     return (
                       <Pressable
                         key={option.code}
-                        onPress={() => toggleOption(option.code)}
+                        onPress={Platform.OS === 'web' ? undefined : () => toggleOption(option.code)}
+                        onPressIn={Platform.OS === 'web' ? () => toggleOption(option.code) : undefined}
                         style={({ pressed }) => [
                           styles.optionRow,
                           selected && styles.optionRowSelected,

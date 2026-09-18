@@ -9,7 +9,7 @@ import {
   normalizePlaceDescription,
   type PlaceDetail,
 } from './place';
-import { clearApiCache } from './cache';
+import { buildApiCacheKey, clearApiCache, getCachedOrFetch } from './cache';
 import type { PicksCard } from './picks';
 import type {
   PlaceListItem,
@@ -58,6 +58,8 @@ const SERVICE_REGION_NAME_BY_CODE: Record<string, string> = {
   GYEONGSANG: '경상도',
   JEJU: '제주도',
 };
+
+const SAVED_PLACES_CACHE_TTL_MS = 2 * 60_000;
 
 let savedPlaceCache: SavedPlaceItem[] = [];
 let savedPlaceCacheOwnerPublicId: string | null = null;
@@ -355,24 +357,32 @@ export async function fetchSavedPlaces(
   cursor: string | null = null,
   size = 20,
 ): Promise<SavedPlacesResponse> {
-  try {
-    const response = await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
-      params: { size, ...(cursor ? { cursor } : {}) },
-    });
-    const items = response.data.data.items.map(cloneSavedPlaceItem);
-    mergeSavedPlacesIntoCache(items);
-    prefetchImageUrls(items.map((item) => item.imageUrl));
-    return {
-      ...response.data.data,
-      items,
-    };
-  } catch {
-    const result = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
-    return {
-      ...result,
-      items: result.items,
-    };
-  }
+  const viewerPublicId = useAuthStore.getState().user?.publicId ?? 'guest';
+  const language = useLanguageStore.getState().language;
+  const cacheKey = buildApiCacheKey('saved-places:list', [viewerPublicId, language, cursor, size]);
+
+  const result = await getCachedOrFetch(cacheKey, SAVED_PLACES_CACHE_TTL_MS, async () => {
+    try {
+      const response = await savedClient.get<SavedPlacesEnvelope>('/users/me/saved-places', {
+        params: { size, ...(cursor ? { cursor } : {}) },
+      });
+      const items = response.data.data.items.map(cloneSavedPlaceItem);
+      mergeSavedPlacesIntoCache(items);
+      return {
+        ...response.data.data,
+        items,
+      };
+    } catch {
+      const fallback = paginateSavedPlaces(getLocalSavedPlaces(), cursor, size);
+      return {
+        ...fallback,
+        items: fallback.items,
+      };
+    }
+  });
+
+  prefetchImageUrls(result.items.map((item) => item.imageUrl));
+  return result;
 }
 
 export async function savePlace(
@@ -401,6 +411,7 @@ export async function savePlace(
       );
     }
 
+    clearApiCache('saved-places:');
     clearApiCache('places:');
     clearApiCache('home');
     return result;
@@ -409,6 +420,7 @@ export async function savePlace(
       mergeSavedPlaceIntoCache(snapshot, true);
     }
 
+    clearApiCache('saved-places:');
     clearApiCache('places:');
     clearApiCache('home');
     return {
@@ -426,6 +438,7 @@ export async function unsavePlace(placeId: number | string): Promise<void> {
     // Keep the optimistic local removal.
   } finally {
     removeSavedPlaceFromCache(placeId);
+    clearApiCache('saved-places:');
     clearApiCache('places:');
     clearApiCache('home');
   }
