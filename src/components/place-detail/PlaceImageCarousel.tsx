@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 
 import type { PlaceImage } from '@/api/place';
 import { Palette } from '@/constants/colors';
+import { useHorizontalDragScroll } from '@/hooks/use-horizontal-drag-scroll';
 
 const SIDE_PADDING = 16;
 const GAP = 12;
@@ -20,6 +21,7 @@ function getImageKey(image: PlaceImage) {
 
 export default function PlaceImageCarousel({ images }: { images: PlaceImage[] }) {
   const { width } = useWindowDimensions();
+  const scrollRef = useHorizontalDragScroll();
   const [failedImageKeys, setFailedImageKeys] = useState<Set<string>>(() => new Set());
   // The Figma carousel intentionally leaves 34pt of the following card visible:
   // 16pt leading inset + 325pt card + 12pt gap + 22pt preview on a 375pt screen.
@@ -35,6 +37,7 @@ export default function PlaceImageCarousel({ images }: { images: PlaceImage[] })
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
@@ -47,6 +50,7 @@ export default function PlaceImageCarousel({ images }: { images: PlaceImage[] })
             style={[styles.image, { width: imageSize, height: imageSize }]}
             contentFit="cover"
             accessibilityLabel={image.altText}
+            draggable={false}
             onError={() => {
               const key = getImageKey(image);
               setFailedImageKeys((current) => new Set(current).add(key));

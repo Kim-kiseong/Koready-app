@@ -33,9 +33,9 @@ export default function LanguageScreen() {
     if (!selected || isSubmitting) return;
     if (isDevMockSession) {
       applyLanguageChange({ language: selected, nextStep: 'TERMS', updatedAt: new Date().toISOString() });
-      // replace, not push — this screen has no back button of its own, so it
-      // shouldn't linger in history either; Terms is the next step after
-      // Language, mirroring the real (non-mock) branch below.
+      // replace, not push — Language shouldn't linger in history once you've
+      // moved on from it; Terms is the next step after Language, mirroring
+      // the real (non-mock) branch below.
       router.replace(resolveNextStepRoute('TERMS'));
       return;
     }
@@ -100,10 +100,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    // Figma reserves the shared 54pt header's height here even though this
-    // screen renders no header — content starts at the same 122pt mark
-    // (54 header + 24 margin) as the sibling onboarding screens that do
-    // render one.
     paddingTop: 78,
     gap: 32,
   },
