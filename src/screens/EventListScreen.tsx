@@ -61,7 +61,15 @@ export default function EventListScreen() {
   // 375pt reference width — on any other device width that leaves either dead
   // space or (if hardcoded) a rounding-driven wrap down to a single column.
   // Deriving it from the actual screen width keeps the 2-column grid exact.
-  const gridCardWidth = (screenWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+  // Floored (not left as the exact fractional fit) so 2 cards + the gap
+  // always land a hair under the container's width instead of exactly at
+  // it — browser zoom introduces sub-pixel rounding between this
+  // JS-computed width and what the layout engine actually renders, and an
+  // exact zero-tolerance fit wraps to a single column the moment that
+  // rounding goes against it (only worked by coincidence at 100%/80% zoom).
+  const gridCardWidth = Math.floor(
+    (screenWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
+  );
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const orderedMonths = useMemo(() => {
     const currentMonth = new Date().getMonth() + 1;
