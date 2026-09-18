@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -22,6 +22,7 @@ import PillChip from '@/components/PillChip';
 import SortBottomSheet from '@/components/SortBottomSheet';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
+import { useHorizontalDragScroll } from '@/hooks/use-horizontal-drag-scroll';
 import { useTranslation } from '@/i18n/useTranslation';
 import { goBackOrRoot } from '@/navigation/safe-back';
 import { useLanguageStore } from '@/store/language-store';
@@ -65,11 +66,45 @@ export default function EventListScreen() {
   const [isSortSheetOpen, setSortSheetOpen] = useState(false);
   const [isFilterSheetOpen, setFilterSheetOpen] = useState(false);
   const [featured, setFeatured] = useState<FeaturedEvent[]>([]);
+  // Same reasoning as HomeScreen's isEventsLoading: stays true until the
+  // data's in AND every big card's photo has settled, so this row doesn't
+  // flash empty then pop photos in one by one either.
+  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
+  const settledFeaturedImageIdsRef = useRef<Set<string>>(new Set());
+  const featuredScrollRef = useHorizontalDragScroll();
   const [events, setEvents] = useState<EventListing[]>([]);
 
   useEffect(() => {
-    fetchFeaturedEvents('POPULAR', month).then(setFeatured);
+    let cancelled = false;
+    // month's own trigger (the month PillChip's onPress, see
+    // handleMonthChange below) resets isFeaturedLoading itself — only
+    // language has no local control to hook that into on this screen, so
+    // it's set here instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsFeaturedLoading(true);
+    settledFeaturedImageIdsRef.current = new Set();
+    fetchFeaturedEvents('POPULAR', month).then((result) => {
+      if (cancelled) return;
+      setFeatured(result);
+      if (result.length === 0) setIsFeaturedLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [month, language]);
+
+  const handleFeaturedImageSettled = (eventId: string) => {
+    settledFeaturedImageIdsRef.current.add(eventId);
+    if (settledFeaturedImageIdsRef.current.size >= featured.length) {
+      setIsFeaturedLoading(false);
+    }
+  };
+
+  const handleMonthChange = (nextMonth: number) => {
+    if (nextMonth === month) return;
+    setIsFeaturedLoading(true);
+    setMonth(nextMonth);
+  };
 
   useEffect(() => {
     fetchEventListings(month, sortOrder, filters).then(setEvents);
@@ -92,20 +127,39 @@ export default function EventListScreen() {
               key={m}
               label={language === 'EN' ? EN_MONTH_NAMES[m - 1].slice(0, 3) : `${m}월`}
               selected={month === m}
-              onPress={() => setMonth(m)}
+              onPress={() => handleMonthChange(m)}
             />
           ))}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
-          {featured.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
-            />
-          ))}
-        </ScrollView>
+        <View style={styles.featuredRowWrap}>
+          {/* Stays mounted while loading too — its cards are what report
+              back via onImageSettled, so hiding it until "loaded" would
+              mean it never gets the chance to finish loading. The loading
+              box below simply covers it until then. */}
+          <ScrollView
+            ref={featuredScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.featuredRow}
+            pointerEvents={isFeaturedLoading ? 'none' : 'auto'}>
+            {featured.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
+                onImageSettled={() => handleFeaturedImageSettled(event.id)}
+              />
+            ))}
+          </ScrollView>
+
+          {isFeaturedLoading && (
+            <View style={[StyleSheet.absoluteFill, styles.featuredLoadingBox]}>
+              <ActivityIndicator color={Palette.primary} />
+              <CustomText style={styles.featuredLoadingText}>{t.eventList.featuredLoading}</CustomText>
+            </View>
+          )}
+        </View>
 
         <View style={styles.gridHeaderRow}>
           <View style={styles.countRow}>
@@ -187,6 +241,22 @@ const styles = StyleSheet.create({
   featuredRow: {
     gap: 12,
     paddingHorizontal: 16,
+  },
+  featuredRowWrap: {
+    // Matches EventCard's own height so the section holds its size while
+    // loading instead of collapsing/jumping once the row appears.
+    height: 312,
+  },
+  featuredLoadingBox: {
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  featuredLoadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
   },
   gridHeaderRow: {
     flexDirection: 'row',

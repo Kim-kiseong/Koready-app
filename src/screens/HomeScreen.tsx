@@ -30,6 +30,7 @@ import PillChip from '@/components/PillChip';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
+import { useHorizontalDragScroll } from '@/hooks/use-horizontal-drag-scroll';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
@@ -73,6 +74,7 @@ export default function HomeScreen() {
   // cascade. Mirrors LanguageScreen's/TermsScreen's same dev-only bypass.
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const { width: windowWidth } = useWindowDimensions();
+  const featuredScrollRef = useHorizontalDragScroll();
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
   const [events, setEvents] = useState<FeaturedEvent[]>([]);
@@ -251,6 +253,7 @@ export default function HomeScreen() {
                 mean it never gets the chance to finish loading. The loading
                 box below simply covers it until then. */}
             <ScrollView
+              ref={featuredScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.eventRow}

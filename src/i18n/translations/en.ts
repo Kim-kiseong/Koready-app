@@ -429,6 +429,7 @@ export const en: DeepPartial<Translations> = {
     },
   },
   eventList: {
+    featuredLoading: 'Loading recommended places...',
     total: '',
     countUnit: 'places',
     sortTitle: 'Sort by',

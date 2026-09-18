@@ -334,6 +334,7 @@ export interface Translations {
   };
   eventList: {
     titleSuffix: string;
+    featuredLoading: string;
     total: string;
     countUnit: string;
     sortTitle: string;
@@ -904,6 +905,7 @@ export const ko: Translations = {
   },
   eventList: {
     titleSuffix: "월에 가볼 만한 곳",
+    featuredLoading: "추천 장소를 불러오는 중이에요.",
     total: "전체",
     countUnit: "개",
     sortTitle: "정렬",
