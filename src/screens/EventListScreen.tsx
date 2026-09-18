@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,6 +45,13 @@ const GRID_GAP = 13;
 const SCREEN_PADDING = 16;
 const TOP_FEATURED_COUNT = 5;
 
+function prefetchEventMonths(months: number[], currentMonth: number, sortOrder: EventSortOrder, filters: EventFilters) {
+  const monthsToPrefetch = months.filter((prefetchMonth) => prefetchMonth !== currentMonth);
+  void Promise.allSettled(
+    monthsToPrefetch.map((prefetchMonth) => fetchEventListings(prefetchMonth, sortOrder, filters)),
+  );
+}
+
 export default function EventListScreen() {
   const router = useRouter();
   const t = useTranslation();
@@ -82,11 +89,7 @@ export default function EventListScreen() {
   const featuredScrollRef = useHorizontalDragScroll();
   const monthScrollRef = useHorizontalDragScroll();
   const [events, setEvents] = useState<EventListing[]>([]);
-  // Same reasoning as HomeScreen's isEventsLoading: stays true until the
-  // data's in AND every big card's photo has settled, so this row doesn't
-  // flash empty then pop photos in one by one either.
-  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
-  const settledFeaturedImageIdsRef = useRef<Set<string>>(new Set());
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
 
   // The top "big card" row used to be its own separate GET
   // /monthly-recommendations call (fetchFeaturedEvents) requesting the same
@@ -99,33 +102,22 @@ export default function EventListScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    // month/sortOrder/filters' own triggers (handleMonthChange,
-    // SortBottomSheet's onSelect, FilterBottomSheet's onApply) reset
-    // isFeaturedLoading themselves — only language has no local control to
-    // hook that into on this screen, so it's set here instead.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsFeaturedLoading(true);
-    settledFeaturedImageIdsRef.current = new Set();
+    setIsEventsLoading(true);
     fetchEventListings(month, sortOrder, filters).then((result) => {
       if (cancelled) return;
       setEvents(result);
-      if (result.length === 0) setIsFeaturedLoading(false);
+      setIsEventsLoading(false);
+      prefetchEventMonths(orderedMonths, month, sortOrder, filters);
     });
     return () => {
       cancelled = true;
     };
-  }, [month, sortOrder, filters, language]);
-
-  const handleFeaturedImageSettled = (eventId: string) => {
-    settledFeaturedImageIdsRef.current.add(eventId);
-    if (settledFeaturedImageIdsRef.current.size >= featured.length) {
-      setIsFeaturedLoading(false);
-    }
-  };
+  }, [month, sortOrder, filters, language, orderedMonths]);
 
   const handleMonthChange = (nextMonth: number) => {
     if (nextMonth === month) return;
-    setIsFeaturedLoading(true);
+    setIsEventsLoading(true);
     setMonth(nextMonth);
   };
 
@@ -168,18 +160,17 @@ export default function EventListScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.featuredRow}
-            pointerEvents={isFeaturedLoading ? 'none' : 'auto'}>
+            pointerEvents={isEventsLoading ? 'none' : 'auto'}>
             {featured.map((event) => (
               <EventCard
                 key={event.id}
                 event={event}
                 onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
-                onImageSettled={() => handleFeaturedImageSettled(event.id)}
               />
             ))}
           </ScrollView>
 
-          {isFeaturedLoading && (
+          {isEventsLoading && (
             <View style={styles.featuredLoadingBox}>
               <ActivityIndicator color={Palette.primary} />
               <CustomText style={styles.featuredLoadingText}>{t.eventList.featuredLoading}</CustomText>
@@ -187,12 +178,7 @@ export default function EventListScreen() {
           )}
         </View>
 
-        {/* Hidden together with the featured row above while isFeaturedLoading
-            — both come from the same fetch (see the events effect), so
-            showing this count/grid the instant events lands, ahead of the
-            featured row's own image-settle wait, read as this section
-            loading in two disjointed steps instead of one. */}
-        {!isFeaturedLoading && (
+        {!isEventsLoading && (
           <>
             <View style={styles.gridHeaderRow}>
               <View style={styles.countRow}>
@@ -243,7 +229,7 @@ export default function EventListScreen() {
         visible={isSortSheetOpen}
         value={sortOrder}
         onSelect={(next) => {
-          if (next !== sortOrder) setIsFeaturedLoading(true);
+          if (next !== sortOrder) setIsEventsLoading(true);
           setSortOrder(next);
           setSortSheetOpen(false);
         }}
@@ -254,7 +240,7 @@ export default function EventListScreen() {
         visible={isFilterSheetOpen}
         value={filters}
         onApply={(next) => {
-          setIsFeaturedLoading(true);
+          setIsEventsLoading(true);
           setFilters(next);
         }}
         onClose={() => setFilterSheetOpen(false)}
