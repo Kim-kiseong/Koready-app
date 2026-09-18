@@ -75,6 +75,7 @@ export default function HomeScreen() {
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
   const { width: windowWidth } = useWindowDimensions();
   const featuredScrollRef = useHorizontalDragScroll();
+  const chipScrollRef = useHorizontalDragScroll();
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
   const [events, setEvents] = useState<FeaturedEvent[]>([]);
@@ -235,7 +236,11 @@ export default function HomeScreen() {
             <SeeAllLink label={t.home.seeAll} onPress={() => router.push('/events')} />
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          <ScrollView
+            ref={chipScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}>
             {FEATURED_EVENT_CATEGORIES.map((id) => (
               <PillChip
                 key={id}

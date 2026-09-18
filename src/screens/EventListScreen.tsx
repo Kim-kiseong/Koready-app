@@ -72,6 +72,7 @@ export default function EventListScreen() {
   const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
   const settledFeaturedImageIdsRef = useRef<Set<string>>(new Set());
   const featuredScrollRef = useHorizontalDragScroll();
+  const monthScrollRef = useHorizontalDragScroll();
   const [events, setEvents] = useState<EventListing[]>([]);
 
   useEffect(() => {
@@ -121,7 +122,11 @@ export default function EventListScreen() {
       <OnboardingHeader onBack={() => goBackOrRoot(router)} title={title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthRow}>
+        <ScrollView
+          ref={monthScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.monthRow}>
           {orderedMonths.map((m) => (
             <PillChip
               key={m}
