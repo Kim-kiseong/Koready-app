@@ -65,6 +65,7 @@ const MATE_TAB_COPY: Record<
     profileButton: string;
     messageButtonAvailable: string;
     messageButtonUnavailable: string;
+    loading: string;
     errorTitle: string;
     errorDescription: string;
     errorRetry: string;
@@ -86,6 +87,7 @@ const MATE_TAB_COPY: Record<
     profileButton: '프로필 보기',
     messageButtonAvailable: '쪽지 보내기',
     messageButtonUnavailable: '쪽지 불가',
+    loading: '메이트를 불러오는 중이에요.',
     errorTitle: '메이트를 불러오지 못했어요.',
     errorDescription: '잠시 후 다시 시도해 주세요.',
     errorRetry: '다시 시도',
@@ -106,6 +108,7 @@ const MATE_TAB_COPY: Record<
     profileButton: 'View profile',
     messageButtonAvailable: 'Send message',
     messageButtonUnavailable: 'Not available',
+    loading: 'Loading mates.',
     errorTitle: "Couldn't load travel buddies.",
     errorDescription: 'Please try again in a moment.',
     errorRetry: 'Try again',
@@ -244,6 +247,7 @@ export default function MateTab({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color={Palette.primary} />
+        <CustomText style={styles.loadingText}>{copy.loading}</CustomText>
       </View>
     );
   }
@@ -630,7 +634,15 @@ const styles = StyleSheet.create({
     minHeight: 360,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
     backgroundColor: '#FFFFFF',
+  },
+  loadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
+    textAlign: 'center',
   },
   container: {
     flex: 1,

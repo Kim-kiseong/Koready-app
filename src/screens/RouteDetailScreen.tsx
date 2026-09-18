@@ -354,6 +354,7 @@ export default function RouteDetailScreen() {
     return (
       <SafeAreaView style={styles.loading} edges={['top']}>
         <ActivityIndicator color={Palette.primary} />
+        <CustomText style={styles.loadingText}>{routeCopy.loading}</CustomText>
       </SafeAreaView>
     );
   }
@@ -648,7 +649,14 @@ function RouteMetaClock() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 12 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 12, backgroundColor: '#FFFFFF' },
+  loadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    lineHeight: 19.6,
+    color: Palette.grey500,
+    textAlign: 'center',
+  },
   errorText: {
     alignSelf: 'stretch',
     textAlign: 'left',

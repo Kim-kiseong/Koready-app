@@ -3,9 +3,12 @@ import { Asset } from 'expo-asset';
 import type { ServiceRegionCode, TravelStyleId } from '@/api/onboarding';
 import type { LanguageCode } from '@/api/types';
 import { API_BASE_URL } from '@/constants/env';
+import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
+import { prefetchImageUrls } from '@/utils/image-prefetch';
 import { formatPlaceRegionName } from '@/utils/place-i18n';
 import { client } from './client';
+import { buildApiCacheKey, getCachedOrFetch } from './cache';
 
 export type FeaturedEventCategory = 'POPULAR' | TravelStyleId;
 
@@ -30,6 +33,9 @@ export type FeaturedEvent = {
 const DEFAULT_FEATURED_EVENT_IMAGE_URI = Asset.fromModule(
   require('@/assets/images/destinations/default.jpg'),
 ).uri;
+
+const HOME_CACHE_TTL_MS = 30_000;
+const MONTHLY_RECOMMENDATIONS_CACHE_TTL_MS = 60_000;
 
 export type GuideArticle = {
   id: string;
@@ -259,8 +265,17 @@ type HomeEnvelope = {
 // HomeScreen already sources those from onboarding-store/language-store; this
 // exists mainly to back the "POPULAR" featured-events tab with real data.
 export async function fetchHome(): Promise<HomeResponse> {
-  const response = await client.get<HomeEnvelope>('/home');
-  return response.data.data;
+  const viewerPublicId = useAuthStore.getState().user?.publicId ?? 'guest';
+  const language = useLanguageStore.getState().language;
+  const cacheKey = buildApiCacheKey('home', [viewerPublicId, language]);
+
+  const home = await getCachedOrFetch(cacheKey, HOME_CACHE_TTL_MS, async () => {
+    const response = await client.get<HomeEnvelope>('/home');
+    return response.data.data;
+  });
+
+  prefetchImageUrls(home.monthlyRecommendation.items.map((item) => item.imageUrl));
+  return home;
 }
 
 export type MonthlyRecommendationsParams = {
@@ -299,21 +314,38 @@ type MonthlyRecommendationsEnvelope = {
 export async function fetchMonthlyRecommendations(
   params: MonthlyRecommendationsParams,
 ): Promise<MonthlyRecommendationsResponse> {
-  const response = await client.get<MonthlyRecommendationsEnvelope>('/monthly-recommendations', {
-    params: {
-      year: params.year,
-      month: params.month,
-      serviceRegionCode: params.serviceRegionCode,
-      dateFilterType: params.dateFilterType,
-      customStartDate: params.customStartDate,
-      customEndDate: params.customEndDate,
-      travelStyles: params.travelStyles,
-      sort: params.sort,
-      cursor: params.cursor,
-      size: params.size,
+  const viewerPublicId = useAuthStore.getState().user?.publicId ?? 'guest';
+  const language = useLanguageStore.getState().language;
+  const cacheKey = buildApiCacheKey('home:monthly-recommendations', [
+    viewerPublicId,
+    language,
+    params,
+  ]);
+
+  const result = await getCachedOrFetch(
+    cacheKey,
+    MONTHLY_RECOMMENDATIONS_CACHE_TTL_MS,
+    async () => {
+      const response = await client.get<MonthlyRecommendationsEnvelope>('/monthly-recommendations', {
+        params: {
+          year: params.year,
+          month: params.month,
+          serviceRegionCode: params.serviceRegionCode,
+          dateFilterType: params.dateFilterType,
+          customStartDate: params.customStartDate,
+          customEndDate: params.customEndDate,
+          travelStyles: params.travelStyles,
+          sort: params.sort,
+          cursor: params.cursor,
+          size: params.size,
+        },
+      });
+      return response.data.data;
     },
-  });
-  return response.data.data;
+  );
+
+  prefetchImageUrls(result.items.map((item) => item.imageUrl));
+  return result;
 }
 
 function formatFeaturedEventDateRangeLabel(
