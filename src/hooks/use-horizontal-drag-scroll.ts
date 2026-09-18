@@ -25,11 +25,19 @@ export function useHorizontalDragScroll() {
 
     const onMouseDown = (event: MouseEvent) => {
       if (event.button !== 0) return;
+      // Stops the browser's own text-selection drag from starting at all —
+      // without this, dragging across card titles/dates highlights them
+      // instead of (or in addition to) scrolling.
+      event.preventDefault();
       isDragging = true;
       didDrag = false;
       startX = event.clientX;
       startScrollLeft = node.scrollLeft;
       node.style.cursor = 'grabbing';
+      // Belt-and-suspenders for the same thing at the document level, in
+      // case the pointer drags fast enough to leave the row's own bounds
+      // mid-drag (mousemove is tracked on window, so the drag keeps going).
+      document.body.style.userSelect = 'none';
     };
 
     const onMouseMove = (event: MouseEvent) => {
@@ -43,6 +51,7 @@ export function useHorizontalDragScroll() {
       if (!isDragging) return;
       isDragging = false;
       node.style.cursor = 'grab';
+      document.body.style.userSelect = '';
       if (didDrag) {
         // A drag that actually moved the scroll shouldn't also fire
         // whatever card ends up under the pointer at release — the same
@@ -57,6 +66,11 @@ export function useHorizontalDragScroll() {
     };
 
     node.style.cursor = 'grab';
+    // Belongs on the row itself too, not just during a drag — otherwise
+    // just clicking (without moving) a title/date can still leave it
+    // selected, since preventDefault above only runs from onMouseDown.
+    node.style.userSelect = 'none';
+    (node.style as unknown as { webkitUserSelect: string }).webkitUserSelect = 'none';
     node.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', endDrag);

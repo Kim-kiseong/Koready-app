@@ -412,12 +412,38 @@ function normalizeImageUrl(rawUrl: string | null | undefined, fallbackUrl: strin
   return encodeURI(`${API_BASE_URL}/${trimmed}`);
 }
 
+// Places with a festival date are more actionable (time-sensitive) than ones
+// without, so both featured lists below surface them first. This is as far
+// as the client can implement the requested priority scheme — see the
+// "dated-first, then by save count" note above fetchFeaturedEvents for what's
+// missing and why. Array.sort is stable, so the backend's own relative
+// ordering within each group (RECOMMENDED's status-then-quality-score,
+// DEADLINE's soonest-end-date) is preserved, just regrouped by date presence.
+function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aHasDate = a.dateRangeLabel !== '';
+    const bHasDate = b.dateRangeLabel !== '';
+    if (aHasDate === bHasDate) return 0;
+    return aHasDate ? -1 : 1;
+  });
+}
+
 // Always goes through GET /monthly-recommendations (never GET /home) so the
 // featured carousel — on both the home screen and the month-picker event list
 // — reflects the requested month with server-side priority ordering
 // (sort: RECOMMENDED) and is capped at exactly 5 cards. POPULAR omits
 // travelStyles so it isn't filtered to one style. Swallows failures to an
 // empty list so a network hiccup doesn't crash the carousel.
+//
+// Requested priority scheme was "1) dated content by save count desc, 2)
+// undated content by save count desc" (DEADLINE swaps #1 for soonest-ending
+// first). Checked the live Swagger spec for GET /monthly-recommendations:
+// RECOMMENDED is documented as "ONGOING/UPCOMING/ENDED status before quality
+// score" and DEADLINE as "soonest end date" — neither groups by date presence
+// first, and PlaceCard has no save/like count field for the client to sort by
+// itself. So only the "dated first" half is doable here (sortDatedFirst);
+// the save-count sub-ordering needs a backend change (either implement this
+// exact scheme server-side, or expose a save/popularity count on PlaceCard).
 const FEATURED_EVENTS_SIZE = 5;
 
 export async function fetchFeaturedEvents(
@@ -434,14 +460,16 @@ export async function fetchFeaturedEvents(
       sort: 'RECOMMENDED',
       size: FEATURED_EVENTS_SIZE,
     });
-    return result.items.map(toFeaturedEvent);
+    return sortDatedFirst(result.items.map(toFeaturedEvent));
   } catch {
     return [];
   }
 }
 
 // EventListScreen's full grid — region/date/type filtering and sorting all
-// happen server-side now via GET /monthly-recommendations.
+// happen server-side now via GET /monthly-recommendations; sortDatedFirst is
+// the same client-side regrouping as fetchFeaturedEvents above (see its
+// comment for what's server-side-only for now).
 export async function fetchEventListings(
   month: number,
   sort: EventSortOrder = 'RECOMMENDED',
@@ -459,15 +487,7 @@ export async function fetchEventListings(
       travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
       sort,
     });
-    // Places with a festival date are more actionable (time-sensitive) than
-    // ones without, so surface them first while keeping the backend's
-    // relative ordering within each group (Array.sort is stable).
-    return result.items.map(toEventListing).sort((a, b) => {
-      const aHasDate = a.dateRangeLabel !== '';
-      const bHasDate = b.dateRangeLabel !== '';
-      if (aHasDate === bHasDate) return 0;
-      return aHasDate ? -1 : 1;
-    });
+    return sortDatedFirst(result.items.map(toEventListing));
   } catch {
     return [];
   }

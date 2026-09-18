@@ -534,6 +534,11 @@ const styles = StyleSheet.create({
     // Matches EventCard's own height so the section holds its size while
     // loading instead of collapsing/jumping once the row appears.
     height: 312,
+    // Without this, a horizontal ScrollView sized only by its wrapper's
+    // height (not its own) can end up a hair taller than that wrapper —
+    // enough for a sliver of a still-loading card's photo/gradient to peek
+    // out past the loading overlay's edge instead of being fully covered.
+    overflow: 'hidden',
   },
   featuredLoadingBox: {
     backgroundColor: '#ffffff',
