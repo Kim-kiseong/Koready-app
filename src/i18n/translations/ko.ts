@@ -73,6 +73,7 @@ export interface Translations {
     featuredTitlePrefix: string;
     featuredTitleConnector: string;
     featuredTitleSuffix: string;
+    featuredLoading: string;
     guidesSectionTitle: string;
     seeAll: string;
     languageKo: string;
@@ -577,6 +578,7 @@ export const ko: Translations = {
     featuredTitlePrefix: "한국",
     featuredTitleConnector: "에 왔으면,",
     featuredTitleSuffix: "월에 '이건' 해야지!",
+    featuredLoading: "이달의 추천 여행지를 불러오는 중이에요.",
     guidesSectionTitle: "호리가 알려주는 한국 여행 가이드",
     seeAll: "전체보기",
     languageKo: "한국어",

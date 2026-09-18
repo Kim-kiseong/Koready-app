@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -75,6 +76,11 @@ export default function HomeScreen() {
 
   const [category, setCategory] = useState<FeaturedEventCategory>('POPULAR');
   const [events, setEvents] = useState<FeaturedEvent[]>([]);
+  // Covers both the API call and every card's photo settling — stays true
+  // until the data has arrived AND each event's image has loaded (or
+  // failed), so the row doesn't flash empty then pop photos in one by one.
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const settledEventImageIdsRef = useRef<Set<string>>(new Set());
   const [guides, setGuides] = useState<GuideArticle[]>([]);
   const [guidePage, setGuidePage] = useState(0);
   const [pendingLanguage, setPendingLanguage] = useState<LanguageCode | null>(null);
@@ -85,15 +91,37 @@ export default function HomeScreen() {
     // without this guard, a slower first response (e.g. KO right after
     // switching to EN) can resolve after the newer one and clobber it, so the
     // screen gets stuck showing the language you just switched away from.
+    // isEventsLoading itself is reset to true by whatever triggered this
+    // category/language change (see setCategory's onPress and
+    // LanguageSwitchModal's onConfirm below) rather than here, since
+    // synchronously setting state as the first thing an effect does is its
+    // own anti-pattern — this effect only needs to react to the change, not
+    // cause it.
     let cancelled = false;
+    settledEventImageIdsRef.current = new Set();
     fetchFeaturedEvents(category).then((result) => {
       if (cancelled) return;
       setEvents(result);
+      // Nothing to wait for — don't leave the loading state stuck forever.
+      if (result.length === 0) setIsEventsLoading(false);
     });
     return () => {
       cancelled = true;
     };
   }, [category, language]);
+
+  const handleEventImageSettled = (eventId: string) => {
+    settledEventImageIdsRef.current.add(eventId);
+    if (settledEventImageIdsRef.current.size >= events.length) {
+      setIsEventsLoading(false);
+    }
+  };
+
+  const handleCategoryChange = (nextCategory: FeaturedEventCategory) => {
+    if (nextCategory === category) return;
+    setIsEventsLoading(true);
+    setCategory(nextCategory);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -211,19 +239,39 @@ export default function HomeScreen() {
                 key={id}
                 label={t.home.categories[id]}
                 selected={category === id}
-                onPress={() => setCategory(id)}
+                onPress={() => handleCategoryChange(id)}
               />
             ))}
           </ScrollView>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.eventRow}>
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })} />
-            ))}
-          </ScrollView>
+          <View style={styles.featuredRowWrap}>
+            {/* Mounted the whole time events is loading too (not just once
+                isEventsLoading flips false) — its cards are what report
+                back via onImageSettled, so hiding it until "loaded" would
+                mean it never gets the chance to finish loading. The loading
+                box below simply covers it until then. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.eventRow}
+              pointerEvents={isEventsLoading ? 'none' : 'auto'}>
+              {events.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
+                  onImageSettled={() => handleEventImageSettled(event.id)}
+                />
+              ))}
+            </ScrollView>
+
+            {isEventsLoading && (
+              <View style={[StyleSheet.absoluteFill, styles.featuredLoadingBox]}>
+                <ActivityIndicator color={Palette.primary} />
+                <CustomText style={styles.featuredLoadingText}>{t.home.featuredLoading}</CustomText>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={[styles.section, styles.guideSection]}>
@@ -282,6 +330,7 @@ export default function HomeScreen() {
             // repeated taps looked like the toggle just wasn't responding.
             if (isChangingLanguage) return;
             if (isDevMockSession) {
+              setIsEventsLoading(true);
               applyLanguageChange({
                 language: pendingLanguage,
                 nextStep: 'COMPLETED',
@@ -293,6 +342,7 @@ export default function HomeScreen() {
             setIsChangingLanguage(true);
             try {
               const result = await updateMyLanguage(pendingLanguage);
+              setIsEventsLoading(true);
               applyLanguageChange(result);
               setPendingLanguage(null);
             } catch (error) {
@@ -476,6 +526,22 @@ const styles = StyleSheet.create({
   eventRow: {
     gap: 12,
     paddingHorizontal: 16,
+  },
+  featuredRowWrap: {
+    // Matches EventCard's own height so the section holds its size while
+    // loading instead of collapsing/jumping once the row appears.
+    height: 312,
+  },
+  featuredLoadingBox: {
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  featuredLoadingText: {
+    fontFamily: FontFamily.pretendard.medium,
+    fontSize: 14,
+    color: Palette.grey600,
   },
   guideRow: {
     gap: GUIDE_CARD_GAP,

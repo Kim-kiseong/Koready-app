@@ -331,6 +331,7 @@ export const en: DeepPartial<Translations> = {
   home: {
     locationPlaceholder: 'No location set',
     searchPlaceholder: 'What kind of trip are you up for today?',
+    featuredLoading: "Loading this month's picks...",
     guidesSectionTitle: "Hori's Guide to Traveling in Korea",
     seeAll: 'View all',
     categories: {
