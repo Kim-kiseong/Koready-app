@@ -2,14 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { type StateStorage } from 'zustand/middleware';
 
-// secure-storage.ts deliberately no-ops on web for anything that touches
-// auth tokens — localStorage is readable by any script on the page (XSS
-// exposed) in a way SecureStore's native keychain/keystore isn't, so that
-// tradeoff is correct there. But the same no-op also breaks web persistence
-// for stores that hold nothing sensitive (a "seen this hint" flag, a UI
-// preference, ...), where there's no security reason to skip it — e.g.
-// picks-store's hasSeenGuide reset on every web page load and kept
-// re-showing the onboarding guide. Use this instead for that kind of state.
+// General-purpose persistent storage for non-auth UI state. It mirrors the
+// same native SecureStore / web localStorage split as secure-storage.ts, but
+// stays separate so callers can clearly distinguish UI preferences from the
+// auth/session store.
 export const webPersistentStorage: StateStorage = {
   getItem: async (name) => {
     if (Platform.OS === 'web') {

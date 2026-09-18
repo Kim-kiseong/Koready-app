@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { createBuddyRoute, type BuddyRoute } from '@/api/route';
 import CustomText from '@/components/CustomText';
@@ -219,6 +219,8 @@ export default function BuddyRouteTab({ placeId, destinationPlaceId, destination
         {statCards.map((card) => {
           const Icon = card.Icon;
           const isTransportLabel = card.label === routeCopy.statLabels.transport;
+          const transportLabelStyle =
+            isTransportLabel && (Platform.OS === 'web' ? styles.statLabelTransportWeb : styles.statLabelTransport);
           return (
             <View
               key={card.label}
@@ -232,7 +234,7 @@ export default function BuddyRouteTab({ placeId, destinationPlaceId, destination
                   numberOfLines={1}
                   adjustsFontSizeToFit={isTransportLabel}
                   minimumFontScale={0.88}
-                  style={[styles.statLabel, isTransportLabel && styles.statLabelTransport]}
+                  style={[styles.statLabel, transportLabelStyle]}
                 >
                   {card.label}
                 </CustomText>
@@ -290,6 +292,7 @@ const styles = StyleSheet.create({
   statTextGroup: { flex: 1, paddingRight: 12 },
   statLabel: { fontSize: 13, color: Palette.grey600, fontFamily: FontFamily.pretendard.regular },
   statLabelTransport: { marginRight: 4 },
+  statLabelTransportWeb: { marginRight: 4, fontSize: 11.5 },
   statValue: { marginTop: 6, fontFamily: FontFamily.pretendard.semiBold, fontSize: 16, lineHeight: 21, color: Palette.text },
   iconWrap: { position: 'absolute', right: -4, bottom: -4, width: 56, height: 56, alignItems: 'flex-end', justifyContent: 'flex-end', opacity: 0.9 },
   fareCard: { backgroundColor: '#F8FAFC', paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, borderWidth: 1, borderColor: Palette.grey200, borderRadius: 12 },

@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import {
@@ -11,11 +12,50 @@ import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 
 type Props = { description?: PlaceDescriptionData | null; images: PlaceImage[] };
+type DisplayPlaceImage = PlaceImage & { displayKey: string; errorKey: string };
+
+function getImageKey(image: PlaceImage) {
+  const source = image.source;
+  const uri =
+    typeof source === 'object' && source && !Array.isArray(source) && 'uri' in source
+      ? source.uri
+      : null;
+
+  return `${image.order}:${typeof uri === 'string' ? uri : ''}`;
+}
 
 export default function PlaceDescription({ description, images }: Props) {
   const { width } = useWindowDimensions();
+  const [failedImageKeys, setFailedImageKeys] = useState<Set<string>>(() => new Set());
   const normalizedDescription = normalizePlaceDescription(description);
-  const detailImages = [...images].sort((a, b) => a.order - b.order).slice(1);
+  const detailImages = useMemo<DisplayPlaceImage[]>(() => {
+    const sortedImages = [...images].sort((a, b) => a.order - b.order);
+    const thumbnailImage = sortedImages[0];
+    const thumbnailKey = thumbnailImage ? getImageKey(thumbnailImage) : null;
+    const rawDetailImages = sortedImages.slice(1);
+    const thumbnailFallbackIndex =
+      thumbnailImage && thumbnailKey && !failedImageKeys.has(thumbnailKey)
+        ? rawDetailImages.findIndex((image) => failedImageKeys.has(getImageKey(image)))
+        : -1;
+
+    return rawDetailImages.flatMap((image, index) => {
+      const imageKey = getImageKey(image);
+
+      if (!failedImageKeys.has(imageKey)) {
+        return [{ ...image, displayKey: imageKey, errorKey: imageKey }];
+      }
+
+      if (thumbnailImage && thumbnailKey && index === thumbnailFallbackIndex) {
+        return [{
+          ...thumbnailImage,
+          displayKey: `thumbnail-fallback:${imageKey}:${thumbnailKey}`,
+          errorKey: thumbnailKey,
+        }];
+      }
+
+      return [];
+    });
+  }, [failedImageKeys, images]);
   const heroImage = detailImages[0];
   const galleryImages = detailImages.slice(1, 3);
   const galleryImageSize = (width - 16 * 2 - 16) / 2;
@@ -43,6 +83,9 @@ export default function PlaceDescription({ description, images }: Props) {
           style={styles.heroImage}
           contentFit="cover"
           accessibilityLabel={heroImage.altText}
+          onError={() => {
+            setFailedImageKeys((current) => new Set(current).add(heroImage.errorKey));
+          }}
         />
       ) : null}
 
@@ -52,11 +95,14 @@ export default function PlaceDescription({ description, images }: Props) {
         <View style={styles.gallery}>
           {galleryImages.map((image) => (
             <Image
-              key={image.order}
+              key={image.displayKey}
               source={image.source}
               style={[styles.galleryImage, { width: galleryImageSize, height: galleryImageSize }]}
               contentFit="cover"
               accessibilityLabel={image.altText}
+              onError={() => {
+                setFailedImageKeys((current) => new Set(current).add(image.errorKey));
+              }}
             />
           ))}
         </View>

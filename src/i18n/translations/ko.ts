@@ -11,6 +11,7 @@ export interface Translations {
   login: {
     googleButton: string;
     appleButton: string;
+    mobileRecommendation: string;
   };
   language: {
     title: string;
@@ -143,6 +144,7 @@ export interface Translations {
   };
   my: {
     title: string;
+    loading: string;
     profileBadgePublic: string;
     profileBadgePrivate: string;
     editProfile: string;
@@ -504,6 +506,7 @@ export const ko: Translations = {
   login: {
     googleButton: "Google로 시작하기",
     appleButton: "Apple로 시작하기",
+    mobileRecommendation: "Koready 서비스는 모바일 환경 접속을 권장합니다.",
   },
   language: {
     title: "언어를 선택해주세요",
@@ -661,6 +664,7 @@ export const ko: Translations = {
   },
   my: {
     title: "마이페이지",
+    loading: "마이페이지를 불러오는 중이에요.",
     profileBadgePublic: "프로필 공개 중",
     profileBadgePrivate: "프로필 비공개",
     editProfile: "프로필 수정",
@@ -976,7 +980,7 @@ export const ko: Translations = {
     routeTab: {
       title: "Buddy Route",
       subtitle: "추천 여행지까지 가는 방법을 확인해보세요.",
-      loading: "이동 경로를 불러오는 중이에요.",
+      loading: "상세 이동 경로를 불러오는 중이에요.",
       error: "이동 경로를 불러오지 못했어요.",
       retry: "다시 시도",
       summaryLabels: {

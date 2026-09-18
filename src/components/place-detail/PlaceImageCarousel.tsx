@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { PlaceImage } from '@/api/place';
@@ -8,15 +9,30 @@ import { useHorizontalDragScroll } from '@/hooks/use-horizontal-drag-scroll';
 const SIDE_PADDING = 16;
 const GAP = 12;
 
+function getImageKey(image: PlaceImage) {
+  const source = image.source;
+  const uri =
+    typeof source === 'object' && source && !Array.isArray(source) && 'uri' in source
+      ? source.uri
+      : null;
+
+  return `${image.order}:${typeof uri === 'string' ? uri : ''}`;
+}
+
 export default function PlaceImageCarousel({ images }: { images: PlaceImage[] }) {
   const { width } = useWindowDimensions();
   const scrollRef = useHorizontalDragScroll();
+  const [failedImageKeys, setFailedImageKeys] = useState<Set<string>>(() => new Set());
   // The Figma carousel intentionally leaves 34pt of the following card visible:
   // 16pt leading inset + 325pt card + 12pt gap + 22pt preview on a 375pt screen.
   const imageSize = width - 50;
-  const sortedImages = [...images].sort((a, b) => a.order - b.order);
+  const sortedImages = useMemo(
+    () => [...images].sort((a, b) => a.order - b.order),
+    [images],
+  );
+  const visibleImages = sortedImages.filter((image) => !failedImageKeys.has(getImageKey(image)));
 
-  if (sortedImages.length === 0) return null;
+  if (visibleImages.length === 0) return null;
 
   return (
     <View style={styles.container}>
@@ -27,14 +43,18 @@ export default function PlaceImageCarousel({ images }: { images: PlaceImage[] })
         showsHorizontalScrollIndicator={false}
         snapToInterval={imageSize + GAP}
         contentContainerStyle={styles.content}>
-        {sortedImages.map((image) => (
+        {visibleImages.map((image) => (
           <Image
-            key={image.order}
+            key={getImageKey(image)}
             source={image.source}
             style={[styles.image, { width: imageSize, height: imageSize }]}
             contentFit="cover"
             accessibilityLabel={image.altText}
             draggable={false}
+            onError={() => {
+              const key = getImageKey(image);
+              setFailedImageKeys((current) => new Set(current).add(key));
+            }}
           />
         ))}
       </ScrollView>

@@ -1,6 +1,5 @@
 import { isAxiosError } from 'axios';
 import { Image, type ImageSource } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -54,17 +53,12 @@ const DEV_HOME_SESSION = {
 const FRAME_WIDTH = 375;
 const FRAME_HEIGHT = 812;
 const TITLE_TOP = 246;
+const SUBTITLE_TOP = 301;
 const MASCOT_TOP = 460;
 const MASCOT_WIDTH = 164;
 const MASCOT_BOTTOM = MASCOT_TOP + 210;
 const SHADOW_TOP = 655;
 const BUTTON_GROUP_TOP = 699;
-const BOTTOM_FADE_TOP = 629;
-const BOTTOM_FADE_HEIGHT = 187;
-// Figma's "Image_fx 2" reflection layer fades to solid white by 22.722% into
-// this band — past that point it's opaque white, which is what makes the
-// buttons below read as sitting on a white floor instead of the wallpaper.
-const BOTTOM_FADE_WHITE_STOP = 0.22722;
 
 export default function LoginScreen() {
   const t = useTranslation();
@@ -141,14 +135,6 @@ export default function LoginScreen() {
         contentFit="cover"
       />
 
-      <LinearGradient
-        colors={[`${Palette.white}00`, Palette.white, Palette.white]}
-        locations={[0, BOTTOM_FADE_WHITE_STOP, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[styles.bottomFade, { top: BOTTOM_FADE_TOP * scale, height: BOTTOM_FADE_HEIGHT * scale }]}
-      />
-
       {__DEV__ && (
         <SafeAreaView edges={['top']} style={styles.devBanner}>
           <View style={styles.devButtonGroup}>
@@ -163,6 +149,9 @@ export default function LoginScreen() {
       )}
 
       <CustomText style={[styles.title, { top: TITLE_TOP * scale }]}>Koready</CustomText>
+      <CustomText style={[styles.subtitle, { top: SUBTITLE_TOP * scale }]}>
+        {t.login.mobileRecommendation}
+      </CustomText>
 
       <View style={[styles.mascotWrap, { top: MASCOT_TOP * scale }]}>
         <Image
@@ -267,10 +256,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.72,
     color: Palette.primary,
   },
-  bottomFade: {
+  subtitle: {
     position: 'absolute',
     left: 0,
     right: 0,
+    paddingHorizontal: 16,
+    textAlign: 'center',
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 18.2,
+    letterSpacing: -0.26,
+    color: Palette.grey900,
   },
   mascotWrap: {
     position: 'absolute',
