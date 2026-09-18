@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isAxiosError } from 'axios';
 
@@ -14,6 +14,7 @@ import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useOnboardingStore } from '@/store/onboarding-store';
@@ -55,6 +56,7 @@ export default function LocationScreen() {
 
   const [query, setQuery] = useState(location?.displayAddress ?? '');
   const [isFocused, setIsFocused] = useState(false);
+  const [isSelected, setIsSelected] = useState(Boolean(location));
   const [results, setResults] = useState<LocationSearchItem[]>(
     () => isDevMockSession && query.trim().length >= 2 ? DEV_MOCK_SEARCH_RESULTS : [],
   );
@@ -95,6 +97,7 @@ export default function LocationScreen() {
 
   const handleQueryChange = (value: string) => {
     setQuery(value);
+    setIsSelected(false);
     setResults(isDevMockSession && value.trim().length >= 2 ? DEV_MOCK_SEARCH_RESULTS : []);
   };
 
@@ -112,6 +115,7 @@ export default function LocationScreen() {
       setCurrentLocationId(1);
       setQuery(item.roadAddress ?? item.name);
       setResults([]);
+      setIsSelected(true);
       return;
     }
     setIsSaving(true);
@@ -131,6 +135,7 @@ export default function LocationScreen() {
       // Only reflect the pick in the search box/results once it's actually saved.
       setQuery(saved.customLabel ?? saved.displayName);
       setResults([]);
+      setIsSelected(true);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 410) {
         Alert.alert(t.location.alerts.errorTitle, t.location.alerts.searchResultExpired);
@@ -145,6 +150,7 @@ export default function LocationScreen() {
   const handleClear = () => {
     setQuery('');
     setResults([]);
+    setIsSelected(false);
   };
 
   const handleNext = () => {
@@ -157,7 +163,7 @@ export default function LocationScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
-        onBack={() => router.replace('/terms')}
+        onBack={() => goBackOrRoot(router, '/terms')}
         progress={{ currentStep: 1, totalSteps: 3 }}
         rightIcon={null}
       />
@@ -171,7 +177,11 @@ export default function LocationScreen() {
         <View
           style={[
             styles.searchBar,
-            isFocused ? styles.searchBarFocused : styles.searchBarDefault,
+            isSelected
+              ? styles.searchBarSelected
+              : isFocused
+                ? styles.searchBarFocused
+                : styles.searchBarDefault,
           ]}>
           <SymbolView
             name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
@@ -274,16 +284,45 @@ const styles = StyleSheet.create({
     gap: 10,
     height: 52,
     borderRadius: 12,
-    borderWidth: 1,
     paddingHorizontal: 16,
+    ...Platform.select({
+      // RN Web runs border*Width through the same PixelRatio division
+      // native uses for StyleSheet.hairlineWidth (declaredPx /
+      // devicePixelRatio) — on a display with a non-integer scale factor
+      // that lands on a sub-pixel CSS width the browser has to anti-alias,
+      // which reads as a soft, thick smudge instead of a crisp 1px line
+      // (see the identical fix + full explanation on TermsScreen's `link`
+      // style). `boxShadow` bypasses that conversion entirely, so each
+      // state below sets it instead of borderColor on web.
+      web: {},
+      default: { borderWidth: 1 },
+    }),
   },
   searchBarDefault: {
     backgroundColor: Palette.grey100,
-    borderColor: Palette.grey200,
+    ...Platform.select({
+      web: { boxShadow: `inset 0 0 0 1px ${Palette.grey200}` } as object,
+      default: { borderColor: Palette.grey200 },
+    }),
   },
   searchBarFocused: {
     backgroundColor: Palette.secondary,
-    borderColor: Palette.primaryLight,
+    ...Platform.select({
+      web: { boxShadow: `inset 0 0 0 1px ${Palette.primaryLight}` } as object,
+      default: { borderColor: Palette.primaryLight },
+    }),
+  },
+  // Figma's active search bar (node 1076:5967) uses the same lighter
+  // primaryLight border/secondary bg for both typing and already-picked
+  // states — no separate darker-green "selected" treatment. Using
+  // Palette.primary here read as a visibly heavier/bolder border at the
+  // same 1px width.
+  searchBarSelected: {
+    backgroundColor: Palette.secondary,
+    ...Platform.select({
+      web: { boxShadow: `inset 0 0 0 1px ${Palette.primaryLight}` } as object,
+      default: { borderColor: Palette.primaryLight },
+    }),
   },
   searchInput: {
     flex: 1,
