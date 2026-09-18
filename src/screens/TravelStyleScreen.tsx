@@ -10,6 +10,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { useOnboardingStore } from '@/store/onboarding-store';
 
 const MAX_TRAVEL_STYLES = 4;
@@ -39,7 +40,7 @@ export default function TravelStyleScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <OnboardingHeader
-        onBack={() => router.replace('/location')}
+        onBack={() => goBackOrRoot(router, '/location')}
         progress={{ currentStep: 2, totalSteps: 3 }}
         rightIcon={null}
       />
