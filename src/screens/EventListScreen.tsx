@@ -7,11 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   DEFAULT_EVENT_FILTERS,
   fetchEventListings,
-  fetchFeaturedEvents,
   type EventFilters,
   type EventListing,
   type EventSortOrder,
-  type FeaturedEvent,
 } from '@/api/home';
 import CustomText from '@/components/CustomText';
 import EventCard from '@/components/EventCard';
@@ -45,6 +43,7 @@ const EN_MONTH_NAMES = [
 const GRID_COLUMNS = 2;
 const GRID_GAP = 13;
 const SCREEN_PADDING = 16;
+const TOP_FEATURED_COUNT = 5;
 
 export default function EventListScreen() {
   const router = useRouter();
@@ -65,34 +64,42 @@ export default function EventListScreen() {
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_EVENT_FILTERS);
   const [isSortSheetOpen, setSortSheetOpen] = useState(false);
   const [isFilterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [featured, setFeatured] = useState<FeaturedEvent[]>([]);
+  const featuredScrollRef = useHorizontalDragScroll();
+  const monthScrollRef = useHorizontalDragScroll();
+  const [events, setEvents] = useState<EventListing[]>([]);
   // Same reasoning as HomeScreen's isEventsLoading: stays true until the
   // data's in AND every big card's photo has settled, so this row doesn't
   // flash empty then pop photos in one by one either.
   const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
   const settledFeaturedImageIdsRef = useRef<Set<string>>(new Set());
-  const featuredScrollRef = useHorizontalDragScroll();
-  const monthScrollRef = useHorizontalDragScroll();
-  const [events, setEvents] = useState<EventListing[]>([]);
+
+  // The top "big card" row used to be its own separate GET
+  // /monthly-recommendations call (fetchFeaturedEvents) requesting the same
+  // month's full page just to slice off the first 5 — a second full request
+  // for data the grid below was already fetching, which is why switching
+  // months visibly took longer to update the row above than the grid below.
+  // It's just the sorted grid's own first 5 (EventListing already has every
+  // field EventCard needs), so no second request is required at all.
+  const featured = events.slice(0, TOP_FEATURED_COUNT);
 
   useEffect(() => {
     let cancelled = false;
-    // month's own trigger (the month PillChip's onPress, see
-    // handleMonthChange below) resets isFeaturedLoading itself — only
-    // language has no local control to hook that into on this screen, so
-    // it's set here instead.
+    // month/sortOrder/filters' own triggers (handleMonthChange,
+    // SortBottomSheet's onSelect, FilterBottomSheet's onApply) reset
+    // isFeaturedLoading themselves — only language has no local control to
+    // hook that into on this screen, so it's set here instead.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsFeaturedLoading(true);
     settledFeaturedImageIdsRef.current = new Set();
-    fetchFeaturedEvents('POPULAR', month).then((result) => {
+    fetchEventListings(month, sortOrder, filters).then((result) => {
       if (cancelled) return;
-      setFeatured(result);
+      setEvents(result);
       if (result.length === 0) setIsFeaturedLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [month, language]);
+  }, [month, sortOrder, filters, language]);
 
   const handleFeaturedImageSettled = (eventId: string) => {
     settledFeaturedImageIdsRef.current.add(eventId);
@@ -106,10 +113,6 @@ export default function EventListScreen() {
     setIsFeaturedLoading(true);
     setMonth(nextMonth);
   };
-
-  useEffect(() => {
-    fetchEventListings(month, sortOrder, filters).then(setEvents);
-  }, [month, sortOrder, filters, language]);
 
   const title = useMemo(
     () =>
@@ -213,6 +216,7 @@ export default function EventListScreen() {
         visible={isSortSheetOpen}
         value={sortOrder}
         onSelect={(next) => {
+          if (next !== sortOrder) setIsFeaturedLoading(true);
           setSortOrder(next);
           setSortSheetOpen(false);
         }}
@@ -222,7 +226,10 @@ export default function EventListScreen() {
       <FilterBottomSheet
         visible={isFilterSheetOpen}
         value={filters}
-        onApply={setFilters}
+        onApply={(next) => {
+          setIsFeaturedLoading(true);
+          setFilters(next);
+        }}
         onClose={() => setFilterSheetOpen(false)}
       />
     </SafeAreaView>
