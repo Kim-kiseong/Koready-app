@@ -1,13 +1,15 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, Pressable as GestureAwarePressable } from 'react-native-gesture-handler';
 import Animated, {
+  Extrapolation,
   interpolate,
   runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
@@ -16,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   createRecommendationDeck,
-  fetchRecommendationDeckPage,
   recordRecommendationEvent,
   type PicksCard,
   type PicksScope,
@@ -79,8 +80,14 @@ const MAX_STACK_DEPTH = 2;
 const STACK_WIDTH_FACTOR = 1 + MAX_STACK_DEPTH * (BEHIND_CARD_X_OFFSET_RATIO - BEHIND_CARD_SCALE_STEP);
 const SWIPE_THRESHOLD = 120;
 const SWIPE_VELOCITY_THRESHOLD = 800;
-// Fallback only, used until the deck's own remainingThreshold arrives from the server.
-const FALLBACK_PREFETCH_THRESHOLD = 5;
+// BottomNavBar's other tabs (see BottomNavBar.tsx's sideTabs/centerTab hrefs)
+// — a round trip through one of these means the user actually left the
+// Picks tab, as opposed to drilling into a card's detail page and back.
+const OTHER_TAB_PATHS = new Set(['/home', '/map', '/saved', '/my']);
+// The client no longer paginates — RecommendationDeck still requires
+// remainingThreshold on the wire, so the dev-mock deck needs some value here
+// to satisfy the type, even though nothing reads it anymore.
+const DEV_FALLBACK_REMAINING_THRESHOLD = 5;
 
 // Dev-only: the mock session's access token can't be refreshed by the real
 // backend, so calling the real API with it 401s and forces a logout (see
@@ -203,12 +210,31 @@ function buildDevFallbackDeck(scope: PicksScope): RecommendationDeck {
     cards,
     nextCursor: null,
     hasMore: false,
-    remainingThreshold: FALLBACK_PREFETCH_THRESHOLD,
+    remainingThreshold: DEV_FALLBACK_REMAINING_THRESHOLD,
   };
 }
 
 function formatPickTagLabel(tag: unknown) {
   return toDisplayText(tag).replace(/^#+\s*/, '').trim();
+}
+
+// Up to `count` cards after currentIndex, wrapping cyclically instead of
+// stopping at the end of the array — so the behind-card stack still peeks
+// on the last card or two instead of visually running out, matching the
+// swipe navigation looping back to the front of the deck. Caps at
+// cards.length - 1 so a short deck (1-2 cards) never previews the current
+// card behind itself.
+function getWrappedNextCards(cards: PicksCard[], currentIndex: number, count: number): PicksCard[] {
+  const previewCount = Math.min(count, cards.length - 1);
+  return Array.from({ length: previewCount }, (_, i) => cards[(currentIndex + 1 + i) % cards.length]);
+}
+
+// undefined when there's nothing to go back to (a single-card deck), same
+// reasoning as getWrappedNextCards' cap — otherwise the "previous" card
+// would just be the current one wrapping onto itself.
+function getWrappedPrevCard(cards: PicksCard[], currentIndex: number): PicksCard | undefined {
+  if (cards.length < 2) return undefined;
+  return cards[(currentIndex - 1 + cards.length) % cards.length];
 }
 
 export default function PicksScreen() {
@@ -239,14 +265,17 @@ export default function PicksScreen() {
   const [deckId, setDeckId] = useState<string | null>(null);
   const [cards, setCards] = useState<PicksCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [remainingThreshold, setRemainingThreshold] = useState(FALLBACK_PREFETCH_THRESHOLD);
+  // Tells the newly-front PicksFlipCard how it arrived, so it can play a
+  // matching entrance animation instead of just popping in — 'next' grows
+  // up from the behind-stack spot it was just peeking from (see
+  // PicksFlipCard's entrance/behindAmount). 'prev' doesn't need one: the
+  // outgoing card's own live drag already hands off smoothly to it (see
+  // prevCardStyle). Reset on every fresh deck so a reload/scope-switch never
+  // inherits a stale direction.
+  const [enterDirection, setEnterDirection] = useState<'next' | 'prev' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const isFetchingMoreRef = useRef(false);
   const latestRequestIdRef = useRef(0);
-  const activeDeckIdRef = useRef<string | null>(null);
   const isInitialDeckLoadRef = useRef(true);
 
   // The deck endpoint always returns each card's server-side saved flag, which
@@ -265,14 +294,11 @@ export default function PicksScreen() {
   };
 
   const applyDeck = (deck: RecommendationDeck) => {
-    activeDeckIdRef.current = deck.deckId;
     setDeckId(deck.deckId);
     const reconciledCards = reconcileSaved(deck.cards);
     setCards(reconciledCards);
-    setCursor(deck.nextCursor);
-    setHasMore(deck.hasMore);
-    setRemainingThreshold(deck.remainingThreshold);
     setCurrentIndex(0);
+    setEnterDirection(null);
     setIsLoading(false);
 
     for (const card of reconciledCards) {
@@ -283,10 +309,8 @@ export default function PicksScreen() {
 
   const loadDeck = (targetScope: PicksScope) => {
     // Scope can change (or retry) before an in-flight request settles — track
-    // which call is newest so a slower, stale response can't clobber it, and
-    // drop any prefetch lock a scope switch left behind mid-flight.
+    // which call is newest so a slower, stale response can't clobber it.
     const requestId = ++latestRequestIdRef.current;
-    isFetchingMoreRef.current = false;
 
     const request = isDevMockSession
       ? Promise.resolve(buildDevFallbackDeck(targetScope))
@@ -325,8 +349,6 @@ export default function PicksScreen() {
     setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
-    setCursor(null);
-    setHasMore(false);
     setIsLoading(true);
     setHasError(false);
     loadDeck(scope);
@@ -336,48 +358,12 @@ export default function PicksScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, onboardingHasHydrated, savedPlaceHydrated, language]);
 
-  // Keep the client-side card stack topped up: once fewer unseen cards remain ahead
-  // of currentIndex than the server's remainingThreshold, pull the next page.
-  useEffect(() => {
-    if (!deckId || !hasMore || isFetchingMoreRef.current) return;
-    const remaining = cards.length - (currentIndex + 1);
-    if (remaining > remainingThreshold) return;
-
-    const requestDeckId = deckId;
-    isFetchingMoreRef.current = true;
-    fetchRecommendationDeckPage(deckId, cursor)
-      .then((deck) => {
-        // The active deck can change (scope switch/retry) while this was in
-        // flight — drop a stale page instead of appending it to the wrong deck.
-        if (activeDeckIdRef.current !== requestDeckId) return;
-        const reconciledCards = reconcileSaved(deck.cards);
-        setCards((prev) => [...prev, ...reconciledCards]);
-        setCursor(deck.nextCursor);
-        setHasMore(deck.hasMore);
-        setRemainingThreshold(deck.remainingThreshold);
-
-        for (const card of reconciledCards) {
-          if (!card.saved) continue;
-          upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'RECOMMENDATION_CARD'));
-        }
-      })
-      .catch(() => {
-        // Best-effort prefetch; leave the existing cards/cursor as-is and let
-        // the next threshold crossing retry.
-      })
-      .finally(() => {
-        isFetchingMoreRef.current = false;
-      });
-  }, [cards.length, currentIndex, cursor, deckId, hasMore, remainingThreshold, upsertSavedPlace]);
-
   const changeScope = (nextScope: PicksScope) => {
     if (nextScope === scope) return;
     setScope(nextScope);
     setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
-    setCursor(null);
-    setHasMore(false);
     setIsLoading(true);
     setHasError(false);
     loadDeck(nextScope);
@@ -388,6 +374,39 @@ export default function PicksScreen() {
     setHasError(false);
     loadDeck(scope);
   };
+
+  // Regenerate the deck when the user actually leaves the Picks tab (via the
+  // bottom nav) and comes back — not on every focus. picks/home/map/saved/my
+  // and places/[placeId] are flat siblings in the same Stack (AppNavigator),
+  // so a plain useFocusEffect can't tell "came back from another tab" apart
+  // from "came back from a card's detail page via the back button" — both
+  // are just a blur-then-refocus of this same still-mounted screen. Tracking
+  // pathname visits to the sibling tab routes distinguishes them without
+  // touching those other screens: a detail-page round trip leaves the ref
+  // false (skip), a tab-switch round trip leaves it true (reload).
+  const pathname = usePathname();
+  const shouldRefreshDeckOnFocusRef = useRef(false);
+  useEffect(() => {
+    if (OTHER_TAB_PATHS.has(pathname)) {
+      shouldRefreshDeckOnFocusRef.current = true;
+    }
+  }, [pathname]);
+
+  const refreshDeckOnFocus = useCallback(() => {
+    if (!shouldRefreshDeckOnFocusRef.current) return;
+    shouldRefreshDeckOnFocusRef.current = false;
+    setDeckId(null);
+    setCards([]);
+    setCurrentIndex(0);
+    setIsLoading(true);
+    setHasError(false);
+    loadDeck(scope);
+    // loadDeck closes over scope/isDevMockSession/originLocationId directly
+    // and is redefined every render — same as the hydration effect above,
+    // only scope needs to be a real dependency here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope]);
+  useFocusEffect(refreshDeckOnFocus);
 
   const card = cards[currentIndex];
 
@@ -471,7 +490,9 @@ export default function PicksScreen() {
         {!isLoading && !hasError && card && (
           <PicksDeck
             card={card}
-            nextCards={cards.slice(currentIndex + 1, currentIndex + 3)}
+            enterFrom={enterDirection}
+            nextCards={getWrappedNextCards(cards, currentIndex, MAX_STACK_DEPTH)}
+            prevCard={getWrappedPrevCard(cards, currentIndex)}
             onToggleSave={toggleSaved}
             onExpand={() => recordEvent(card.placeId, 'CARD_EXPANDED')}
             onViewDetail={() => {
@@ -484,15 +505,15 @@ export default function PicksScreen() {
                 },
               });
             }}
-            canSwipeNext={currentIndex + 1 < cards.length}
-            canSwipePrev={currentIndex > 0}
             onSwipeNext={() => {
               recordEvent(card.placeId, 'CARD_NEXT');
-              setCurrentIndex((i) => Math.min(i + 1, cards.length - 1));
+              setEnterDirection('next');
+              setCurrentIndex((i) => (i + 1) % cards.length);
             }}
             onSwipePrev={() => {
               recordEvent(card.placeId, 'CARD_PREVIOUS');
-              setCurrentIndex((i) => Math.max(i - 1, 0));
+              setEnterDirection('prev');
+              setCurrentIndex((i) => (i - 1 + cards.length) % cards.length);
             }}
           />
         )}
@@ -507,24 +528,24 @@ export default function PicksScreen() {
 
 type PicksDeckProps = {
   card: PicksCard;
+  enterFrom: 'next' | 'prev' | null;
   nextCards: PicksCard[];
+  prevCard: PicksCard | undefined;
   onToggleSave: () => void;
   onExpand: () => void;
   onViewDetail: () => void;
-  canSwipeNext: boolean;
-  canSwipePrev: boolean;
   onSwipeNext: () => void;
   onSwipePrev: () => void;
 };
 
 function PicksDeck({
   card,
+  enterFrom,
   nextCards,
+  prevCard,
   onToggleSave,
   onExpand,
   onViewDetail,
-  canSwipeNext,
-  canSwipePrev,
   onSwipeNext,
   onSwipePrev,
 }: PicksDeckProps) {
@@ -547,10 +568,10 @@ function PicksDeck({
       <PicksFlipCard
         key={card.placeId}
         card={card}
+        enterFrom={enterFrom}
+        prevCard={prevCard}
         cardSize={cardSize}
         screenWidth={screenWidth}
-        canSwipeNext={canSwipeNext}
-        canSwipePrev={canSwipePrev}
         onSwipeNext={onSwipeNext}
         onSwipePrev={onSwipePrev}
         onToggleSave={onToggleSave}
@@ -565,8 +586,6 @@ type CardSize = { width: number; height: number };
 
 function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number; cardSize: CardSize }) {
   const scale = 1 - depth * BEHIND_CARD_SCALE_STEP;
-  const width = cardSize.width * scale;
-  const height = cardSize.height * scale;
 
   return (
     <View
@@ -574,16 +593,29 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
         styles.card,
         styles.behindCard,
         styles.pointerEventsNone,
+        cardSize,
         {
-          width,
-          height,
-          left: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth,
-          top: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth,
-          borderRadius: 16 * scale,
+          // Same top-left-anchored transform PicksFlipCard's swipeStyle/
+          // entrance animations use when settling into this exact slot
+          // (see the comment there) — rendering this at literal cardSize
+          // and transforming it visually, instead of shrinking width/height
+          // directly, keeps the <Image> at one consistent layout size across
+          // every state a card passes through (front, transitioning,
+          // resting here). A differently-sized Image here forced the
+          // browser to re-rasterize at a new resolution on every handoff —
+          // the actual source of the flicker/flash, which the transform
+          // fix alone didn't fully address since it only lined up
+          // position/scale, not the underlying image element's size.
+          transformOrigin: '0% 0%',
+          transform: [
+            { translateX: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth },
+            { translateY: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth },
+            { scale },
+          ],
         },
       ]}>
       {card.imageUrl ? (
-        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" draggable={false} />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
       )}
@@ -600,10 +632,10 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
 
 type PicksFlipCardProps = {
   card: PicksCard;
+  enterFrom: 'next' | 'prev' | null;
+  prevCard: PicksCard | undefined;
   cardSize: CardSize;
   screenWidth: number;
-  canSwipeNext: boolean;
-  canSwipePrev: boolean;
   onSwipeNext: () => void;
   onSwipePrev: () => void;
   onToggleSave: () => void;
@@ -617,10 +649,10 @@ type PicksFlipCardProps = {
 // race against the index update and flicker.
 function PicksFlipCard({
   card,
+  enterFrom,
+  prevCard,
   cardSize,
   screenWidth,
-  canSwipeNext,
-  canSwipePrev,
   onSwipeNext,
   onSwipePrev,
   onToggleSave,
@@ -630,6 +662,22 @@ function PicksFlipCard({
   const t = useTranslation();
   const flip = useSharedValue(0);
   const translateX = useSharedValue(0);
+  // Frozen at mount (remounts reset it anyway) so the effect below only ever
+  // considers the value this instance actually arrived with.
+  const [shouldAnimateEntrance] = useState(enterFrom === 'next');
+  // 0 = sitting at the behind-stack spot (where this card was just peeking
+  // from as a BehindCard), 1 = settled at the front. Cards that didn't
+  // arrive via a next-swipe start at 1 and never move.
+  const entrance = useSharedValue(shouldAnimateEntrance ? 0 : 1);
+
+  useEffect(() => {
+    if (shouldAnimateEntrance) {
+      entrance.value = withTiming(1, { duration: 250 });
+    }
+    // Mount-only: shouldAnimateEntrance is frozen above specifically so this
+    // never needs to re-run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleFlip = () => {
     const isExpanding = flip.value === 0;
@@ -647,23 +695,64 @@ function PicksFlipCard({
       const isSwipeRight = event.translationX > SWIPE_THRESHOLD || event.velocityX > SWIPE_VELOCITY_THRESHOLD;
       const isSwipeLeft = event.translationX < -SWIPE_THRESHOLD || event.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
-      // Swiping either direction only ever advances to the next card —
-      // there's no swipe gesture for going back to the previous one anymore.
-      if ((isSwipeRight || isSwipeLeft) && canSwipeNext) {
-        const exitX = isSwipeRight ? screenWidth : -screenWidth;
-        translateX.value = withTiming(exitX, { duration: 250 }, (finished) => {
+      // Left = next card, right = previous card — both wrap at either end
+      // (onSwipeNext/onSwipePrev compute the new index mod cards.length).
+      if (isSwipeLeft) {
+        translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
           if (finished) runOnJS(onSwipeNext)();
+        });
+      } else if (isSwipeRight) {
+        translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
+          if (finished) runOnJS(onSwipePrev)();
         });
       } else {
         translateX.value = withSpring(0);
       }
     });
 
-  const swipeStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { rotateZ: `${interpolate(translateX.value, [-screenWidth, 0, screenWidth], [-8, 0, 8])}deg` },
-    ],
+  // How "into the behind-stack spot" this card currently is: driven by
+  // whichever of the two things that can pull it there is active — a
+  // rightward drag (going to the previous card puts *this* card there), or
+  // the mount entrance animation (arriving from there via a next-swipe).
+  // Shared by swipeStyle and behindTintStyle below so both move in lockstep.
+  const behindAmount = useDerivedValue(() => {
+    const dragProgress =
+      translateX.value >= 0 ? interpolate(translateX.value, [0, screenWidth], [0, 1], Extrapolation.CLAMP) : 0;
+    return Math.max(dragProgress, 1 - entrance.value);
+  });
+
+  // BehindCard reaches its stacked size by literally shrinking its
+  // width/height from its own top-left corner (see BehindCard's left/top +
+  // resized box below) — not a centered CSS scale. transformOrigin '0% 0%'
+  // makes `scale` shrink from this card's top-left the same way, so
+  // translateX/Y can use BehindCard's own offset formula directly and the
+  // two line up exactly at behindAmount 1. (A centered scale, the default,
+  // would land at a different spot — that mismatch was the visible
+  // pop/flicker when this handed off to the real BehindCard underneath.)
+  // No rotateZ in this branch: BehindCard never tilts.
+  const swipeStyle = useAnimatedStyle(() => {
+    if (behindAmount.value > 0) {
+      return {
+        transformOrigin: '0% 0%',
+        transform: [
+          { translateX: interpolate(behindAmount.value, [0, 1], [0, cardSize.width * BEHIND_CARD_X_OFFSET_RATIO]) },
+          { translateY: interpolate(behindAmount.value, [0, 1], [0, cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO]) },
+          { scale: interpolate(behindAmount.value, [0, 1], [1, 1 - BEHIND_CARD_SCALE_STEP]) },
+        ],
+      };
+    }
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { rotateZ: `${interpolate(translateX.value, [-screenWidth, 0], [-8, 0])}deg` },
+      ],
+    };
+  });
+
+  // Matches BehindCard's own tint exactly at behindAmount 1, for the same
+  // no-pop-on-handoff reason as swipeStyle above.
+  const behindTintStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(behindAmount.value, [0, 1], [0, BEHIND_CARD_TINT_BASE_OPACITY + BEHIND_CARD_TINT_STEP_OPACITY]),
   }));
 
   const frontStyle = useAnimatedStyle(() => ({
@@ -676,25 +765,44 @@ function PicksFlipCard({
     zIndex: flip.value < 0.5 ? 0 : 1,
   }));
 
+  // Sits off-screen at rest (-screenWidth = just past the left edge) and is
+  // tied to the same translateX the pan gesture drives, offset by
+  // -screenWidth — so as the front card is dragged right toward
+  // +screenWidth (the "previous" direction), this reaches 0 at exactly the
+  // moment the front card fully exits, reading as the previous card being
+  // pulled in by the same drag rather than popping in once the swipe
+  // completes. Dragging left (next) only pushes it further off-screen, so
+  // it never shows during a forward swipe.
+  const prevCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value - screenWidth }],
+  }));
+
   const heartIcon = (
     <HeartIcon filled={card.saved} color={card.saved ? Palette.red300 : Palette.grey400} size={20} />
   );
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.cardStack, cardSize, styles.topCard, swipeStyle]}>
-        <Animated.View style={[styles.card, styles.cardFace, cardSize, frontStyle]}>
-          <Pressable style={styles.cardImageWrap} onPress={toggleFlip}>
-            {card.imageUrl ? (
-              <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+    <>
+      {prevCard && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.card, styles.cardStack, cardSize, styles.prevCardLayer, prevCardStyle]}>
+          <View style={styles.cardImageWrap}>
+            {prevCard.imageUrl ? (
+              <Image
+                source={{ uri: prevCard.imageUrl }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                draggable={false}
+              />
             ) : (
               <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
             )}
-          </Pressable>
+          </View>
 
           <View style={styles.cardInfo}>
             <View style={styles.cardTextGroup}>
-              <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+              <CustomText style={styles.cardTitle}>{prevCard.title}</CustomText>
               <View style={styles.cardLocationRow}>
                 <View style={styles.cardLocationIconFrame}>
                   <Image
@@ -703,57 +811,112 @@ function PicksFlipCard({
                     contentFit="contain"
                   />
                 </View>
-                <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
+                <CustomText style={styles.cardLocation}>{prevCard.locationText}</CustomText>
               </View>
             </View>
 
-            <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
-              {heartIcon}
-            </Pressable>
+            <View style={styles.saveButton}>
+              <HeartIcon
+                filled={prevCard.saved}
+                color={prevCard.saved ? Palette.red300 : Palette.grey400}
+                size={20}
+              />
+            </View>
           </View>
         </Animated.View>
+      )}
 
-        <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, cardSize, backStyle]}>
-          <Pressable style={styles.cardBackContent} onPress={toggleFlip}>
-            <View style={styles.cardBackTop}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardTextGroup}>
-                  <CustomText style={styles.cardTitle}>{card.title}</CustomText>
-                  <View style={styles.cardLocationRow}>
-                    <View style={styles.cardLocationIconFrame}>
-                      <Image
-                        source={require('@/assets/images/location-pin-detail.svg')}
-                        style={styles.cardLocationIcon}
-                        contentFit="contain"
-                      />
-                    </View>
-                    <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.cardStack, cardSize, styles.topCard, swipeStyle]}>
+          <Animated.View style={[styles.card, styles.cardFace, cardSize, frontStyle]}>
+            {/* Core RN's Pressable claims the touch responder on press-down,
+                which can swallow the drag that starts on top of it before
+                the sibling Gesture.Pan ever sees the movement. Gesture
+                Handler's own Pressable runs through the same native gesture
+                system as `pan` above, so a press-then-drag here still gets
+                recognized as the swipe instead of getting stuck on this tap
+                target. */}
+            <GestureAwarePressable style={styles.cardImageWrap} onPress={toggleFlip}>
+              {card.imageUrl ? (
+                <Image
+                  source={{ uri: card.imageUrl }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  draggable={false}
+                />
+              ) : (
+                <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
+              )}
+            </GestureAwarePressable>
+
+            <View style={styles.cardInfo}>
+              <View style={styles.cardTextGroup}>
+                <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+                <View style={styles.cardLocationRow}>
+                  <View style={styles.cardLocationIconFrame}>
+                    <Image
+                      source={require('@/assets/images/location-pin-detail.svg')}
+                      style={styles.cardLocationIcon}
+                      contentFit="contain"
+                    />
                   </View>
+                  <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
                 </View>
-
-                <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
-                  {heartIcon}
-                </Pressable>
               </View>
 
-              <View style={styles.tagRow}>
-                {card.tags.map((tag, index) => (
-                  <View key={toStableListKey(tag, index)} style={styles.tagChip}>
-                    <CustomText style={styles.tagLabel}>{formatPickTagLabel(tag)}</CustomText>
-                  </View>
-                ))}
-              </View>
-
-              <CustomText style={styles.descriptionText}>{card.shortDescription}</CustomText>
+              <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+                {heartIcon}
+              </Pressable>
             </View>
 
-            <Pressable style={styles.detailButton} onPress={onViewDetail}>
-              <CustomText style={styles.detailButtonText}>{t.picks.detailButton}</CustomText>
+            <Animated.View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, styles.behindCardTint, behindTintStyle]}
+            />
+          </Animated.View>
+
+          <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, cardSize, backStyle]}>
+            <Pressable style={styles.cardBackContent} onPress={toggleFlip}>
+              <View style={styles.cardBackTop}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardTextGroup}>
+                    <CustomText style={styles.cardTitle}>{card.title}</CustomText>
+                    <View style={styles.cardLocationRow}>
+                      <View style={styles.cardLocationIconFrame}>
+                        <Image
+                          source={require('@/assets/images/location-pin-detail.svg')}
+                          style={styles.cardLocationIcon}
+                          contentFit="contain"
+                        />
+                      </View>
+                      <CustomText style={styles.cardLocation}>{card.locationText}</CustomText>
+                    </View>
+                  </View>
+
+                  <Pressable style={styles.saveButton} onPress={onToggleSave} hitSlop={4}>
+                    {heartIcon}
+                  </Pressable>
+                </View>
+
+                <View style={styles.tagRow}>
+                  {card.tags.map((tag, index) => (
+                    <View key={toStableListKey(tag, index)} style={styles.tagChip}>
+                      <CustomText style={styles.tagLabel}>{formatPickTagLabel(tag)}</CustomText>
+                    </View>
+                  ))}
+                </View>
+
+                <CustomText style={styles.descriptionText}>{card.shortDescription}</CustomText>
+              </View>
+
+              <Pressable style={styles.detailButton} onPress={onViewDetail}>
+                <CustomText style={styles.detailButtonText}>{t.picks.detailButton}</CustomText>
+              </Pressable>
             </Pressable>
-          </Pressable>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-    </GestureDetector>
+      </GestureDetector>
+    </>
   );
 }
 
@@ -879,6 +1042,17 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 10,
     elevation: 10,
+  },
+  // Above topCard: on a rightward (previous-card) drag, the current card
+  // animates down to the behind-stack spot instead of sliding off-screen
+  // (see swipeStyle), so this needs to paint over it as it arrives — the
+  // reverse of a plain next-card peek, which always stays behind topCard.
+  prevCardLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 20,
+    elevation: 20,
   },
   card: {
     borderRadius: 16,

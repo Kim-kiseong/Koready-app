@@ -32,11 +32,11 @@ export default function LanguageScreen() {
   const handleNext = async () => {
     if (!selected || isSubmitting) return;
     if (isDevMockSession) {
-      applyLanguageChange({ language: selected, nextStep: 'ONBOARDING', updatedAt: new Date().toISOString() });
+      applyLanguageChange({ language: selected, nextStep: 'TERMS', updatedAt: new Date().toISOString() });
       // replace, not push — this screen has no back button of its own, so it
-      // shouldn't linger in history either; the conceptual "back" target from
-      // the next screen is /terms, the step before this one.
-      router.replace(resolveNextStepRoute('ONBOARDING'));
+      // shouldn't linger in history either; Terms is the next step after
+      // Language, mirroring the real (non-mock) branch below.
+      router.replace(resolveNextStepRoute('TERMS'));
       return;
     }
     setIsSubmitting(true);

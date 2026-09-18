@@ -3,7 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { Fragment, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fetchRequiredTerms, submitTermAgreements, type RequiredTermItem } from '@/api/terms';
@@ -12,10 +12,12 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
+import { PRIVACY_POLICY_TEXT, SERVICE_TERMS_TEXT } from '@/constants/legal-text';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
+import { useTermDetailStore } from '@/store/term-detail-store';
 import { goBackOrRoot } from '@/navigation/safe-back';
 
 function extractErrorMessage(error: unknown): string {
@@ -46,10 +48,10 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
     title: '서비스 이용약관',
     required: true,
     version: '1.0',
-    sourceType: 'EXTERNAL_URL',
-    contentUrl: 'https://example.com/terms/service/1.0',
-    content: null,
-    contentFormat: null,
+    sourceType: 'INLINE',
+    contentUrl: null,
+    content: SERVICE_TERMS_TEXT.KO,
+    contentFormat: 'PLAIN_TEXT',
     agreed: false,
     needsAgreement: true,
     displayOrder: 1,
@@ -61,10 +63,10 @@ const DEV_FALLBACK_TERMS: RequiredTermItem[] = [
     title: '개인정보 취급 방침',
     required: true,
     version: '1.0',
-    sourceType: 'EXTERNAL_URL',
-    contentUrl: 'https://example.com/terms/privacy/1.0',
-    content: null,
-    contentFormat: null,
+    sourceType: 'INLINE',
+    contentUrl: null,
+    content: PRIVACY_POLICY_TEXT.KO,
+    contentFormat: 'PLAIN_TEXT',
     agreed: false,
     needsAgreement: true,
     displayOrder: 2,
@@ -96,6 +98,7 @@ export default function TermsScreen() {
   // this screen ever gets a chance to show anything. Skip the real call
   // entirely for that session instead of letting it round-trip and fail.
   const isDevMockSession = __DEV__ && accessToken === DEV_MOCK_ACCESS_TOKEN;
+  const setPendingTermDetail = useTermDetailStore((state) => state.setPending);
   const [terms, setTerms] = useState<RequiredTermItem[] | null>(
     () => isDevMockSession ? DEV_FALLBACK_TERMS : null,
   );
@@ -173,25 +176,38 @@ export default function TermsScreen() {
     setAgreedMap(Object.fromEntries(terms.map((term) => [term.termVersionId, next])));
   };
 
+  // Per the backend contract, sourceType (not `code`, which is a free-form
+  // admin-defined string with no fixed value) decides how to open a term:
+  // EXTERNAL_URL opens contentUrl in the browser, INLINE renders `content`
+  // in-app. Previously this special-cased the two known onboarding term
+  // codes and silently did nothing for anything else — if the live backend's
+  // "서비스 이용약관" term wasn't configured with that exact literal code (it's
+  // admin-defined per term, not guaranteed), tapping it did nothing with no
+  // error, which is exactly the "이용약관만 안 눌림" symptom.
   const openTerm = (term: RequiredTermItem) => {
-    if (term.code === 'SERVICE_TERMS' || term.code === 'PRIVACY_POLICY') {
-      router.push({ pathname: '/terms/[code]', params: { code: term.code } });
+    if (term.sourceType === 'EXTERNAL_URL') {
+      if (!term.contentUrl) return;
+      WebBrowser.openBrowserAsync(term.contentUrl).catch((error) => {
+        Alert.alert(t.terms.linkOpenError, extractErrorMessage(error));
+      });
       return;
     }
-    // contentUrl is only populated when sourceType is EXTERNAL_URL — INLINE
-    // terms have no link to open from this list.
-    if (term.sourceType !== 'EXTERNAL_URL' || !term.contentUrl) {
-      return;
-    }
-    WebBrowser.openBrowserAsync(term.contentUrl).catch((error) => {
-      Alert.alert(t.terms.linkOpenError, extractErrorMessage(error));
+    if (!term.content) return;
+    setPendingTermDetail({
+      code: term.code,
+      title: term.title,
+      content: term.content,
+      contentFormat: term.contentFormat,
     });
+    router.push({ pathname: '/terms/[code]', params: { code: term.code } });
   };
 
   const handleNext = async () => {
     if (!terms || !requiredAgreed || isSubmitting) return;
     if (isDevMockSession) {
-      router.replace(resolveNextStepRoute('LANGUAGE'));
+      // Terms comes after Language in the onboarding flow, so the next step
+      // from here is onboarding (Location), not back to Language.
+      router.replace(resolveNextStepRoute('ONBOARDING'));
       return;
     }
     setIsSubmitting(true);
@@ -316,6 +332,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.pretendard.semiBold,
     fontSize: 22,
     lineHeight: 30.8,
+    letterSpacing: -0.44,
     color: Palette.grey900,
   },
   checkGroup: {
@@ -348,18 +365,46 @@ const styles = StyleSheet.create({
   agreeAllLabel: {
     fontFamily: FontFamily.pretendard.medium,
     fontSize: 16,
+    lineHeight: 22.4,
+    letterSpacing: -0.32,
     color: Palette.text,
   },
   label: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,
+    lineHeight: 19.6,
+    letterSpacing: -0.28,
     color: Palette.text,
   },
+  // Figma specs this underline as `decoration-from-font` — a thin line
+  // matched to the font's own metrics. `textDecorationLine`'s thickness is
+  // "auto" on every platform, and there's no RN style prop to set it
+  // explicitly. borderBottomWidth looked like the fix, but RN Web runs any
+  // border-width style through the same PixelRatio division native uses for
+  // StyleSheet.hairlineWidth (declaredPx / devicePixelRatio) — confirmed by
+  // reading the computed style directly (`borderBottomWidth: 1` rendered as
+  // 3.2px at devicePixelRatio 0.3125, and 0.889px at 1.125). On a display
+  // with a non-integer scale factor (Windows custom scaling, which Windows
+  // itself warns can render UI blurry), that division lands on a sub-pixel
+  // CSS width the browser has to anti-alias, which reads as a soft, thick
+  // smudge rather than a crisp line — reproducing every time, not just on
+  // first paint. `boxShadow` is a raw CSS passthrough on RN Web (unlike
+  // `border*`, it isn't tokenized through that PixelRatio conversion — see
+  // the plain-px boxShadow values already used elsewhere in this codebase,
+  // e.g. EventGridCard.tsx), so an inset shadow renders a guaranteed literal
+  // 1px regardless of the display's DPI. Kept as textDecorationLine on
+  // native (iOS/Android), where a bordered nested Text span can break inline
+  // wrapping — not worth the risk for a platform that hasn't shown this bug.
   link: {
     fontFamily: FontFamily.pretendard.regular,
     fontSize: 14,
+    lineHeight: 19.6,
+    letterSpacing: -0.28,
     color: Palette.text,
-    textDecorationLine: 'underline',
+    ...Platform.select({
+      web: { boxShadow: `inset 0 -1px 0 0 ${Palette.text}` } as object,
+      default: { textDecorationLine: 'underline' as const },
+    }),
   },
   footer: {
     marginTop: 'auto',
