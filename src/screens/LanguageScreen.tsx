@@ -6,12 +6,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { updateMyLanguage } from '@/api/user';
 import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
+import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import SelectableCard from '@/components/SelectableCard';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
+import { goBackOrRoot } from '@/navigation/safe-back';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -33,9 +35,9 @@ export default function LanguageScreen() {
     if (!selected || isSubmitting) return;
     if (isDevMockSession) {
       applyLanguageChange({ language: selected, nextStep: 'TERMS', updatedAt: new Date().toISOString() });
-      // replace, not push — this screen has no back button of its own, so it
-      // shouldn't linger in history either; Terms is the next step after
-      // Language, mirroring the real (non-mock) branch below.
+      // replace, not push — Language shouldn't linger in history once you've
+      // moved on from it; Terms is the next step after Language, mirroring
+      // the real (non-mock) branch below.
       router.replace(resolveNextStepRoute('TERMS'));
       return;
     }
@@ -60,6 +62,11 @@ export default function LanguageScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      {/* Login used router.replace to get here, so there's no real "back" —
+          goBackOrRoot falls through to explicitly sending them to /login,
+          e.g. to sign in with a different Google account. */}
+      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} rightIcon={null} />
+
       <View style={styles.content}>
         <View style={styles.headerGroup}>
           <CustomText style={styles.title}>{t.language.title}</CustomText>
@@ -100,11 +107,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    // Figma reserves the shared 54pt header's height here even though this
-    // screen renders no header — content starts at the same 122pt mark
-    // (54 header + 24 margin) as the sibling onboarding screens that do
-    // render one.
-    paddingTop: 78,
+    // Matches the sibling onboarding screens' own content padding now that
+    // this renders a real OnboardingHeader above it (54pt) instead of
+    // reserving that height manually.
+    paddingTop: 24,
     gap: 32,
   },
   headerGroup: {
