@@ -588,7 +588,7 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
         },
       ]}>
       {card.imageUrl ? (
-        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" draggable={false} />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
       )}
@@ -739,7 +739,12 @@ function PicksFlipCard({
           style={[styles.card, styles.cardStack, cardSize, styles.prevCardLayer, prevCardStyle]}>
           <View style={styles.cardImageWrap}>
             {prevCard.imageUrl ? (
-              <Image source={{ uri: prevCard.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              <Image
+                source={{ uri: prevCard.imageUrl }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                draggable={false}
+              />
             ) : (
               <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
             )}
@@ -783,7 +788,12 @@ function PicksFlipCard({
                 target. */}
             <GestureAwarePressable style={styles.cardImageWrap} onPress={toggleFlip}>
               {card.imageUrl ? (
-                <Image source={{ uri: card.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <Image
+                  source={{ uri: card.imageUrl }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  draggable={false}
+                />
               ) : (
                 <View style={[StyleSheet.absoluteFill, styles.cardImageFallback]} />
               )}
