@@ -154,7 +154,7 @@ export default function EventListScreen() {
           </ScrollView>
 
           {isFeaturedLoading && (
-            <View style={[StyleSheet.absoluteFill, styles.featuredLoadingBox]}>
+            <View style={styles.featuredLoadingBox}>
               <ActivityIndicator color={Palette.primary} />
               <CustomText style={styles.featuredLoadingText}>{t.eventList.featuredLoading}</CustomText>
             </View>
@@ -246,13 +246,19 @@ const styles = StyleSheet.create({
     // Matches EventCard's own height so the section holds its size while
     // loading instead of collapsing/jumping once the row appears.
     height: 312,
-    // Without this, a horizontal ScrollView sized only by its wrapper's
-    // height (not its own) can end up a hair taller than that wrapper —
-    // enough for a sliver of a still-loading card's photo/gradient to peek
-    // out past the loading overlay's edge instead of being fully covered.
-    overflow: 'hidden',
   },
   featuredLoadingBox: {
+    // A couple px past absoluteFill's exact edges on every side — cheaper
+    // and more reliable than getting the still-loading ScrollView's own
+    // layout height to match this wrapper's to the sub-pixel (RN Web can
+    // round the two independently), which left a sliver of a loading card's
+    // photo/gradient visible as a thin line along one edge. Overshooting
+    // onto the page's own white background is invisible either way.
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',

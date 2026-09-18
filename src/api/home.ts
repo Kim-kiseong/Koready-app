@@ -428,12 +428,9 @@ function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
   });
 }
 
-// Always goes through GET /monthly-recommendations (never GET /home) so the
-// featured carousel — on both the home screen and the month-picker event list
-// — reflects the requested month with server-side priority ordering
-// (sort: RECOMMENDED) and is capped at exactly 5 cards. POPULAR omits
-// travelStyles so it isn't filtered to one style. Swallows failures to an
-// empty list so a network hiccup doesn't crash the carousel.
+// Always goes through GET /monthly-recommendations (never GET /home).
+// POPULAR omits travelStyles so it isn't filtered to one style. Swallows
+// failures to an empty list so a network hiccup doesn't crash the carousel.
 //
 // Requested priority scheme was "1) dated content by save count desc, 2)
 // undated content by save count desc" (DEADLINE swaps #1 for soonest-ending
@@ -444,6 +441,16 @@ function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
 // itself. So only the "dated first" half is doable here (sortDatedFirst);
 // the save-count sub-ordering needs a backend change (either implement this
 // exact scheme server-side, or expose a save/popularity count on PlaceCard).
+//
+// The "top 5" shown here must be the top 5 of the SAME pool fetchEventListings
+// shows in the full grid, dated-first-sorted — not the backend's own top 5
+// (which ranks by status/quality score and can leave a dated item, e.g. a
+// festival with a lower quality score, out entirely). So this requests the
+// full MONTHLY_RECOMMENDATIONS_PAGE_SIZE page (matching fetchEventListings'
+// own page size), sorts it the same way, and only then takes the first 5 —
+// otherwise a dated item ranked 6th-or-later server-side would never even be
+// in the 5 fetched, no matter how the client re-sorts afterward.
+const MONTHLY_RECOMMENDATIONS_PAGE_SIZE = 20;
 const FEATURED_EVENTS_SIZE = 5;
 
 export async function fetchFeaturedEvents(
@@ -458,9 +465,9 @@ export async function fetchFeaturedEvents(
       month: month ?? now.getMonth() + 1,
       travelStyles: category === 'POPULAR' ? undefined : [category],
       sort: 'RECOMMENDED',
-      size: FEATURED_EVENTS_SIZE,
+      size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE,
     });
-    return sortDatedFirst(result.items.map(toFeaturedEvent));
+    return sortDatedFirst(result.items.map(toFeaturedEvent)).slice(0, FEATURED_EVENTS_SIZE);
   } catch {
     return [];
   }
@@ -469,7 +476,11 @@ export async function fetchFeaturedEvents(
 // EventListScreen's full grid — region/date/type filtering and sorting all
 // happen server-side now via GET /monthly-recommendations; sortDatedFirst is
 // the same client-side regrouping as fetchFeaturedEvents above (see its
-// comment for what's server-side-only for now).
+// comment for what's server-side-only for now). size is explicit here
+// (rather than relying on the backend's own default, which happens to be the
+// same 20) so it can never silently drift out of sync with
+// MONTHLY_RECOMMENDATIONS_PAGE_SIZE above and break that top-5-of-the-same-
+// pool guarantee.
 export async function fetchEventListings(
   month: number,
   sort: EventSortOrder = 'RECOMMENDED',
@@ -486,6 +497,7 @@ export async function fetchEventListings(
       customEndDate: hasCustomDateRange ? filters.dateRange.endDate! : undefined,
       travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
       sort,
+      size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE,
     });
     return sortDatedFirst(result.items.map(toEventListing));
   } catch {
