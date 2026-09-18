@@ -586,8 +586,6 @@ type CardSize = { width: number; height: number };
 
 function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number; cardSize: CardSize }) {
   const scale = 1 - depth * BEHIND_CARD_SCALE_STEP;
-  const width = cardSize.width * scale;
-  const height = cardSize.height * scale;
 
   return (
     <View
@@ -595,12 +593,25 @@ function BehindCard({ card, depth, cardSize }: { card: PicksCard; depth: number;
         styles.card,
         styles.behindCard,
         styles.pointerEventsNone,
+        cardSize,
         {
-          width,
-          height,
-          left: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth,
-          top: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth,
-          borderRadius: 16 * scale,
+          // Same top-left-anchored transform PicksFlipCard's swipeStyle/
+          // entrance animations use when settling into this exact slot
+          // (see the comment there) — rendering this at literal cardSize
+          // and transforming it visually, instead of shrinking width/height
+          // directly, keeps the <Image> at one consistent layout size across
+          // every state a card passes through (front, transitioning,
+          // resting here). A differently-sized Image here forced the
+          // browser to re-rasterize at a new resolution on every handoff —
+          // the actual source of the flicker/flash, which the transform
+          // fix alone didn't fully address since it only lined up
+          // position/scale, not the underlying image element's size.
+          transformOrigin: '0% 0%',
+          transform: [
+            { translateX: cardSize.width * BEHIND_CARD_X_OFFSET_RATIO * depth },
+            { translateY: cardSize.width * BEHIND_CARD_Y_OFFSET_RATIO * depth },
+            { scale },
+          ],
         },
       ]}>
       {card.imageUrl ? (
