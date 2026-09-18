@@ -6,14 +6,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { updateMyLanguage } from '@/api/user';
 import type { LanguageCode } from '@/api/types';
 import CustomText from '@/components/CustomText';
-import OnboardingHeader from '@/components/OnboardingHeader';
 import PrimaryButton from '@/components/PrimaryButton';
 import SelectableCard from '@/components/SelectableCard';
 import { Palette } from '@/constants/colors';
 import { DEV_MOCK_ACCESS_TOKEN } from '@/constants/dev';
 import { FontFamily } from '@/constants/typography';
 import { useTranslation } from '@/i18n/useTranslation';
-import { goBackOrRoot } from '@/navigation/safe-back';
 import { resolveNextStepRoute } from '@/navigation/next-step-route';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -62,11 +60,6 @@ export default function LanguageScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      {/* Login used router.replace to get here, so there's no real "back" —
-          goBackOrRoot falls through to explicitly sending them to /login,
-          e.g. to sign in with a different Google account. */}
-      <OnboardingHeader onBack={() => goBackOrRoot(router, '/login')} rightIcon={null} />
-
       <View style={styles.content}>
         <View style={styles.headerGroup}>
           <CustomText style={styles.title}>{t.language.title}</CustomText>
@@ -107,10 +100,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    // Matches the sibling onboarding screens' own content padding now that
-    // this renders a real OnboardingHeader above it (54pt) instead of
-    // reserving that height manually.
-    paddingTop: 24,
+    paddingTop: 78,
     gap: 32,
   },
   headerGroup: {
