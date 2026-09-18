@@ -2,14 +2,20 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { type StateStorage } from 'zustand/middleware';
 
-// expo-secure-store has no web implementation. On native platforms this keeps
-// using SecureStore, while web falls back to localStorage so a browser refresh
-// can rehydrate zustand's persisted session.
+// expo-secure-store has no web implementation. Native keeps using it (OS
+// keychain/keystore). On web, session state goes in sessionStorage instead —
+// this used to no-op entirely on web, which meant every page reload logged
+// the user out. sessionStorage (deliberately not localStorage) keeps the
+// token's exposure window to "this tab, until it's closed" rather than
+// indefinitely on disk, while still surviving a reload. Every call is
+// try/catched since storage access can throw (private browsing, blocked
+// storage, quota) — falls back to the same "just requires signing in again"
+// behavior this had before.
 export const secureStorage: StateStorage = {
   getItem: async (name) => {
     if (Platform.OS === 'web') {
       try {
-        return window.localStorage.getItem(name);
+        return window.sessionStorage.getItem(name);
       } catch {
         return null;
       }
@@ -19,10 +25,9 @@ export const secureStorage: StateStorage = {
   setItem: async (name, value) => {
     if (Platform.OS === 'web') {
       try {
-        window.localStorage.setItem(name, value);
+        window.sessionStorage.setItem(name, value);
       } catch {
-        // Private-mode Safari and storage quota limits can throw. In that case
-        // the session simply won't persist across refreshes.
+        // Ignored — same degrade as a getItem failure above.
       }
       return;
     }
@@ -31,9 +36,9 @@ export const secureStorage: StateStorage = {
   removeItem: async (name) => {
     if (Platform.OS === 'web') {
       try {
-        window.localStorage.removeItem(name);
+        window.sessionStorage.removeItem(name);
       } catch {
-        // See setItem.
+        // Ignored — same degrade as a getItem failure above.
       }
       return;
     }

@@ -36,7 +36,17 @@ export default function PcIframeShell({ children }: { children: ReactNode }) {
   const { width, height } = useWindowDimensions();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [href] = useState(() => window.location.href);
-  const showShell = isTopLevel && width >= DESKTOP_BREAKPOINT;
+  // Decided once, not on every resize: the iframe and the outer tab are
+  // separate browsing contexts, so flipping this mid-session unmounts
+  // whichever one was showing and mounts the other from scratch — the outer
+  // tab's URL is frozen at whatever it was when the tab first loaded (it
+  // never follows navigation that happens inside the iframe), so that remount
+  // lands on a stale route instead of wherever the user actually is. Browser
+  // zoom changes window width the same way a real resize does, so without
+  // this a zoom change crossing DESKTOP_BREAKPOINT mid-session looked like
+  // getting logged out. The visual scale below still tracks width/height
+  // live — only this structural iframe-vs-direct choice is pinned.
+  const [showShell] = useState(() => isTopLevel && width >= DESKTOP_BREAKPOINT);
   // The iframe itself always stays exactly 393x852 (so the app inside keeps
   // seeing a consistent phone-sized `window`) — only its visual size scales,
   // via CSS transform, to fill however big the actual browser window is.
