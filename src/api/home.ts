@@ -34,8 +34,8 @@ const DEFAULT_FEATURED_EVENT_IMAGE_URI = Asset.fromModule(
   require('@/assets/images/destinations/default.jpg'),
 ).uri;
 
-const HOME_CACHE_TTL_MS = 30_000;
-const MONTHLY_RECOMMENDATIONS_CACHE_TTL_MS = 60_000;
+const HOME_CACHE_TTL_MS = 5 * 60_000;
+const MONTHLY_RECOMMENDATIONS_CACHE_TTL_MS = 10 * 60_000;
 
 export type GuideArticle = {
   id: string;
