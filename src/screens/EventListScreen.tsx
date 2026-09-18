@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -49,12 +49,19 @@ export default function EventListScreen() {
   const router = useRouter();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
-  const { width: windowWidth } = useWindowDimensions();
+  // Measured from the screen's own onLayout instead of useWindowDimensions —
+  // this app always renders inside PcIframeShell's 393-wide iframe on a PC
+  // browser (see PcIframeShell.web.tsx), and useWindowDimensions there was
+  // landing on the outer top-level tab's full width instead of the iframe's,
+  // computing a card width far wider than what actually fits and collapsing
+  // the grid to a single column. The screen's own laid-out width is correct
+  // regardless of which window a dimensions hook happens to resolve against.
+  const [screenWidth, setScreenWidth] = useState(0);
   // Figma's grid card is a fixed 165pt that only fits 2-per-row at exactly the
   // 375pt reference width — on any other device width that leaves either dead
   // space or (if hardcoded) a rounding-driven wrap down to a single column.
-  // Deriving it from the actual window width keeps the 2-column grid exact.
-  const gridCardWidth = (windowWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+  // Deriving it from the actual screen width keeps the 2-column grid exact.
+  const gridCardWidth = (screenWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const orderedMonths = useMemo(() => {
     const currentMonth = new Date().getMonth() + 1;
@@ -121,7 +128,10 @@ export default function EventListScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={styles.screen}
+      edges={['top', 'bottom']}
+      onLayout={(event) => setScreenWidth(event.nativeEvent.layout.width)}>
       <OnboardingHeader onBack={() => goBackOrRoot(router)} title={title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -169,47 +179,56 @@ export default function EventListScreen() {
           )}
         </View>
 
-        <View style={styles.gridHeaderRow}>
-          <View style={styles.countRow}>
-            <CustomText style={styles.countLabel}>{t.eventList.total}</CustomText>
-            <CustomText style={styles.countValue}>{events.length}</CustomText>
-            <CustomText style={styles.countLabel}>{t.eventList.countUnit}</CustomText>
-          </View>
+        {/* Hidden together with the featured row above while isFeaturedLoading
+            — both come from the same fetch (see the events effect), so
+            showing this count/grid the instant events lands, ahead of the
+            featured row's own image-settle wait, read as this section
+            loading in two disjointed steps instead of one. */}
+        {!isFeaturedLoading && (
+          <>
+            <View style={styles.gridHeaderRow}>
+              <View style={styles.countRow}>
+                <CustomText style={styles.countLabel}>{t.eventList.total}</CustomText>
+                <CustomText style={styles.countValue}>{events.length}</CustomText>
+                <CustomText style={styles.countLabel}>{t.eventList.countUnit}</CustomText>
+              </View>
 
-          <View style={styles.toolsRow}>
-            <Pressable style={styles.sortButton} onPress={() => setSortSheetOpen(true)}>
-              <CustomText style={styles.sortButtonText}>
-                {sortOrder === 'RECOMMENDED' ? t.eventList.sortRecommended : t.eventList.sortDeadline}
-              </CustomText>
-              <SymbolView
-                name={{ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' }}
-                size={12}
-                weight="regular"
-                tintColor={Palette.grey500}
-              />
-            </Pressable>
-            <Pressable style={styles.filterButton} onPress={() => setFilterSheetOpen(true)}>
-              <SymbolView
-                name={{ ios: 'slider.horizontal.3', android: 'tune', web: 'tune' }}
-                size={14}
-                weight="regular"
-                tintColor={Palette.grey500}
-              />
-            </Pressable>
-          </View>
-        </View>
+              <View style={styles.toolsRow}>
+                <Pressable style={styles.sortButton} onPress={() => setSortSheetOpen(true)}>
+                  <CustomText style={styles.sortButtonText}>
+                    {sortOrder === 'RECOMMENDED' ? t.eventList.sortRecommended : t.eventList.sortDeadline}
+                  </CustomText>
+                  <SymbolView
+                    name={{ ios: 'chevron.down', android: 'arrow_drop_down', web: 'arrow_drop_down' }}
+                    size={12}
+                    weight="regular"
+                    tintColor={Palette.grey500}
+                  />
+                </Pressable>
+                <Pressable style={styles.filterButton} onPress={() => setFilterSheetOpen(true)}>
+                  <SymbolView
+                    name={{ ios: 'slider.horizontal.3', android: 'tune', web: 'tune' }}
+                    size={14}
+                    weight="regular"
+                    tintColor={Palette.grey500}
+                  />
+                </Pressable>
+              </View>
+            </View>
 
-        <View style={styles.grid}>
-          {events.map((event) => (
-            <EventGridCard
-              key={event.id}
-              event={event}
-              categoryLabel={formatPlaceTravelStyle(event.category, language)}
-              width={gridCardWidth}
-              onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
-            />
-          ))}
-        </View>
+            <View style={styles.grid}>
+              {events.map((event) => (
+                <EventGridCard
+                  key={event.id}
+                  event={event}
+                  categoryLabel={formatPlaceTravelStyle(event.category, language)}
+                  width={gridCardWidth}
+                  onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
+                />
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <SortBottomSheet
