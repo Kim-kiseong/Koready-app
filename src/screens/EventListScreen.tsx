@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -151,10 +151,6 @@ export default function EventListScreen() {
         </ScrollView>
 
         <View style={styles.featuredRowWrap}>
-          {/* Stays mounted while loading too — its cards are what report
-              back via onImageSettled, so hiding it until "loaded" would
-              mean it never gets the chance to finish loading. The loading
-              box below simply covers it until then. */}
           <ScrollView
             ref={featuredScrollRef}
             horizontal
@@ -216,7 +212,7 @@ export default function EventListScreen() {
                   key={event.id}
                   event={event}
                   categoryLabel={formatPlaceTravelStyle(event.category, language)}
-                  width={gridCardWidth}
+                  width={Platform.OS === 'web' ? undefined : gridCardWidth}
                   onPress={() => router.push({ pathname: '/places/[placeId]', params: { placeId: event.id } })}
                 />
               ))}
@@ -350,11 +346,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: GRID_GAP,
-    rowGap: GRID_GAP,
-    paddingHorizontal: SCREEN_PADDING,
-  },
+  grid: Platform.select({
+    // CSS Grid needs no JS-measured width at all — the browser's own layout
+    // engine divides the row into exactly 2 equal tracks, so there's nothing
+    // for browser zoom's sub-pixel rounding (or a stale onLayout measurement)
+    // to disagree with. flexWrap's approach (still used natively, where none
+    // of that applies) has to get a computed per-card width exactly right or
+    // it wraps to a single column — this sidesteps that class of bug
+    // entirely instead of chasing another rounding edge case.
+    web: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      columnGap: GRID_GAP,
+      rowGap: GRID_GAP,
+      paddingHorizontal: SCREEN_PADDING,
+    } as object,
+    default: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: GRID_GAP,
+      rowGap: GRID_GAP,
+      paddingHorizontal: SCREEN_PADDING,
+    },
+  }),
 });
