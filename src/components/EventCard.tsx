@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import type { FeaturedEvent } from '@/api/home';
@@ -11,32 +10,13 @@ import { FontFamily } from '@/constants/typography';
 export type EventCardProps = {
   event: FeaturedEvent;
   onPress?: () => void;
-  // Reports that this card's photo has settled (loaded or failed) — lets
-  // HomeScreen keep the whole featured row behind a loading state until
-  // every card's image is ready, instead of photos popping in one by one.
-  onImageSettled?: () => void;
 };
 
-export default function EventCard({ event, onPress, onImageSettled }: EventCardProps) {
-  useEffect(() => {
-    // No photo to wait for — count it as settled immediately so a mix of
-    // photo/no-photo cards doesn't leave the row stuck loading.
-    if (!event.imageUrl) onImageSettled?.();
-    // Only meant to fire once, for whichever card this is — the eslint rule
-    // would want onImageSettled/event.imageUrl listed, but this card never
-    // changes which event it's showing (see the `key` it's mounted with).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+export default function EventCard({ event, onPress }: EventCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       {event.imageUrl ? (
-        <Image
-          source={{ uri: event.imageUrl }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          onLoadEnd={onImageSettled}
-        />
+        <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.imageFallback]} />
       )}

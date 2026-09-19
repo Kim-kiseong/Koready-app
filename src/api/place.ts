@@ -171,8 +171,8 @@ export type PlaceDetail = {
   travelStyle?: string | null;
 };
 
-const PLACE_LIST_CACHE_TTL_MS = 60_000;
-const PLACE_DETAIL_CACHE_TTL_MS = 5 * 60_000;
+const PLACE_LIST_CACHE_TTL_MS = 10 * 60_000;
+const PLACE_DETAIL_CACHE_TTL_MS = 30 * 60_000;
 
 function isWithinRequestedDateRange(
   place: { festivalOccurrence: SavedPlaceFestivalOccurrence | null },
