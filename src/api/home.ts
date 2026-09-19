@@ -483,7 +483,44 @@ function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
 // otherwise a dated item ranked 6th-or-later server-side would never even be
 // in the 5 fetched, no matter how the client re-sorts afterward.
 const MONTHLY_RECOMMENDATIONS_PAGE_SIZE = 20;
+// The backend rejects size > 50 (INVALID_REQUEST) — this is the largest pool
+// fetchEventListings can pull from when hunting for dated items below.
+const MONTHLY_RECOMMENDATIONS_MAX_SIZE = 50;
 const FEATURED_EVENTS_SIZE = 5;
+
+// RECOMMENDED ranks by "ONGOING/UPCOMING/ENDED status before quality score"
+// (see the comment above fetchFeaturedEvents), which routinely buries a real
+// festival below the MONTHLY_RECOMMENDATIONS_PAGE_SIZE cutoff entirely — e.g.
+// April 2026 has 6 dated festivals but RECOMMENDED's own top 20 (even top 50)
+// only surfaces 2 of them, so sortDatedFirst has nothing to regroup for the
+// other 4; they're simply never fetched. DEADLINE, though, was confirmed
+// (live Swagger + spot checks) to always rank every dated item in a month
+// ahead of every undated one, regardless of how many there are — so it's used
+// here purely as a way to harvest the full list of dated places for the
+// month/filter combo, independent of whatever the primary sort's own ranking
+// would have included.
+async function fetchDatedPlaceCards(
+  params: Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>,
+): Promise<PlaceCard[]> {
+  try {
+    const result = await fetchMonthlyRecommendations({
+      ...params,
+      sort: 'DEADLINE',
+      size: MONTHLY_RECOMMENDATIONS_MAX_SIZE,
+    });
+    return result.items.filter((item) => item.festivalOccurrence);
+  } catch {
+    return [];
+  }
+}
+
+// Puts every dated item (soonest-ending first, from fetchDatedPlaceCards)
+// ahead of primaryItems' own undated ones, de-duplicating by placeId so a
+// dated item that also happened to rank inside primaryItems isn't repeated.
+function mergeDatedFirst(primaryItems: PlaceCard[], datedItems: PlaceCard[]): PlaceCard[] {
+  const datedIds = new Set(datedItems.map((item) => item.placeId));
+  return [...datedItems, ...primaryItems.filter((item) => !datedIds.has(item.placeId))];
+}
 
 export async function fetchFeaturedEvents(
   category: FeaturedEventCategory,
@@ -519,19 +556,23 @@ export async function fetchEventListings(
   filters: EventFilters = DEFAULT_EVENT_FILTERS,
 ): Promise<EventListing[]> {
   const hasCustomDateRange = Boolean(filters.dateRange.startDate && filters.dateRange.endDate);
+  const baseParams = {
+    year: new Date().getFullYear(),
+    month,
+    serviceRegionCode: filters.region === 'ALL' ? undefined : filters.region,
+    dateFilterType: hasCustomDateRange ? 'CUSTOM' : filters.date === 'ALL' ? undefined : filters.date,
+    customStartDate: hasCustomDateRange ? filters.dateRange.startDate! : undefined,
+    customEndDate: hasCustomDateRange ? filters.dateRange.endDate! : undefined,
+    travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
+  } satisfies Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>;
+
   try {
-    const result = await fetchMonthlyRecommendations({
-      year: new Date().getFullYear(),
-      month,
-      serviceRegionCode: filters.region === 'ALL' ? undefined : filters.region,
-      dateFilterType: hasCustomDateRange ? 'CUSTOM' : filters.date === 'ALL' ? undefined : filters.date,
-      customStartDate: hasCustomDateRange ? filters.dateRange.startDate! : undefined,
-      customEndDate: hasCustomDateRange ? filters.dateRange.endDate! : undefined,
-      travelStyles: filters.type === 'ALL' ? undefined : [filters.type],
-      sort,
-      size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE,
-    });
-    return sortDatedFirst(result.items.map(toEventListing));
+    const [result, datedItems] = await Promise.all([
+      fetchMonthlyRecommendations({ ...baseParams, sort, size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE }),
+      fetchDatedPlaceCards(baseParams),
+    ]);
+    const merged = mergeDatedFirst(result.items, datedItems).slice(0, MONTHLY_RECOMMENDATIONS_PAGE_SIZE);
+    return sortDatedFirst(merged.map(toEventListing));
   } catch {
     return [];
   }
