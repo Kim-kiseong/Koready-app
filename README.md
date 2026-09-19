@@ -1,58 +1,143 @@
-# Welcome to your Expo app 👋
+# KOREADY
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**가보고 싶은 곳을, '갈 수 있는 곳'으로**
 
-## Get started
+외국인 유학생과 장기 거주 외국인이 한국의 로컬 여행지를 발견하고, 실제 방문 가능성을 판단하며, 같은 여행지에 관심 있는 사람과 연결될 수 있도록 돕는 로컬 여행 서비스입니다.
 
-1. Install dependencies
+**서비스 바로가기 → [https://koready.site](https://koready.site)**
 
-   ```bash
-   npm install
-   ```
+> 2026 관광데이터 활용 공모전 출품작 · 팀 유랑이들
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 왜 만들었나
 
-Use `npx expo run:ios` or `npx expo run:android` when you want to launch the native app in a simulator/emulator. Keep `npx expo start` running when you need the Metro bundler for live reload.
+한국에 사는 외국인 유학생과 장기 거주 외국인은 서울·부산·제주를 넘어 다양한 지역을 여행하고 싶어 하지만, 실제 로컬 여행으로 이어지기까지 여러 장벽이 있습니다.
 
-In the output, you'll find options to open the app in a
+- 지역 관광정보가 여러 플랫폼에 흩어져 있음
+- 외국인의 관점에서 자신에게 맞는 여행지인지 판단하기 어려움
+- 실제로 이동 가능한 거리인지, 어떻게 가는지 알기 어려움
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+KOREADY는 한국관광공사의 관광데이터를 **외국인 이용자의 관점으로 재가공**하여, 여행지 발견부터 이동 가능성 판단, 여행자 연결까지 하나의 흐름으로 제공합니다.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 핵심 기능
 
-When you're ready, run:
+### K-Local Pick — 나만의 한국 로컬 여행지 추천
+여행 취향과 조건을 바탕으로 맞춤 지역 관광지를 추천합니다. 카드를 좌우로 넘기며 원하는 여행지를 탐색할 수 있습니다.
+
+### Buddy Route — 여행 전 이동 가능성 확인
+출발지 기준 예상 소요 시간, 교통수단, 당일치기 가능 여부를 제공합니다. 지도에서 구간별 이동 경로와 예상 교통비까지 확인할 수 있습니다.
+
+### Mates — 같은 여행지에 관심 있는 여행자 연결
+같은 관광지를 저장한 사용자의 프로필을 확인하고 1:1 쪽지를 보낼 수 있습니다. 관광지 탐색을 여행자 간 연결 경험으로 확장합니다.
+
+### Hori's Guide — 여행 상황별 가이드
+교통, 주문, 안전, 언어 등 한국 여행 중 자주 마주치는 상황을 주제별로 정리해 제공합니다.
+
+### Regional Map — 지역별 여행지 지도
+전국 관광지를 서울·경기·강원·충청·경상·전라·제주 7개 권역으로 나누어 지도에서 직관적으로 탐색합니다.
+
+---
+
+## 기술 스택
+
+| 구분 | 사용 기술 |
+| --- | --- |
+| 프레임워크 | React Native (Expo SDK 57) |
+| 언어 | TypeScript |
+| 라우팅 | Expo Router (file-based routing) |
+| 애니메이션 | React Native Reanimated, Gesture Handler |
+| 국제화 | i18n (한국어 / English) |
+| 배포 | Vercel (Web), EAS Build (Native) |
+
+## 활용 API
+
+| API | 활용 내용 |
+| --- | --- |
+| 한국관광공사 OpenAPI | 전국 관광지·축제 정보 조회 및 맞춤 추천 |
+| 카카오맵 API | Buddy Route의 이동 경로 표시 및 지도 렌더링 |
+| Google Identity Services / Sign-In SDK | OAuth 2.0 기반 소셜 로그인 (웹 / 네이티브 분기) |
+
+---
+
+## 시작하기
+
+### 요구 사항
+
+- Node.js 20 이상
+
+### 설치 및 실행
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+실행 후 터미널에서 플랫폼을 선택합니다.
 
-### Other setup steps
+| 키 | 실행 환경 |
+| --- | --- |
+| `w` | 웹 브라우저 |
+| `a` | Android (개발 빌드 필요) |
+| `i` | iOS 시뮬레이터 (macOS) |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+이 프로젝트는 네이티브 모듈을 사용하므로 Expo Go로는 실행되지 않습니다. 모바일에서 확인하려면 개발 빌드가 필요합니다.
 
-## Learn more
+### 환경 변수
 
-To learn more about developing your project with Expo, look at the following resources:
+프로젝트 루트에 `.env` 파일이 필요합니다. 키 값은 팀 내부에서 공유받아 주세요.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+EXPO_PUBLIC_API_BASE_URL=
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=
+EXPO_PUBLIC_KAKAO_MAP_JS_KEY=
+```
 
-## Join the community
+### 코드 검사
 
-Join our community of developers creating universal apps.
+```bash
+npx tsc --noEmit    # 타입 체크
+npx expo lint       # 린트
+npx expo-doctor     # 프로젝트 상태 점검
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 프로젝트 구조
+
+```
+src/
+├── api/            # 백엔드 API 통신 및 소셜 로그인
+├── app/            # Expo Router 라우트 정의
+├── components/     # 재사용 UI 컴포넌트
+├── screens/        # 화면 단위 컴포넌트
+├── i18n/           # 다국어 번역 리소스
+└── styles/         # 공통 스타일 및 디자인 토큰
+```
+
+---
+
+## 발전 계획
+
+**더 정확하게** — 저장·관심·이용 데이터를 축적해 취향을 학습하고, 교통·날씨·축제 운영정보를 결합해 추천과 방문 가능성 판단을 정교화합니다.
+
+**더 가깝게** — Mates를 여행지별 커뮤니티, 동행 매칭, 방문 후기 공유로 확장해 여행 전 연결부터 여행 후 경험 공유까지 이어지는 구조를 만듭니다.
+
+**더 넓게** — 영어를 시작으로 중국어·일본어 등 다국어 지원을 확대하고, 서비스 대상을 워킹홀리데이·인턴·근로자 등 장기 거주 외국인 전체로 넓힙니다.
+
+---
+
+## 팀 유랑이들
+
+| 역할 | 담당 |
+| --- | --- |
+| Frontend | [@Kim-kiseong](https://github.com/Kim-kiseong), [@mmmindh](https://github.com/mmmindh) |
+
+---
+
+## 라이선스
+
+이 프로젝트는 [MIT License](./LICENSE)를 따릅니다.
