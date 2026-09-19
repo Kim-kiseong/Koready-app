@@ -10,13 +10,15 @@ import { FontFamily } from '@/constants/typography';
 export type EventGridCardProps = {
   event: EventListing;
   categoryLabel: string;
-  width: number;
+  // Omitted on web, where the grid container is real CSS Grid and each card
+  // just fills its own column track instead of being sized from JS.
+  width?: number;
   onPress?: () => void;
 };
 
 export default function EventGridCard({ event, categoryLabel, width, onPress }: EventGridCardProps) {
   return (
-    <Pressable style={[styles.card, { width }]} onPress={onPress}>
+    <Pressable style={[styles.card, { width: width ?? '100%' }]} onPress={onPress}>
       <View style={styles.photoSection}>
         {event.imageUrl ? (
           <Image source={{ uri: event.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
