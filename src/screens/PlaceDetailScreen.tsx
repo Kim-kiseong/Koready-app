@@ -8,6 +8,7 @@ import {
 } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { recordRecommendationEvent } from '@/api/picks';
 import {
   fetchPlaceDetail,
   type PlaceDetail,
@@ -26,7 +28,6 @@ import {
   savePlace,
   unsavePlace,
 } from '@/api/saved-place';
-import { recordRecommendationEvent } from '@/api/picks';
 import CustomText from '@/components/CustomText';
 import BackIcon from '@/components/icons/BackIcon';
 import BuddyRouteTab from '@/components/place-detail/BuddyRouteTab';
@@ -44,6 +45,8 @@ import { goBackOrRoot } from '@/navigation/safe-back';
 import { useAuthStore } from '@/store/auth-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSavedPlaceStore } from '@/store/saved-place-store';
+
+const KOREA_TOURISM_ORGANIZATION_URL = 'https://korean.visitkorea.or.kr/main/main.do';
 
 function normalizePlaceDetailTab(tab?: string): PlaceDetailTab {
   if (tab === 'ROUTE' || tab === 'MATES') {
@@ -316,6 +319,8 @@ function PlaceDetailScreenContent({
               points={description?.enjoyPoints ?? []}
             />
 
+            <TourismSourceAttribution />
+
             <View
               style={
                 styles.nearbySection
@@ -395,6 +400,21 @@ function getFirstPlaceImageUrl(place: PlaceDetail) {
   return typeof source.uri === 'string' ? source.uri : undefined;
 }
 
+function TourismSourceAttribution() {
+  const handlePress = () => {
+    void Linking.openURL(KOREA_TOURISM_ORGANIZATION_URL);
+  };
+
+  return (
+    <View style={styles.sourceAttributionRow}>
+      <CustomText style={styles.sourceAttribution}>제공</CustomText>
+      <CustomText style={styles.sourceAttributionLink} onPress={handlePress}>
+        ©한국관광공사
+      </CustomText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -426,9 +446,36 @@ const styles = StyleSheet.create({
     color: Palette.grey600,
   },
 
+  sourceAttributionRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+
+  sourceAttribution: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 18.2,
+    letterSpacing: -0.26,
+    color: '#6B7684',
+  },
+
+  sourceAttributionLink: {
+    fontFamily: FontFamily.pretendard.regular,
+    fontSize: 13,
+    lineHeight: 18.2,
+    letterSpacing: -0.26,
+    color: '#6B7684',
+    textDecorationLine: 'underline',
+  },
+
   nearbySection: {
     paddingHorizontal: 24,
-    marginTop: 40,
+    marginTop: 30,
   },
 
   sectionTitle: {

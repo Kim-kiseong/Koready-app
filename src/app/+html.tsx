@@ -99,7 +99,7 @@ export default function Root({ children }: PropsWithChildren) {
             no keyboard-nav flow that needs the native ring to begin with. */}
         <style
           dangerouslySetInnerHTML={{
-            __html: `input, textarea { outline: none; }`,
+            __html: `input, textarea { outline: none; font-size: max(16px, 1em); }`,
           }}
         />
         {/* This app is mobile-only UI. On a wide top-level web tab (a PC
