@@ -342,6 +342,8 @@ export interface Translations {
     sortTitle: string;
     sortRecommended: string;
     sortDeadline: string;
+    emptyTitle: string;
+    emptyDescription: string;
   };
   eventFilter: {
     title: string;
@@ -915,6 +917,8 @@ export const ko: Translations = {
     sortTitle: "정렬",
     sortRecommended: "추천순",
     sortDeadline: "마감순",
+    emptyTitle: "새로운 여행지를 준비 중이에요!",
+    emptyDescription: "조금만 기다려주세요",
   },
   eventFilter: {
     title: "필터",
