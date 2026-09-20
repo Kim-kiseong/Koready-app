@@ -113,30 +113,37 @@ export default function AddressSearchScreen() {
         {showResults && (
           <View style={styles.resultList}>
             {results.map((result) => (
-              <View key={result.searchResultToken} style={styles.resultGroup}>
+              // One Pressable for the whole group, not just the address
+              // sub-rows — result.name (the prominent top label) used to sit
+              // outside any Pressable, so it looked tappable but wasn't; only
+              // the road/lot-number rows underneath actually selected anything.
+              <Pressable
+                key={result.searchResultToken}
+                style={styles.resultGroup}
+                onPress={() => handleSelectResult(result)}>
                 <CustomText style={styles.zipText}>{result.name}</CustomText>
                 {result.roadAddress && (
-                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                  <View style={styles.resultRow}>
                     <View style={[styles.badge, styles.badgeRoad]}>
                       <CustomText style={styles.badgeTextRoad}>{t.location.roadAddressBadge}</CustomText>
                     </View>
                     <CustomText style={styles.addressText}>{result.roadAddress}</CustomText>
-                  </Pressable>
+                  </View>
                 )}
                 {result.address && (
-                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                  <View style={styles.resultRow}>
                     <View style={[styles.badge, styles.badgeLot]}>
                       <CustomText style={styles.badgeTextLot}>{t.location.lotNumberBadge}</CustomText>
                     </View>
                     <CustomText style={styles.addressText}>{result.address}</CustomText>
-                  </Pressable>
+                  </View>
                 )}
                 {!result.roadAddress && !result.address && (
-                  <Pressable style={styles.resultRow} onPress={() => handleSelectResult(result)}>
+                  <View style={styles.resultRow}>
                     <CustomText style={styles.addressText}>{result.sido} {result.sigungu}</CustomText>
-                  </Pressable>
+                  </View>
                 )}
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
