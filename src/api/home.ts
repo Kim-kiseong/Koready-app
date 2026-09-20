@@ -348,40 +348,61 @@ export async function fetchMonthlyRecommendations(
   return result;
 }
 
+// Shows the year whenever it isn't self-evidently "now": either the
+// occurrence's calendar year genuinely differs from today's real year (a
+// next-year item from a wrapped-forward month tab always qualifies here — see
+// fetchEventListings — regardless of which tab it's on, so two tabs never
+// disagree about whether a next-year item needs the label), or the occurrence
+// is ENDED. ENDED needs its own check even when the year does match today's:
+// a reference item fetchEventListings' RECOMMENDED branch pulls in from last
+// year when the wrapped year has nothing yet can itself land back in the
+// real current year once that wrap rolls over, and "7.24~8.9" alone reads as
+// an upcoming date, not one that already happened, without something marking
+// it. Compared per date (not just the pair) so a range that itself crosses a
+// year boundary (e.g. Dec 28 – Jan 3) still shows it on whichever side needs it.
 function formatFeaturedEventDateRangeLabel(
-  festivalOccurrence: Pick<FestivalOccurrence, 'startDate' | 'endDate'> | null | undefined,
+  festivalOccurrence: Pick<FestivalOccurrence, 'startDate' | 'endDate' | 'status'> | null | undefined,
   language: LanguageCode,
 ) {
   if (!festivalOccurrence?.startDate || !festivalOccurrence.endDate) {
     return '';
   }
 
+  const thisYear = new Date().getFullYear();
+  const alwaysShowYear = festivalOccurrence.status === 'ENDED';
+
   const formatKoreanDate = (value: string) => {
     const date = new Date(`${value}T00:00:00Z`);
+    const showYear = alwaysShowYear || date.getUTCFullYear() !== thisYear;
     const parts = new Intl.DateTimeFormat('ko-KR', {
+      ...(showYear ? { year: '2-digit' as const } : {}),
       month: 'numeric',
       day: 'numeric',
       weekday: 'short',
       timeZone: 'UTC',
     }).formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
     const month = parts.find((part) => part.type === 'month')?.value ?? '';
     const day = parts.find((part) => part.type === 'day')?.value ?? '';
     const weekday = parts.find((part) => part.type === 'weekday')?.value ?? '';
-    return `${month}.${day}(${weekday})`;
+    return year ? `${year}.${month}.${day}(${weekday})` : `${month}.${day}(${weekday})`;
   };
 
   const formatEnglishDate = (value: string) => {
     const date = new Date(`${value}T00:00:00Z`);
+    const showYear = alwaysShowYear || date.getUTCFullYear() !== thisYear;
     const parts = new Intl.DateTimeFormat('en-US', {
+      ...(showYear ? { year: 'numeric' as const } : {}),
       month: 'short',
       day: 'numeric',
       weekday: 'short',
       timeZone: 'UTC',
     }).formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
     const month = parts.find((part) => part.type === 'month')?.value ?? '';
     const day = parts.find((part) => part.type === 'day')?.value ?? '';
     const weekday = parts.find((part) => part.type === 'weekday')?.value ?? '';
-    return `${month} ${day} (${weekday})`;
+    return year ? `${month} ${day}, ${year} (${weekday})` : `${month} ${day} (${weekday})`;
   };
 
   if (language === 'EN') {
@@ -444,13 +465,13 @@ function normalizeImageUrl(rawUrl: string | null | undefined, fallbackUrl: strin
   return encodeURI(`${API_BASE_URL}/${trimmed}`);
 }
 
-// Places with a festival date are more actionable (time-sensitive) than ones
-// without, so both featured lists below surface them first. This is as far
-// as the client can implement the requested priority scheme — see the
-// "dated-first, then by save count" note above fetchFeaturedEvents for what's
-// missing and why. Array.sort is stable, so the backend's own relative
-// ordering within each group (RECOMMENDED's status-then-quality-score,
-// DEADLINE's soonest-end-date) is preserved, just regrouped by date presence.
+// DEADLINE-only (see fetchEventListings) — RECOMMENDED uses
+// sortRecommendedWithDatedPriority instead, at the PlaceCard level where
+// festivalOccurrence.status is still available; by the time items are mapped
+// to EventListing/FeaturedEvent, only dateRangeLabel survives, which is all
+// this needs to regroup DEADLINE's already-merged (dated items ahead of
+// undated) list. Array.sort is stable, so DEADLINE's own soonest-end-date
+// ordering within each group is preserved, just regrouped by date presence.
 function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const aHasDate = a.dateRangeLabel !== '';
@@ -463,42 +484,82 @@ function sortDatedFirst<T extends { dateRangeLabel: string }>(items: T[]): T[] {
 // Always goes through GET /monthly-recommendations (never GET /home).
 // POPULAR omits travelStyles so it isn't filtered to one style. Swallows
 // failures to an empty list so a network hiccup doesn't crash the carousel.
-//
-// Requested priority scheme was "1) dated content by save count desc, 2)
-// undated content by save count desc" (DEADLINE swaps #1 for soonest-ending
-// first). Checked the live Swagger spec for GET /monthly-recommendations:
-// RECOMMENDED is documented as "ONGOING/UPCOMING/ENDED status before quality
-// score" and DEADLINE as "soonest end date" — neither groups by date presence
-// first, and PlaceCard has no save/like count field for the client to sort by
-// itself. So only the "dated first" half is doable here (sortDatedFirst);
-// the save-count sub-ordering needs a backend change (either implement this
-// exact scheme server-side, or expose a save/popularity count on PlaceCard).
-//
-// The "top 5" shown here must be the top 5 of the SAME pool fetchEventListings
-// shows in the full grid, dated-first-sorted — not the backend's own top 5
-// (which ranks by status/quality score and can leave a dated item, e.g. a
-// festival with a lower quality score, out entirely). So this requests the
-// full MONTHLY_RECOMMENDATIONS_PAGE_SIZE page (matching fetchEventListings'
-// own page size), sorts it the same way, and only then takes the first 5 —
-// otherwise a dated item ranked 6th-or-later server-side would never even be
-// in the 5 fetched, no matter how the client re-sorts afterward.
 const MONTHLY_RECOMMENDATIONS_PAGE_SIZE = 20;
 // The backend rejects size > 50 (INVALID_REQUEST) — this is the largest pool
 // fetchEventListings can pull from when hunting for dated items below.
 const MONTHLY_RECOMMENDATIONS_MAX_SIZE = 50;
 const FEATURED_EVENTS_SIZE = 5;
 
-// RECOMMENDED ranks by "ONGOING/UPCOMING/ENDED status before quality score"
-// (see the comment above fetchFeaturedEvents), which routinely buries a real
-// festival below the MONTHLY_RECOMMENDATIONS_PAGE_SIZE cutoff entirely — e.g.
-// April 2026 has 6 dated festivals but RECOMMENDED's own top 20 (even top 50)
-// only surfaces 2 of them, so sortDatedFirst has nothing to regroup for the
-// other 4; they're simply never fetched. DEADLINE, though, was confirmed
+// RECOMMENDED priority scheme (confirmed with product): within the combined
+// pool built by withDatedHarvest below, dated items (has festivalOccurrence)
+// rank ahead of undated ones; ENDED dated items are kept (not dropped) but
+// pushed behind the still-relevant (ONGOING/UPCOMING) dated ones. Within each
+// of those three groups, whatever order the input array already has is left
+// untouched — Array.filter preserves order, so no re-sort is needed. That
+// input order matters: see withDatedHarvest for why a dated item may be in
+// real RECOMMENDED (score) order, or — for one the backend ranks far outside
+// even a 50-item page — DEADLINE order as the only available fallback.
+function sortRecommendedWithDatedPriority(items: PlaceCard[]): PlaceCard[] {
+  const datedActive = items.filter(
+    (item) => item.festivalOccurrence && item.festivalOccurrence.status !== 'ENDED',
+  );
+  const datedEnded = items.filter((item) => item.festivalOccurrence?.status === 'ENDED');
+  const undated = items.filter((item) => !item.festivalOccurrence);
+  return [...datedActive, ...datedEnded, ...undated];
+}
+
+// Harvests EVERY dated item for the month, any status included. Confirmed via
+// spot checks (Nov 2026: totalCount 1083 under RECOMMENDED, but 0 of the top
+// 50 have a festivalOccurrence at all — two real festivals that month,
+// 구미라면 축제 and 포항국제불빛축제, only turn up here) that sort=DEADLINE's
+// response consists solely of dated items and its totalCount always equals
+// the true count of festival occurrences for the month/filter combo — unlike
+// RECOMMENDED, which mixes dated and undated together in one ranking and can
+// bury a low-curationPriority/quality-score dated item arbitrarily far past
+// whatever page size gets requested, with no way to ask for more (the backend
+// rejects size > 50) or otherwise learn where it actually ranks.
+async function fetchAllDatedPlaceCards(
+  params: Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>,
+): Promise<PlaceCard[]> {
+  try {
+    const result = await fetchMonthlyRecommendations({
+      ...params,
+      sort: 'DEADLINE',
+      size: MONTHLY_RECOMMENDATIONS_MAX_SIZE,
+    });
+    return result.items;
+  } catch {
+    return [];
+  }
+}
+
+// Appends whatever fetchAllDatedPlaceCards found that ISN'T already present in
+// primaryItems (the RECOMMENDED page) — de-duplicated by placeId so a dated
+// item that happened to rank inside primaryItems isn't repeated. Order matters
+// for sortRecommendedWithDatedPriority above: primaryItems' own dated items
+// keep their real RECOMMENDED (score) position since they're left at the
+// front; the appended remainder has no real score signal (outside even the
+// 50-item page), so it falls back to fetchAllDatedPlaceCards' own DEADLINE
+// order among itself — the two effectively become two priority tiers within
+// whichever "dated" bucket sortRecommendedWithDatedPriority sorts them into.
+function withDatedHarvest(primaryItems: PlaceCard[], datedHarvest: PlaceCard[]): PlaceCard[] {
+  const primaryIds = new Set(primaryItems.map((item) => item.placeId));
+  const harvestOnly = datedHarvest.filter((item) => !primaryIds.has(item.placeId));
+  return [...primaryItems, ...harvestOnly];
+}
+
+// DEADLINE-only: RECOMMENDED ranks by "ONGOING/UPCOMING/ENDED status before
+// quality score" (see sortRecommendedWithDatedPriority above), which routinely
+// buries a real festival below the MONTHLY_RECOMMENDATIONS_PAGE_SIZE cutoff
+// entirely — e.g. April 2026 has 6 dated festivals but RECOMMENDED's own top
+// 20 (even top 50) only surfaces 2 of them. DEADLINE, though, was confirmed
 // (live Swagger + spot checks) to always rank every dated item in a month
 // ahead of every undated one, regardless of how many there are — so it's used
 // here purely as a way to harvest the full list of dated places for the
 // month/filter combo, independent of whatever the primary sort's own ranking
-// would have included.
+// would have included. ENDED is excluded (unlike the RECOMMENDED path, which
+// keeps it, just deprioritized) since "마감순" showing an already-over event as
+// urgent would be actively misleading.
 async function fetchDatedPlaceCards(
   params: Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>,
 ): Promise<PlaceCard[]> {
@@ -508,7 +569,7 @@ async function fetchDatedPlaceCards(
       sort: 'DEADLINE',
       size: MONTHLY_RECOMMENDATIONS_MAX_SIZE,
     });
-    return result.items.filter((item) => item.festivalOccurrence);
+    return result.items.filter((item) => item.festivalOccurrence && item.festivalOccurrence.status !== 'ENDED');
   } catch {
     return [];
   }
@@ -517,47 +578,74 @@ async function fetchDatedPlaceCards(
 // Puts every dated item (soonest-ending first, from fetchDatedPlaceCards)
 // ahead of primaryItems' own undated ones, de-duplicating by placeId so a
 // dated item that also happened to rank inside primaryItems isn't repeated.
+// primaryItems can still carry the backend's own ENDED occurrences (GET
+// /monthly-recommendations keeps a month's festivals visible with status
+// ENDED after they close, per the live Swagger spec), which fetchDatedPlaceCards
+// already excludes on its side — dropped here too, rather than just left
+// unprioritized, since sortDatedFirst downstream keys off dateRangeLabel alone
+// and would otherwise still pull an already-over festival back to the front.
 function mergeDatedFirst(primaryItems: PlaceCard[], datedItems: PlaceCard[]): PlaceCard[] {
   const datedIds = new Set(datedItems.map((item) => item.placeId));
-  return [...datedItems, ...primaryItems.filter((item) => !datedIds.has(item.placeId))];
+  const remainingPrimaryItems = primaryItems.filter(
+    (item) => !datedIds.has(item.placeId) && item.festivalOccurrence?.status !== 'ENDED',
+  );
+  return [...datedItems, ...remainingPrimaryItems];
 }
 
+// Always RECOMMENDED (there's no sort toggle on the home screen), so this
+// always goes through sortRecommendedWithDatedPriority — see its comment for
+// the priority scheme, and withDatedHarvest for why a second (DEADLINE)
+// request is still needed even at the max page size.
 export async function fetchFeaturedEvents(
   category: FeaturedEventCategory,
   month?: number,
   year?: number,
 ): Promise<FeaturedEvent[]> {
   const now = new Date();
+  const baseParams = {
+    year: year ?? now.getFullYear(),
+    month: month ?? now.getMonth() + 1,
+    travelStyles: category === 'POPULAR' ? undefined : [category],
+  } satisfies Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>;
+
   try {
-    const result = await fetchMonthlyRecommendations({
-      year: year ?? now.getFullYear(),
-      month: month ?? now.getMonth() + 1,
-      travelStyles: category === 'POPULAR' ? undefined : [category],
-      sort: 'RECOMMENDED',
-      size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE,
-    });
-    return sortDatedFirst(result.items.map(toFeaturedEvent)).slice(0, FEATURED_EVENTS_SIZE);
+    const [result, datedHarvest] = await Promise.all([
+      fetchMonthlyRecommendations({ ...baseParams, sort: 'RECOMMENDED', size: MONTHLY_RECOMMENDATIONS_MAX_SIZE }),
+      fetchAllDatedPlaceCards(baseParams),
+    ]);
+    const combined = withDatedHarvest(result.items, datedHarvest);
+    return sortRecommendedWithDatedPriority(combined).map(toFeaturedEvent).slice(0, FEATURED_EVENTS_SIZE);
   } catch {
     return [];
   }
 }
 
-// EventListScreen's full grid — region/date/type filtering and sorting all
-// happen server-side now via GET /monthly-recommendations; sortDatedFirst is
-// the same client-side regrouping as fetchFeaturedEvents above (see its
-// comment for what's server-side-only for now). size is explicit here
-// (rather than relying on the backend's own default, which happens to be the
-// same 20) so it can never silently drift out of sync with
-// MONTHLY_RECOMMENDATIONS_PAGE_SIZE above and break that top-5-of-the-same-
-// pool guarantee.
+// EventListScreen's full grid — region/date/type filtering happens
+// server-side via GET /monthly-recommendations either way. Both sort modes
+// pair the max-page primary request with their own dated-item harvest (see
+// withDatedHarvest / mergeDatedFirst) — necessary in both directions, just for
+// different reasons: RECOMMENDED's own top 50 can contain zero dated items at
+// all for a low-traffic month (see sortRecommendedWithDatedPriority), and
+// DEADLINE's default page (20) can still miss dated items ranked 21st or
+// later by soonest-ending. They differ in what happens once harvested:
+// RECOMMENDED keeps ENDED (pushed behind ONGOING/UPCOMING, never dropped) and
+// orders dated items by real score where known, DEADLINE order otherwise;
+// DEADLINE excludes ENDED entirely and always orders by soonest-ending.
 export async function fetchEventListings(
   month: number,
   sort: EventSortOrder = 'RECOMMENDED',
   filters: EventFilters = DEFAULT_EVENT_FILTERS,
 ): Promise<EventListing[]> {
   const hasCustomDateRange = Boolean(filters.dateRange.startDate && filters.dateRange.endDate);
+  // EventListScreen's month pills wrap forward from the current month across
+  // 12 tabs (see orderedMonths there) — e.g. from September, the "1월" tab
+  // means next January, not the one that already happened this year. A month
+  // number earlier than the current one is therefore next year's; the current
+  // month itself and everything after it stay this year.
+  const now = new Date();
+  const year = month >= now.getMonth() + 1 ? now.getFullYear() : now.getFullYear() + 1;
   const baseParams = {
-    year: new Date().getFullYear(),
+    year,
     month,
     serviceRegionCode: filters.region === 'ALL' ? undefined : filters.region,
     dateFilterType: hasCustomDateRange ? 'CUSTOM' : filters.date === 'ALL' ? undefined : filters.date,
@@ -567,8 +655,35 @@ export async function fetchEventListings(
   } satisfies Omit<MonthlyRecommendationsParams, 'sort' | 'size' | 'cursor'>;
 
   try {
+    if (sort === 'RECOMMENDED') {
+      const [result, datedHarvest] = await Promise.all([
+        fetchMonthlyRecommendations({ ...baseParams, sort: 'RECOMMENDED', size: MONTHLY_RECOMMENDATIONS_MAX_SIZE }),
+        fetchAllDatedPlaceCards(baseParams),
+      ]);
+      let combined = withDatedHarvest(result.items, datedHarvest);
+
+      // year is only ever bumped to next year when the tab wrapped forward
+      // (see above) — for a month that far out, the backend often hasn't
+      // registered next year's occurrence yet (visibleFrom/6-month-out rule),
+      // leaving nothing dated to show. Falls back to last year's same month
+      // as a labeled reference (formatFeaturedEventDateRangeLabel prints its
+      // year since it's never "this year") rather than showing nothing — it
+      // always lands in sortRecommendedWithDatedPriority's ENDED bucket since
+      // a year-old occurrence is definitionally over. Only when genuinely
+      // empty, not merely thin, so a month that already has real next-year
+      // festivals never gets stale ones mixed in beside them.
+      const hasDatedItem = combined.some((item) => item.festivalOccurrence);
+      if (!hasDatedItem && year !== now.getFullYear()) {
+        const previousYearHarvest = await fetchAllDatedPlaceCards({ ...baseParams, year: year - 1 });
+        combined = withDatedHarvest(combined, previousYearHarvest);
+      }
+
+      const reordered = sortRecommendedWithDatedPriority(combined).slice(0, MONTHLY_RECOMMENDATIONS_PAGE_SIZE);
+      return reordered.map(toEventListing);
+    }
+
     const [result, datedItems] = await Promise.all([
-      fetchMonthlyRecommendations({ ...baseParams, sort, size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE }),
+      fetchMonthlyRecommendations({ ...baseParams, sort: 'DEADLINE', size: MONTHLY_RECOMMENDATIONS_PAGE_SIZE }),
       fetchDatedPlaceCards(baseParams),
     ]);
     const merged = mergeDatedFirst(result.items, datedItems).slice(0, MONTHLY_RECOMMENDATIONS_PAGE_SIZE);

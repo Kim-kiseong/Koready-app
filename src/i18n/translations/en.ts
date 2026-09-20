@@ -437,6 +437,8 @@ export const en: DeepPartial<Translations> = {
     sortTitle: 'Sort by',
     sortRecommended: 'Recommended',
     sortDeadline: 'Ending soon',
+    emptyTitle: 'New destinations are coming soon!',
+    emptyDescription: 'Please stay tuned.',
   },
   eventFilter: {
     title: 'Filters',
