@@ -11,6 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -115,8 +117,12 @@ const EMPTY_FORM: BuddyProfileFormState = {
 const MAX_SNS_LINKS = 2;
 const MAX_TRAVEL_STYLES = 4;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const SHEET_ANIMATION_DURATION = 220;
+const shouldUseNativeDriver = Platform.OS !== 'web';
 const WEB_IMMEDIATE_PRESS_PROPS =
   Platform.OS === 'web' ? ({ delayPressIn: 0 } as Record<string, unknown>) : {};
+const WEB_TAP_TARGET_STYLE =
+  Platform.OS === 'web' ? ({ touchAction: 'manipulation' } as object) : null;
 
 type ProfileImageContentType = ProfileImageUploadUrlRequest['contentType'];
 
@@ -1667,6 +1673,10 @@ function SelectionModal({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const [sheetTranslateY] = useState(() => new Animated.Value(windowHeight));
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [isClosing, setIsClosing] = useState(false);
   const isListPresentation = presentation === 'list';
   const renderOptionLabel = useCallback(
     (option: ProfileOptionItem) => optionLabelFormatter
@@ -1684,6 +1694,50 @@ function SelectionModal({
       setIsSearchFocused(false);
     }
   }
+
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (!visible) setIsClosing(true);
+  }
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(sheetTranslateY, {
+          toValue: 0,
+          duration: SHEET_ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: SHEET_ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: shouldUseNativeDriver,
+        }),
+      ]).start();
+      return;
+    }
+
+    if (!isClosing) return;
+
+    Animated.parallel([
+      Animated.timing(sheetTranslateY, {
+        toValue: windowHeight,
+        duration: SHEET_ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: shouldUseNativeDriver,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: SHEET_ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: shouldUseNativeDriver,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setIsClosing(false);
+    });
+  }, [isClosing, overlayOpacity, sheetTranslateY, visible, windowHeight]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -1715,12 +1769,22 @@ function SelectionModal({
     });
   };
 
+  if (!visible && !isClosing) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.sheetOverlay} onPress={onCancel}>
-        <Pressable
-          style={[styles.sheet, { maxHeight: Math.max(320, windowHeight * 0.82) }]}
-          onPress={() => {}}>
+    <Modal visible transparent animationType="none" onRequestClose={onCancel}>
+      <View style={styles.sheetOverlay}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.sheetOverlayBackground, { opacity: overlayOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
+
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              maxHeight: Math.max(320, windowHeight * 0.82),
+              transform: [{ translateY: sheetTranslateY }],
+            },
+          ]}>
           <View style={styles.sheetHandleArea}>
             <View style={styles.sheetHandle} />
           </View>
@@ -1787,6 +1851,7 @@ function SelectionModal({
                         onPress={() => toggleOption(option.code)}
                         style={({ pressed }) => [
                           styles.optionRow,
+                          WEB_TAP_TARGET_STYLE,
                           selected && styles.optionRowSelected,
                           pressed && styles.pressed,
                         ]}>
@@ -1859,8 +1924,8 @@ function SelectionModal({
               </CustomText>
             </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -2788,8 +2853,10 @@ const styles = StyleSheet.create({
   },
   sheetOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(28,28,26,0.7)',
     justifyContent: 'flex-end',
+  },
+  sheetOverlayBackground: {
+    backgroundColor: 'rgba(28,28,26,0.7)',
   },
   sheet: {
     backgroundColor: Palette.white,
@@ -2844,8 +2911,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
     height: 22,
     fontFamily: FontFamily.pretendard.medium,
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 16,
+    lineHeight: 22,
     color: Palette.text,
     paddingVertical: 0,
     includeFontPadding: false,
