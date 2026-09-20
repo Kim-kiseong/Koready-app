@@ -115,6 +115,8 @@ const EMPTY_FORM: BuddyProfileFormState = {
 const MAX_SNS_LINKS = 2;
 const MAX_TRAVEL_STYLES = 4;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const WEB_IMMEDIATE_PRESS_PROPS =
+  Platform.OS === 'web' ? ({ delayPressIn: 0 } as Record<string, unknown>) : {};
 
 type ProfileImageContentType = ProfileImageUploadUrlRequest['contentType'];
 
@@ -1780,8 +1782,9 @@ function SelectionModal({
                     return (
                       <Pressable
                         key={option.code}
-                        onPress={Platform.OS === 'web' ? undefined : () => toggleOption(option.code)}
-                        onPressIn={Platform.OS === 'web' ? () => toggleOption(option.code) : undefined}
+                        {...WEB_IMMEDIATE_PRESS_PROPS}
+                        pressRetentionOffset={12}
+                        onPress={() => toggleOption(option.code)}
                         style={({ pressed }) => [
                           styles.optionRow,
                           selected && styles.optionRowSelected,
