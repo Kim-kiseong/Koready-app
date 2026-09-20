@@ -121,6 +121,8 @@ const SHEET_ANIMATION_DURATION = 220;
 const shouldUseNativeDriver = Platform.OS !== 'web';
 const WEB_IMMEDIATE_PRESS_PROPS =
   Platform.OS === 'web' ? ({ delayPressIn: 0 } as Record<string, unknown>) : {};
+const WEB_TAP_TARGET_STYLE =
+  Platform.OS === 'web' ? ({ touchAction: 'manipulation' } as object) : null;
 
 type ProfileImageContentType = ProfileImageUploadUrlRequest['contentType'];
 
@@ -1849,6 +1851,7 @@ function SelectionModal({
                         onPress={() => toggleOption(option.code)}
                         style={({ pressed }) => [
                           styles.optionRow,
+                          WEB_TAP_TARGET_STYLE,
                           selected && styles.optionRowSelected,
                           pressed && styles.pressed,
                         ]}>
