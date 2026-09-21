@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   createRecommendationDeck,
+  fetchRecommendationDeckPage,
   recordRecommendationEvent,
   type PicksCard,
   type PicksScope,
@@ -84,9 +85,6 @@ const SWIPE_VELOCITY_THRESHOLD = 800;
 // — a round trip through one of these means the user actually left the
 // Picks tab, as opposed to drilling into a card's detail page and back.
 const OTHER_TAB_PATHS = new Set(['/home', '/map', '/saved', '/my']);
-// The client no longer paginates — RecommendationDeck still requires
-// remainingThreshold on the wire, so the dev-mock deck needs some value here
-// to satisfy the type, even though nothing reads it anymore.
 const DEV_FALLBACK_REMAINING_THRESHOLD = 5;
 
 // Dev-only: the mock session's access token can't be refreshed by the real
@@ -218,23 +216,23 @@ function formatPickTagLabel(tag: unknown) {
   return toDisplayText(tag).replace(/^#+\s*/, '').trim();
 }
 
-// Up to `count` cards after currentIndex, wrapping cyclically instead of
-// stopping at the end of the array — so the behind-card stack still peeks
-// on the last card or two instead of visually running out, matching the
-// swipe navigation looping back to the front of the deck. Caps at
-// cards.length - 1 so a short deck (1-2 cards) never previews the current
-// card behind itself.
-function getWrappedNextCards(cards: PicksCard[], currentIndex: number, count: number): PicksCard[] {
-  const previewCount = Math.min(count, cards.length - 1);
-  return Array.from({ length: previewCount }, (_, i) => cards[(currentIndex + 1 + i) % cards.length]);
+function appendUniqueCards(currentCards: PicksCard[], incomingCards: PicksCard[]): PicksCard[] {
+  const seenPlaceIds = new Set(currentCards.map((card) => card.placeId));
+  const uniqueIncomingCards = incomingCards.filter((card) => {
+    if (seenPlaceIds.has(card.placeId)) return false;
+    seenPlaceIds.add(card.placeId);
+    return true;
+  });
+  return [...currentCards, ...uniqueIncomingCards];
 }
 
-// undefined when there's nothing to go back to (a single-card deck), same
-// reasoning as getWrappedNextCards' cap — otherwise the "previous" card
-// would just be the current one wrapping onto itself.
-function getWrappedPrevCard(cards: PicksCard[], currentIndex: number): PicksCard | undefined {
-  if (cards.length < 2) return undefined;
-  return cards[(currentIndex - 1 + cards.length) % cards.length];
+function getNextCards(cards: PicksCard[], currentIndex: number, count: number): PicksCard[] {
+  return cards.slice(currentIndex + 1, currentIndex + 1 + count);
+}
+
+function getPrevCard(cards: PicksCard[], currentIndex: number): PicksCard | undefined {
+  if (currentIndex <= 0) return undefined;
+  return cards[currentIndex - 1];
 }
 
 export default function PicksScreen() {
@@ -265,6 +263,9 @@ export default function PicksScreen() {
   const [deckId, setDeckId] = useState<string | null>(null);
   const [cards, setCards] = useState<PicksCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMoreCards, setHasMoreCards] = useState(false);
+  const [remainingThreshold, setRemainingThreshold] = useState(DEV_FALLBACK_REMAINING_THRESHOLD);
   // Tells the newly-front PicksFlipCard how it arrived, so it can play a
   // matching entrance animation instead of just popping in — 'next' grows
   // up from the behind-stack spot it was just peeking from (see
@@ -276,6 +277,7 @@ export default function PicksScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const latestRequestIdRef = useRef(0);
+  const isFetchingMoreRef = useRef(false);
   const isInitialDeckLoadRef = useRef(true);
 
   // The deck endpoint always returns each card's server-side saved flag, which
@@ -298,8 +300,12 @@ export default function PicksScreen() {
     const reconciledCards = reconcileSaved(deck.cards);
     setCards(reconciledCards);
     setCurrentIndex(0);
+    setNextCursor(deck.nextCursor);
+    setHasMoreCards(deck.hasMore);
+    setRemainingThreshold(deck.remainingThreshold);
     setEnterDirection(null);
     setIsLoading(false);
+    isFetchingMoreRef.current = false;
 
     for (const card of reconciledCards) {
       if (!card.saved) continue;
@@ -328,6 +334,37 @@ export default function PicksScreen() {
       });
   };
 
+  const loadMoreCards = useCallback(() => {
+    if (!deckId || !hasMoreCards || isFetchingMoreRef.current || isDevMockSession) return;
+
+    isFetchingMoreRef.current = true;
+    fetchRecommendationDeckPage(deckId, nextCursor)
+      .then((deck) => {
+        if (deck.deckId !== deckId) return;
+        const reconciledCards = reconcileSaved(deck.cards);
+        setCards((prev) => appendUniqueCards(prev, reconciledCards));
+        setNextCursor(deck.nextCursor);
+        setHasMoreCards(deck.hasMore);
+        setRemainingThreshold(deck.remainingThreshold);
+
+        for (const card of reconciledCards) {
+          if (!card.saved) continue;
+          upsertSavedPlace(buildSavedPlaceFromPickCard({ ...card, saved: true }, 'RECOMMENDATION_CARD'));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        isFetchingMoreRef.current = false;
+      });
+  }, [deckId, hasMoreCards, isDevMockSession, nextCursor, upsertSavedPlace]);
+
+  useEffect(() => {
+    const unseenAheadCount = cards.length - 1 - currentIndex;
+    if (unseenAheadCount < remainingThreshold) {
+      loadMoreCards();
+    }
+  }, [cards.length, currentIndex, loadMoreCards, remainingThreshold]);
+
   useEffect(() => {
     // Wait for auth-store hydration so the initial deck request doesn't race a
     // stale accessToken, for onboarding-store hydration so it carries the
@@ -349,6 +386,9 @@ export default function PicksScreen() {
     setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
+    setNextCursor(null);
+    setHasMoreCards(false);
+    setRemainingThreshold(DEV_FALLBACK_REMAINING_THRESHOLD);
     setIsLoading(true);
     setHasError(false);
     loadDeck(scope);
@@ -364,6 +404,9 @@ export default function PicksScreen() {
     setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
+    setNextCursor(null);
+    setHasMoreCards(false);
+    setRemainingThreshold(DEV_FALLBACK_REMAINING_THRESHOLD);
     setIsLoading(true);
     setHasError(false);
     loadDeck(nextScope);
@@ -398,6 +441,9 @@ export default function PicksScreen() {
     setDeckId(null);
     setCards([]);
     setCurrentIndex(0);
+    setNextCursor(null);
+    setHasMoreCards(false);
+    setRemainingThreshold(DEV_FALLBACK_REMAINING_THRESHOLD);
     setIsLoading(true);
     setHasError(false);
     loadDeck(scope);
@@ -491,8 +537,10 @@ export default function PicksScreen() {
           <PicksDeck
             card={card}
             enterFrom={enterDirection}
-            nextCards={getWrappedNextCards(cards, currentIndex, MAX_STACK_DEPTH)}
-            prevCard={getWrappedPrevCard(cards, currentIndex)}
+            nextCards={getNextCards(cards, currentIndex, MAX_STACK_DEPTH)}
+            prevCard={getPrevCard(cards, currentIndex)}
+            canSwipeNext={currentIndex < cards.length - 1}
+            canSwipePrev={currentIndex > 0}
             onToggleSave={toggleSaved}
             onExpand={() => recordEvent(card.placeId, 'CARD_EXPANDED')}
             onViewDetail={() => {
@@ -508,12 +556,13 @@ export default function PicksScreen() {
             onSwipeNext={() => {
               recordEvent(card.placeId, 'CARD_NEXT');
               setEnterDirection('next');
-              setCurrentIndex((i) => (i + 1) % cards.length);
+              setCurrentIndex((i) => Math.min(i + 1, cards.length - 1));
             }}
             onSwipePrev={() => {
+              if (currentIndex <= 0) return;
               recordEvent(card.placeId, 'CARD_PREVIOUS');
               setEnterDirection('prev');
-              setCurrentIndex((i) => (i - 1 + cards.length) % cards.length);
+              setCurrentIndex((i) => Math.max(i - 1, 0));
             }}
           />
         )}
@@ -531,6 +580,8 @@ type PicksDeckProps = {
   enterFrom: 'next' | 'prev' | null;
   nextCards: PicksCard[];
   prevCard: PicksCard | undefined;
+  canSwipeNext: boolean;
+  canSwipePrev: boolean;
   onToggleSave: () => void;
   onExpand: () => void;
   onViewDetail: () => void;
@@ -543,6 +594,8 @@ function PicksDeck({
   enterFrom,
   nextCards,
   prevCard,
+  canSwipeNext,
+  canSwipePrev,
   onToggleSave,
   onExpand,
   onViewDetail,
@@ -570,6 +623,8 @@ function PicksDeck({
         card={card}
         enterFrom={enterFrom}
         prevCard={prevCard}
+        canSwipeNext={canSwipeNext}
+        canSwipePrev={canSwipePrev}
         cardSize={cardSize}
         screenWidth={screenWidth}
         onSwipeNext={onSwipeNext}
@@ -634,6 +689,8 @@ type PicksFlipCardProps = {
   card: PicksCard;
   enterFrom: 'next' | 'prev' | null;
   prevCard: PicksCard | undefined;
+  canSwipeNext: boolean;
+  canSwipePrev: boolean;
   cardSize: CardSize;
   screenWidth: number;
   onSwipeNext: () => void;
@@ -651,6 +708,8 @@ function PicksFlipCard({
   card,
   enterFrom,
   prevCard,
+  canSwipeNext,
+  canSwipePrev,
   cardSize,
   screenWidth,
   onSwipeNext,
@@ -695,13 +754,11 @@ function PicksFlipCard({
       const isSwipeRight = event.translationX > SWIPE_THRESHOLD || event.velocityX > SWIPE_VELOCITY_THRESHOLD;
       const isSwipeLeft = event.translationX < -SWIPE_THRESHOLD || event.velocityX < -SWIPE_VELOCITY_THRESHOLD;
 
-      // Left = next card, right = previous card — both wrap at either end
-      // (onSwipeNext/onSwipePrev compute the new index mod cards.length).
-      if (isSwipeLeft) {
+      if (isSwipeLeft && canSwipeNext) {
         translateX.value = withTiming(-screenWidth, { duration: 250 }, (finished) => {
           if (finished) runOnJS(onSwipeNext)();
         });
-      } else if (isSwipeRight) {
+      } else if (isSwipeRight && canSwipePrev) {
         translateX.value = withTiming(screenWidth, { duration: 250 }, (finished) => {
           if (finished) runOnJS(onSwipePrev)();
         });
