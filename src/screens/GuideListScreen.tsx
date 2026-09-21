@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { GuideCategoryId, GuideVideo } from '@/api/home';
@@ -24,8 +24,19 @@ export default function GuideListScreen() {
   const router = useRouter();
   const t = useTranslation();
   const language = useLanguageStore((state) => state.language);
-  const { width: windowWidth } = useWindowDimensions();
-  const guideCardWidth = (windowWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+  // Measured from the screen's own onLayout instead of useWindowDimensions —
+  // see EventListScreen for why: useWindowDimensions can resolve against the
+  // wrong window inside PcIframeShell's iframe on PC web, computing a card
+  // width far wider than what actually fits and collapsing the grid to a
+  // single column.
+  const [screenWidth, setScreenWidth] = useState(0);
+  // Floored so 2 cards + the gap always land a hair under the container's
+  // width instead of exactly at it — browser zoom's sub-pixel rounding can
+  // otherwise wrap this to a single column. Only used on native; web uses
+  // real CSS Grid below and needs no JS-computed width at all.
+  const guideCardWidth = Math.floor(
+    (screenWidth - SCREEN_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
+  );
   const [category, setCategory] = useState<GuideCategoryId>('TRANSPORT');
   const [guides, setGuides] = useState<GuideVideo[]>([]);
 
@@ -52,7 +63,10 @@ export default function GuideListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={styles.screen}
+      edges={['top', 'bottom']}
+      onLayout={(event) => setScreenWidth(event.nativeEvent.layout.width)}>
       <OnboardingHeader onBack={() => goBackOrRoot(router)} title={t.guideList.title} rightIcon={null} />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -77,7 +91,7 @@ export default function GuideListScreen() {
             <GuideVideoCard
               key={guide.id}
               guide={guide}
-              width={guideCardWidth}
+              width={Platform.OS === 'web' ? undefined : guideCardWidth}
               onPress={() => handleGuidePress(guide)}
             />
           ))}
@@ -168,10 +182,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Palette.grey600,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 13,
-    rowGap: 13,
-  },
+  grid: Platform.select({
+    // CSS Grid needs no JS-measured width at all — the browser's own layout
+    // engine divides the row into exactly 2 equal tracks, so there's nothing
+    // for browser zoom's sub-pixel rounding (or a stale onLayout measurement)
+    // to disagree with. flexWrap's approach (still used natively, where none
+    // of that applies) has to get a computed per-card width exactly right or
+    // it wraps to a single column — this sidesteps that class of bug
+    // entirely instead of chasing another rounding edge case.
+    web: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      columnGap: GRID_GAP,
+      rowGap: GRID_GAP,
+    } as object,
+    default: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: GRID_GAP,
+      rowGap: GRID_GAP,
+    },
+  }),
 });

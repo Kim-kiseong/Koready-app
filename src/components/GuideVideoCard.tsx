@@ -10,13 +10,15 @@ import { FontFamily } from '@/constants/typography';
 
 export type GuideVideoCardProps = {
   guide: GuideVideo;
-  width: number;
+  // Omitted on web, where the grid container is real CSS Grid and each card
+  // just fills its own column track instead of being sized from JS.
+  width?: number;
   onPress?: () => void;
 };
 
 export default function GuideVideoCard({ guide, width, onPress }: GuideVideoCardProps) {
   return (
-    <Pressable style={[styles.card, { width }]} onPress={onPress}>
+    <Pressable style={[styles.card, { width: width ?? '100%' }]} onPress={onPress}>
       <Image source={HomeImages[guide.imageKey]} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
