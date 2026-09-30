@@ -22,6 +22,18 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <title>KOREADY | 한국 로컬 여행 준비</title>
+        <meta
+          name="description"
+          content="외국인 유학생과 장기 거주 외국인을 위한 한국 로컬 여행지 추천, 이동 경로, 여행 메이트 서비스"
+        />
+        <meta property="og:title" content="KOREADY | 한국 로컬 여행 준비" />
+        <meta
+          property="og:description"
+          content="가보고 싶은 한국의 로컬 여행지를 발견하고, 실제로 갈 수 있는지 확인하세요."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://koready.site/" />
         {/* viewport-fit=cover (missing from Expo's default meta tag) is required
             for `env(safe-area-inset-*)` to report real values on iOS Safari —
             without it, react-native-safe-area-context's insets are stuck at 0

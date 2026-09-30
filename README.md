@@ -135,6 +135,7 @@ src/
 | 역할 | 담당 |
 | --- | --- |
 | Frontend | [@Kim-kiseong](https://github.com/Kim-kiseong), [@mmmindh](https://github.com/mmmindh) |
+| Backend | [@ppp1969](https://github.com/ppp1969) |
 
 ---
 
